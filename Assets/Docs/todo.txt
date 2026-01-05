@@ -1,0 +1,59 @@
+animation   
+    - ai, player
+        - góc nhìn thứ 1
+        - players
+        - blend tree
+        - FK & IK
+ai
+    - behavior tree 
+        - state machine 
+            - tấn công bình thường
+            - tuần tra
+            - tấn công đặc biệt
+item inventory slot
+    - 4 slot
+    - throw item
+    - use item
+save 
+    - easy save 3
+        - thành tựu
+        - item inventory
+        - chỉ số
+        - settings
+settings
+    - màn hình size
+    - audio
+âm thanh    
+    - phát âm thanh môi trường
+    - phát âm thanh ở mỗi tiếng bước chân trên từng địa hình
+    - voice chat
+skin
+    - chọn 1 trong 4 nhân vật
+equipment
+    - đội mũ khác
+    - mang áo
+    - trang bị súng
+        - súng lục 
+        - súng AK
+        - súng shotgun
+    - cầm gậy
+    - cầm kiếm
+steam service
+    - save game lênh steam
+    - mời bạn bè từ steam vào
+    - đánh dấu thành tựu
+chọn map 
+    - map 1
+    - map 2 
+    - map 3 
+trailer 
+    - 
+video
+    - main menu
+light
+    - baking light
+    - shadow
+    - post froccessing
+sound
+    - tiếng chân
+    - lồng tiếng
