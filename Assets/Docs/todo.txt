@@ -32,12 +32,12 @@ skin
 equipment
     - đội mũ khác
     - mang áo
-    - trang bị súng
+    - trang bị súng 
         - súng lục 
-        - súng AK
-        - súng shotgun
-    - cầm gậy
-    - cầm kiếm
+        - súng AK 
+        - súng shotgun 
+    - cầm gậy 
+    - cầm kiếm 
 steam service
     - save game lênh steam
     - mời bạn bè từ steam vào
@@ -55,5 +55,5 @@ light
     - shadow
     - post froccessing
 sound
-    - tiếng chân
+    - tiếng chân 
     - lồng tiếng
