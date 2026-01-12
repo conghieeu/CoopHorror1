@@ -39,8 +39,14 @@ MonoBehaviour:
     - Assembly-CSharp-firstpass
     - BetterHierarchyDemoScripts
     - Cinemachine
+    - Fusion.Addons.FSM
     - Fusion.Menu
     - Fusion.Unity
+    - PhotonChat
+    - PhotonRealtime
+    - PhotonVoice
+    - PhotonVoice.API
+    - PhotonVoice.Fusion
     - QFSW.QC
     - QFSW.QC.Demo
     - QFSW.QC.Extras
