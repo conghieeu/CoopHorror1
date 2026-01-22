@@ -1,3 +1,18 @@
+/// <summary>
+/// PlayerRegistry đóng vai trò là "xương sống" quản lý danh sách người chơi trung tâm (Singleton). 
+/// Nó duy trì một NetworkDictionary đồng bộ hóa ánh xạ giữa ID kết nối mạng (PlayerRef) và nhân vật game (PlayerObject).
+/// 
+/// Tác dụng:
+/// - Truy xuất nhanh O(1) thông tin người chơi bất kỳ.
+/// - Cung cấp các hàm tiện ích (API) để lọc, đếm hoặc chọn ngẫu nhiên người chơi mà không tạo rác bộ nhớ (GC).
+/// - Tự động xử lý logic thêm/xóa dữ liệu khi người chơi vào hoặc rời phòng.
+/// 
+/// Nếu thiếu script này:
+/// - Server mất khả năng kiểm soát tập trung: Không biết chính xác ai đang Online/Offline.
+/// - Hiệu năng giảm sút nghiêm trọng do phải dùng hàm tìm kiếm chậm (FindObjectsOfType) mỗi khi cần tương tác.
+/// - Nhân vật của người đã thoát sẽ không tự hủy (Despawn), để lại "xác rỗng" gây lỗi logic game và mất đồng bộ giữa các Client.
+/// </summary>
+
 using Fusion;
 using Fusion.Sockets;
 using Helpers.Collections;
@@ -5,7 +20,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace FusionImpostor
+namespace NonHand
 {
 	/// <summary>
 	/// Class that handles and references for all of the players who have joined and/or left the game.
@@ -178,12 +193,12 @@ namespace FusionImpostor
 		public static byte[] GetAvailableColors()
 		{
 			List<byte> available = new List<byte>();
-			for (byte i = 1; i < GameManager.rm.playerColours.Length; i++) available.Add(i);
+			// for (byte i = 1; i < GameManager.rm.playerColours.Length; i++) available.Add(i);
 
-			foreach (var item in Instance.ObjectByRef)
-			{
-				available.Remove(item.Value.ColorIndex);
-			}
+			// foreach (var item in Instance.ObjectByRef)
+			// {
+			// 	available.Remove(item.Value.ColorIndex);
+			// }
 
 			return available.ToArray();
 		}

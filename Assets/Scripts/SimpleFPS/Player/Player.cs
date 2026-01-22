@@ -73,7 +73,7 @@ namespace SimpleFPS
 					virtualCameras[i].enabled = false;
 				}
 			}
-
+			
 			_sceneObjects = Runner.GetSingleton<SceneObjects>();
 		}
 

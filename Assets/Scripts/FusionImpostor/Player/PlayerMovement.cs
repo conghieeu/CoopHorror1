@@ -1,3 +1,16 @@
+/// <summary>
+/// PlayerMovement là "Chân, Tay và Giác Quan" của nhân vật.
+/// 
+/// Tác dụng:
+/// - Đi lại & Nhìn: Xử lý việc ông bấm nút (WASD) để đi và xoay chuột để nhìn.
+/// - Hành động chuẩn xác: Dùng tính năng "Bù trễ" (chống lag) để đảm bảo ông chém đâu trúng đó, không bị tình trạng nhìn trúng mà Server bảo trượt do mạng yếu.
+/// - Quản lý trạng thái: Nhớ xem ông đang Sống, Chết (hóa ma đi xuyên tường) hay là Kẻ mạo danh.
+/// 
+/// Nếu thiếu script này:
+/// - Nhân vật bị "liệt toàn thân": Đứng đơ như tượng sáp, bấm phím gãy tay cũng không nhúc nhích.
+/// - Không thể giết người, không thể làm nhiệm vụ. Game coi như phế.
+/// </summary>
+
 using Fusion;
 using Fusion.Addons.SimpleKCC;
 using Helpers.Bits;
@@ -238,7 +251,8 @@ namespace FusionImpostor
 			nearbyInteractables.Clear();
 			nearbyPlayers.Clear();
 
-			// Iterates through the results
+			// Iterate through all of the lag compensated hits.
+			// nghĩa là "Lặp qua tất cả các va chạm được bù trừ độ trễ."
 			for (int i = 0; i < lagHit; i++)
 			{
 				if (lagCompensatedHits[i].Hitbox is Hitbox hb)

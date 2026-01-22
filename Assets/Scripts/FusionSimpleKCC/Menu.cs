@@ -232,7 +232,7 @@ namespace Example
 
 		private static void SetResolution(int width, int height, FullScreenMode fullscreenMode, Resolution resolution)
 		{
-			#if UNITY_6000_0_OR_NEWER
+			#if UNITY_2022_3_OR_NEWER
 			Screen.SetResolution(width, height, fullscreenMode, resolution.refreshRateRatio);
 			#else
 			Screen.SetResolution(width, height, fullscreenMode, resolution.refreshRate);
@@ -241,7 +241,7 @@ namespace Example
 
 		private static int GetRefreshRate(Resolution resolution)
 		{
-			#if UNITY_6000_0_OR_NEWER
+			#if UNITY_2022_3_OR_NEWER
 			return (int)System.Math.Round(resolution.refreshRateRatio.value);
 			#else
 			return resolution.refreshRate;

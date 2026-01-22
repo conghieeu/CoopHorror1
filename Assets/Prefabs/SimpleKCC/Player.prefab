@@ -746,9 +746,9 @@ GameObject:
   - component: {fileID: 160559849584874570}
   - component: {fileID: 2217291093196326150}
   - component: {fileID: 3788465327760623608}
-  - component: {fileID: 885739353337987397}
-  - component: {fileID: 1287987702761090489}
   - component: {fileID: 3442559694062096}
+  - component: {fileID: 4922970460609381956}
+  - component: {fileID: 8595444622595223988}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -790,9 +790,9 @@ MonoBehaviour:
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
-  - {fileID: 885739353337987397}
-  - {fileID: 1287987702761090489}
   - {fileID: 3442559694062096}
+  - {fileID: 4922970460609381956}
+  - {fileID: 8595444622595223988}
   ForceRemoteRenderTimeframe: 0
 --- !u!54 &3788465327760623608
 Rigidbody:
@@ -821,49 +821,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 126
   m_CollisionDetection: 0
---- !u!114 &885739353337987397
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5262772805837407306}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c91469fbd141a6245aece7d6ef974afe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  KCC: {fileID: 3442559694062096}
-  Weapons: {fileID: 0}
-  Health: {fileID: 0}
-  Animator: {fileID: 0}
-  HitboxRoot: {fileID: 0}
-  MoveSpeed: 10
-  JumpForce: 10
-  JumpSound: {fileID: 0}
-  JumpClips: []
-  CameraHandle: {fileID: 4397930381683665641}
-  FirstPersonRoot: {fileID: 0}
-  ThirdPersonRoot: {fileID: 0}
-  SprayPrefab: {fileID: 0}
-  UpGravity: -25
-  DownGravity: -40
-  GroundAcceleration: 55
-  GroundDeceleration: 25
-  AirAcceleration: 25
-  AirDeceleration: 1.3
---- !u!114 &1287987702761090489
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5262772805837407306}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5edcb8eb1153a24c81c22d608645779, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &3442559694062096
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -901,6 +858,43 @@ MonoBehaviour:
     StepRequireGroundTarget: 1
     SnapDistance: 0.25
     SnapSpeed: 4
+--- !u!114 &4922970460609381956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5262772805837407306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0916087048d21141aa7be8e7acc4345, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  KCC: {fileID: 3442559694062096}
+  Input: {fileID: 8595444622595223988}
+  CameraPivot: {fileID: 2155012850610152083}
+  CameraHandle: {fileID: 4397930381683665641}
+  MoveSpeed: 5
+  JumpImpulse: 10
+  UpGravity: -25
+  DownGravity: -40
+  GroundAcceleration: 55
+  GroundDeceleration: 25
+  AirAcceleration: 25
+  AirDeceleration: 1.3
+--- !u!114 &8595444622595223988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5262772805837407306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbb1b6c7172878841becb1e42c37bb0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _lookSensitivity: {x: 0.25, y: 0.25}
 --- !u!1 &7538970145135941771
 GameObject:
   m_ObjectHideFlags: 0
