@@ -122,7 +122,20 @@
         "Assets/Scenes": true,
         "Assets/Materials/Decals": true,
         "Assets/Animations": true,
-        "Logs": true
+        "Logs": true,
+        "Fusion.Addons.FSM.csproj": true,
+        "Fusion.Addons.FSM.Editor.csproj": true,
+        "MicAmplifierEditor.Editor.csproj": true,
+        "ParrelSync.csproj": true,
+        "PhotonChat.csproj": true,
+        "PhotonRealtime.csproj": true,
+        "PhotonVoice.API.csproj": true,
+        "PhotonVoice.csproj": true,
+        "PhotonVoice.Editor.csproj": true,
+        "PhotonVoice.Fusion.csproj": true,
+        "PhotonVoice.Fusion.Editor.csproj": true,
+        "PhotonVoice.Utilities.Editor.csproj": true,
+        "Voice.FMOD.Editor.csproj": true
     },
     "dotnet.defaultSolution": "CoopHorror1.sln",
     "hide-files.files": [
@@ -195,6 +208,19 @@
         "Assets/Scenes",
         "Assets/Materials/Decals",
         "Assets/Animations",
-        "Logs"
+        "Logs",
+        "Fusion.Addons.FSM.csproj",
+        "Fusion.Addons.FSM.Editor.csproj",
+        "MicAmplifierEditor.Editor.csproj",
+        "ParrelSync.csproj",
+        "PhotonChat.csproj",
+        "PhotonRealtime.csproj",
+        "PhotonVoice.API.csproj",
+        "PhotonVoice.csproj",
+        "PhotonVoice.Editor.csproj",
+        "PhotonVoice.Fusion.csproj",
+        "PhotonVoice.Fusion.Editor.csproj",
+        "PhotonVoice.Utilities.Editor.csproj",
+        "Voice.FMOD.Editor.csproj"
     ]
 }

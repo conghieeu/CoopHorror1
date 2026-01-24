@@ -1,0 +1,36 @@
+
+             Kind              Class Name Generalization  Realization/Implement  Composition  Dependency  Assocation  Inheritance  Aggregation
+0           class  AbstractTargetFollower  MonoBehaviour                    NaN          NaN         NaN         NaN          NaN          NaN
+1            enum                     NaN            NaN                    NaN          NaN         NaN         NaN          NaN          NaN
+2       interface                     NaN            NaN                    NaN          NaN         NaN         NaN          NaN          NaN
+3          struct                     NaN            NaN                    NaN          NaN         NaN         NaN          NaN          NaN
+4    static class                     NaN            NaN                    NaN          NaN         NaN         NaN          NaN          NaN
+5  abstract class                     NaN            NaN                    NaN          NaN         NaN         NaN          NaN          NaN
+6    sealed class                     NaN            NaN                    NaN          NaN         NaN         NaN          NaN          NaN
+
+
+```
+
+File `ClassRelationship.csv` này là một **bảng ma trận (matrix) hoặc mẫu (template) dùng để ánh xạ các thành phần mã nguồn (Source Code Elements) sang các quan hệ trong biểu đồ lớp UML (UML Class Diagram)**.
+
+Cụ thể:
+
+1. **Hàng (Rows)**: Đại diện cho các loại thành phần trong C#/Unity (`class`, `enum`, `interface`, `struct`, `static class`, `abstract class`, `sealed class`).
+2. **Cột (Columns)**:
+* `Kind`, `Class Name`: Định danh đối tượng.
+* `Generalization`: Quan hệ tổng quát hóa (thường là kế thừa class cha, ví dụ `AbstractTargetFollower` kế thừa `MonoBehaviour`).
+* **Các cột UML Relation Notation**: `Realization/Implement`, `Composition`, `Dependency`, `Assocation`, `Inheritance`, `Aggregation`. Đây là nơi sẽ điền tên các lớp/đối tượng có quan hệ tương ứng với `Class Name`.
+
+
+
+**Nhận xét thực tế**:
+File này hiện tại chỉ có dữ liệu mẫu ở dòng đầu tiên (Class `AbstractTargetFollower` kế thừa `MonoBehaviour`). Các cột quan hệ UML (`Realization` -> `Aggregation`) đang trống. Mục đích của file này là để điền thủ công hoặc tự động hóa việc liệt kê các mối quan hệ giữa các lớp để vẽ sơ đồ UML hoặc tài liệu hóa kiến trúc phần mềm.
+
+Đúng như bạn nói, các cột sau là các **UML Relation Notations**:
+
+* **Realization/Implement**: Thực thi interface.
+* **Composition**: Quan hệ thành phần (mạnh, vòng đời phụ thuộc).
+* **Aggregation**: Quan hệ toan tính (yếu, vòng đời độc lập).
+* **Dependency**: Quan hệ phụ thuộc (dùng trong phương thức).
+* **Association**: Quan hệ kết hợp (có tham chiếu đến nhau).
+* **Inheritance**: Kế thừa (tương tự Generalization).

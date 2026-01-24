@@ -1,0 +1,83 @@
+Kind,Class Name,Generalization,Realization/Implement,Composition,Dependency,Assocation,Inheritance,Aggregation
+class,ActionOnSelect,MonoBehaviour,IDeselectHandler; ISelectHandler,,BaseEventData,UnityEvent,MonoBehaviour,
+class,AudioBank,,,,AudioClip,,,AudioClip; BankKVP
+class,AudioBankDrawer,PropertyDrawer,,,GUIContent; Rect; SerializedProperty,,PropertyDrawer,
+class,AudioDestroyer,MonoBehaviour,,,,AudioSource,MonoBehaviour,
+class,AudioManager,MonoBehaviour,,,AudioMixerGroup; MixerTarget; Transform; Vector3,AudioBank; AudioMixer; AudioMixerGroup; AudioSource; DefaultMixerTarget,MonoBehaviour,
+class,BankKVP,,,,,AudioClip,,
+class,BankKVPDrawer,PropertyDrawer,,,GUIContent; Rect; SerializedProperty,,PropertyDrawer,
+static class,BitUtil,,,,LayerMask,,,
+class,CameraFollow,MonoBehaviour,,,,Transform; Vector3,MonoBehaviour,
+class,CanvasFader,MonoBehaviour,,,IEnumerator,CanvasGroup,MonoBehaviour,
+static class,CollectionsUtil,,,,,,,https://github.com/VeriorPies/ParrelSync/releases
+class,ColorKiosk,Interactable,,,NetworkObject; PlayerMovement,ColorSelectionUI,Interactable,
+class,ColorOption,MonoBehaviour,,,ToggleGroup,Toggle,MonoBehaviour,
+class,ColorSelectionUI,MonoBehaviour,,,,ColorOption; Material; ToggleGroup; Transform,MonoBehaviour,ColorOption; Renderer
+static class,CommonUtil,,,,Transform,,,
+class,DeadPlayer,Interactable,,,Color; NetworkObject; PlayerMovement,PlayerRef,Interactable,Renderer
+enum,DefaultMixerTarget,,,,,,,
+class,Door,NetworkBehaviour,,,,AnimationCurve; BoxCollider; Transform,NetworkBehaviour,
+class,DownloadTask,TaskBase,,,IEnumerator,Button; Image; TMP_Text,TaskBase,
+class,EmergencyButton,Interactable,,,NetworkObject; PlayerMovement,,Interactable,
+class,FollowTarget,MonoBehaviour,,,,Transform,MonoBehaviour,
+class,FullscreenToggle,MonoBehaviour,,,,KeyCode,MonoBehaviour,
+class,GameManager,NetworkBehaviour,INetworkRunnerCallbacks,,ArraySegment; ConnectRequest; Fusion; GameSettings; HostMigrationToken; NetAddress; NetConnectFailedReason; NetDisconnectReason; NetworkInput; NetworkObject; NetworkRunner; NetworkRunnerCallbackArgs; PlayerRef; ReliableKey; SessionInfo; ShutdownReason; SimulationMessagePtr; Sockets; TaskBase; TaskStation; Tick,FusionBootstrap; GameSettings; GameState; InterfaceManager; MapData; NetworkBool; PlayerObject; ResourcesManager; UIScreen; VoiceManager,NetworkBehaviour,TaskBase; TaskStation
+struct,GameSettings,,,,,,,
+class,GameState,NetworkBehaviour,IStateMachineOwner,,IStateMachine,MeetingStateBehaviour; PlayStateBehaviour; PregameStateBehaviour; StateBehaviour; StateMachine; TickTimer; VotingResultsStateBehaviour; WinStateBehaviour,NetworkBehaviour,
+class,GameUI,MonoBehaviour,,,Fusion; IEnumerator; NetworkRunner; PlayerObject,Button; CanvasGroup; ColorSelectionUI; GameObject; Image; MeetingUI; TMP_Text; TaskItemUI; Transform,MonoBehaviour,
+class,GraphicsSettingsUI,MonoBehaviour,,,,Dropdown,MonoBehaviour,
+class,HUDBridge,MonoBehaviour,,,,,MonoBehaviour,
+class,HoverOverSelectable,MonoBehaviour,IPointerClickHandler; IPointerEnterHandler; IPointerExitHandler,,PointerEventData; Vector3,Selectable; Vector3,MonoBehaviour,
+abstract class,Interactable,NetworkBehaviour,,,NetworkObject; PlayerMovement,,NetworkBehaviour,
+class,InterfaceManager,MonoBehaviour,,,,GameUI; TMP_Text; Transform; UIScreen,MonoBehaviour,
+class,LocationZone,MonoBehaviour,,,Collider,,MonoBehaviour,
+class,ManagerBridge,MonoBehaviour,,,,,MonoBehaviour,
+class,MapData,MonoBehaviour,,,Vector3,Collider; GameObject,MonoBehaviour,Transform
+class,MeetingStateBehaviour,StateBehaviour,,,,,StateBehaviour,
+class,MeetingUI,NetworkBehaviour,,,PlayerObject; PlayerRef; Tick,CanvasGroup; PlayerVotingUI; TMP_Text; TickTimer; Transform,NetworkBehaviour,PlayerRef
+class,MicrophoneDropdownFiller,VoiceComponent,,,IEnumerator,DeviceInfo; Dropdown,VoiceComponent,DeviceInfo
+enum,MixerTarget,,,,,,,
+class,NetFailHandler,MonoBehaviour,,,NetworkRunner; ShutdownReason,,MonoBehaviour,
+class,NetworkStartBridge,MonoBehaviour,,,,FusionBootstrap; TMP_InputField; TMPro,MonoBehaviour,
+class,NicknameSetter,MonoBehaviour,,,,TMP_InputField,MonoBehaviour,
+class,NumberSequenceTask,TaskBase,,,,,TaskBase,Button
+class,OptionsUI,MonoBehaviour,,,,Dropdown; Slider; TMP_InputField,MonoBehaviour,
+class,PatternMatchTask,TaskBase,,,IEnumerator,,TaskBase,Button; Image
+static class,PhysicsUtil,,,,Vector3,,,
+class,PlayStateBehaviour,StateBehaviour,,,TaskStation,,StateBehaviour,
+class,PlayerData,MonoBehaviour,,,Color; PlayerMovement,Animator; Material; PlayerObject; Transform; WorldCanvasNickname,MonoBehaviour,Renderer
+struct,PlayerInput,,,,,Angle; NetworkButtons,,
+class,PlayerInputBehaviour,SimulationBehaviour,INetworkRunnerCallbacks,,ArraySegment; ConnectRequest; HostMigrationToken; NetAddress; NetConnectFailedReason; NetDisconnectReason; NetworkInput; NetworkObject; NetworkRunner; NetworkRunnerCallbackArgs; PlayerRef; ReliableKey; SessionInfo; ShutdownReason; SimulationMessagePtr,,SimulationBehaviour,
+class,PlayerMapIcon,MonoBehaviour,,,PlayerObject,PlayerObject; Transform; Vector3,MonoBehaviour,
+class,PlayerMovement,NetworkBehaviour,,,Interactable; TaskStation,Interactable; KCC; LayerMask; NetworkLinkedList; PlayerData; SimpleKCC; TaskStation; TickTimer,NetworkBehaviour,Interactable; LagCompensatedHit; PlayerObject
+class,PlayerObject,NetworkBehaviour,,,PlayerRef,Color; NetworkString; PlayerMovement; PlayerRef; SphereCollider; VoiceNetworkObject; _16,NetworkBehaviour,
+class,PlayerRegistry,NetworkBehaviour,INetworkRunnerCallbacks,,Action; ArraySegment; ConnectRequest; Fusion; HostMigrationToken; NetAddress; NetConnectFailedReason; NetDisconnectReason; NetworkInput; NetworkObject; NetworkRunner; NetworkRunnerCallbackArgs; PlayerObject; PlayerRef; Predicate; ReliableKey; SessionInfo; ShutdownReason; SimulationMessagePtr; Sockets; System,NetworkDictionary; PlayerObject; PlayerRef,NetworkBehaviour,
+class,PlayerSpawner,SimulationBehaviour,IPlayerJoined; IPlayerLeft,,PlayerRef,NetworkObject,SimulationBehaviour,
+class,PlayerVotingUI,MonoBehaviour,,,MeetingUI; PlayerObject,AudioSource; Button; CanvasGroup; GameObject; Image; MeetingUI; Photon; PlayerObject; Recorder; TMP_Text; Transform; Unity; Voice,MonoBehaviour,
+class,PregameStateBehaviour,StateBehaviour,,,,,StateBehaviour,
+class,RandomIconSelector,MonoBehaviour,,,,Image,MonoBehaviour,Sprite
+class,ReadOnlyAttribute,PropertyAttribute,,,,,PropertyAttribute,
+class,ReadOnlyAttributeDrawer,UnityEditor.PropertyDrawer,,,GUIContent; Rect; SerializedProperty; UnityEditor,,UnityEditor.PropertyDrawer,
+class,RegionUI,MonoBehaviour,,,,,MonoBehaviour,
+class,ResourcesManager,MonoBehaviour,,,NetworkObject,DeadPlayer; Material; PlayerMapIcon; Shader; TaskMapIcon; WorldCanvasNickname,MonoBehaviour,Color; NetworkObject
+static class,RoomCode,,,,,,,
+class,ScalePulse,MonoBehaviour,,,,Image,MonoBehaviour,
+class,ScrollingRawImage,MonoBehaviour,,,,RawImage,MonoBehaviour,
+class,SettingsKiosk,Interactable,,,NetworkObject; PlayerMovement,SettingsUI,Interactable,
+class,SettingsUI,MonoBehaviour,,,Action; IEnumerator; System,GameSettings; TMP_Text; Toggle,MonoBehaviour,
+class,SlidersTask,TaskBase,,,IEnumerator,,TaskBase,Slider
+class,Spin,MonoBehaviour,,,,AnimationCurve; Vector3,MonoBehaviour,
+abstract class,TaskBase,MonoBehaviour,,,,TaskUI,MonoBehaviour,
+class,TaskItemUI,MonoBehaviour,,,TaskBase,TMP_Text; TaskBase,MonoBehaviour,
+class,TaskMapIcon,MonoBehaviour,,,TaskStation,TaskStation; Transform; Vector3,MonoBehaviour,
+class,TaskStation,Interactable,,,NetworkObject; PlayerMovement,NetworkLinkedList; PlayerRef; TaskUI,Interactable,
+class,TaskUI,MonoBehaviour,,,,Sprite; TaskBase,MonoBehaviour,
+class,TemperatureTask,TaskBase,,,IEnumerator,TMP_Text,TaskBase,
+class,UIAudio,MonoBehaviour,IPointerClickHandler; IPointerEnterHandler,,AudioClip; PointerEventData,AudioClip; AudioSource,MonoBehaviour,
+class,UIScreen,MonoBehaviour,,,,CanvasGroup; Selectable; UnityEvent,MonoBehaviour,
+class,UIScreenEditor,Editor,,,,SerializedProperty,Editor,Button
+class,VersionText,MonoBehaviour,,,,TMP_Text,MonoBehaviour,
+class,VoiceManager,MonoBehaviour,,,Recorder; VoiceConnection,MicrophoneDropdownFiller; Recorder; UnityEvent; VoiceConnection,MonoBehaviour,
+class,VotingResultsStateBehaviour,StateBehaviour,,,,StateBehaviour,StateBehaviour,
+class,WinStateBehaviour,StateBehaviour,,,,NetworkBool,StateBehaviour,
+class,WorldCanvasNickname,MonoBehaviour,,,IEnumerator,TMP_Text; Transform; Vector3,MonoBehaviour,

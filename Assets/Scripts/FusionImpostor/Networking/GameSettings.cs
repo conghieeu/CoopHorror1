@@ -7,7 +7,7 @@ namespace FusionImpostor
 	/// Network struct that handles various game settings such as number of impostors, if collision between players should occur, walk speed and more.
 	/// </summary>
 	[System.Serializable]
-	public struct GameSettings : INetworkStruct
+public struct GameSettings : INetworkStruct
 	{
 		public const byte MIN_IMPOSTERS = 0;
 		public const byte MAX_IMPOSTERS = 4;

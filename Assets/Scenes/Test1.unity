@@ -271,6 +271,7 @@ GameObject:
   - component: {fileID: 78164019}
   - component: {fileID: 78164018}
   - component: {fileID: 78164017}
+  - component: {fileID: 78164020}
   m_Layer: 0
   m_Name: left
   m_TagString: Untagged
@@ -364,6 +365,45 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 78164015}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &78164020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 78164015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46cfba1ce9b63a444bc6a9c590a50a3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  TargetToMove: {fileID: 78164016}
+  OffsetPosition: {x: 0, y: 2, z: 0}
+  Duration: 1
+  MotionCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1 &200529272
 GameObject:
   m_ObjectHideFlags: 0
@@ -526,6 +566,7 @@ GameObject:
   - component: {fileID: 290543706}
   - component: {fileID: 290543705}
   - component: {fileID: 290543704}
+  - component: {fileID: 290543707}
   m_Layer: 0
   m_Name: right
   m_TagString: Untagged
@@ -619,6 +660,45 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 290543702}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &290543707
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 290543702}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46cfba1ce9b63a444bc6a9c590a50a3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  TargetToMove: {fileID: 290543703}
+  OffsetPosition: {x: 0, y: 2, z: 0}
+  Duration: 1
+  MotionCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1 &424190671
 GameObject:
   m_ObjectHideFlags: 0
@@ -863,8 +943,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 926772140}
-  - component: {fileID: 926772141}
   - component: {fileID: 926772142}
+  - component: {fileID: 926772143}
   m_Layer: 0
   m_Name: Door
   m_TagString: Untagged
@@ -890,74 +970,6 @@ Transform:
   - {fileID: 988830587}
   m_Father: {fileID: 456397631}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &926772141
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 926772139}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 21d0cfc992108a149866d5037ada527a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  activationArea: {fileID: 988830588}
-  leftDoor: {fileID: 78164016}
-  rightDoor: {fileID: 290543703}
-  openDistance: 2
-  openDuration: 1
-  holdDuration: 1
-  openCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 1
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 1
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  closeCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 1
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 1
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  _IsOpen: 0
-  _TickActivated: 0
 --- !u!114 &926772142
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -975,8 +987,23 @@ MonoBehaviour:
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
-  - {fileID: 926772141}
+  - {fileID: 926772143}
+  - {fileID: 78164020}
+  - {fileID: 290543707}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &926772143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 926772139}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16c3397df23ce0d4ba86027bcde65801, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _IsOn: 0
 --- !u!1 &972896600
 GameObject:
   m_ObjectHideFlags: 0
