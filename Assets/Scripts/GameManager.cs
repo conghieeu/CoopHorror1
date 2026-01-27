@@ -29,4 +29,21 @@ public class GameManager : MonoBehaviour
         // code để tắt mạng với netcode
         NetworkManager.Singleton.Shutdown();
     }
+
+    // log ra thông tin người chơi - đây là người chơi số mấy - id là gì
+    [Command("logplayerinfo")]
+    public void LogPlayerInfo()
+    {
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        {
+            Debug.Log($"Player ID: {client.ClientId}, Is Host: {client.ClientId == NetworkManager.Singleton.LocalClientId}");
+        }
+    }
+
+    // log ra thông tin id của người chơi hiện tại
+    [Command("logmyid")]
+    public void LogMyId()
+    {
+        Debug.Log($"My Client ID: {NetworkManager.Singleton.LocalClientId}");
+    }
 }
