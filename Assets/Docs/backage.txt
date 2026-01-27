@@ -1,1 +1,17 @@
-https://github.com/VeriorPies/ParrelSync/releases
+https://github.com/VeriorPies/ParrelSync/releases (tạo dự án phụ giúp test multiplayer)
+
+https://github.com/Luca3317/TMPEffects.git?path=/Package (text animator)
+https://youtu.be/oBkplJ8N_NY?si=i7PVN5PoEiKMbZiM (tutorial)
+
+
+Addressables
+KatLib
+Easy Save 3
+Fusion 2
+Better Hierarchay
+TextMesh Pro
+Dotween
+behavior designer 
+vFolders 2
+https://github.com/hadashiA/VContainer.git?path=VContainer/Assets/VContainer
+https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask

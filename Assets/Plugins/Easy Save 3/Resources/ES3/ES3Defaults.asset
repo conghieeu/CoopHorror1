@@ -42,6 +42,7 @@ MonoBehaviour:
     - Fusion.Addons.FSM
     - Fusion.Menu
     - Fusion.Unity
+    - NewAssembly
     - PhotonChat
     - PhotonRealtime
     - PhotonVoice

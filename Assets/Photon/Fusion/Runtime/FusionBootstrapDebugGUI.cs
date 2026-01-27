@@ -2,11 +2,12 @@ namespace Fusion {
   using System;
   using UnityEngine;
   using System.Collections.Generic;
+    using UnityEditor;
 
-  /// <summary>
-  /// Companion component for <see cref="FusionBootstrap"/>. Automatically added as needed for rendering in-game networking IMGUI.
-  /// </summary>
-  [RequireComponent(typeof(FusionBootstrap))]
+    /// <summary>
+    /// Companion component for <see cref="FusionBootstrap"/>. Automatically added as needed for rendering in-game networking IMGUI.
+    /// </summary>
+    [RequireComponent(typeof(FusionBootstrap))]
   [AddComponentMenu("Fusion/Fusion Boostrap Debug GUI")]
   [ScriptHelp(BackColor = ScriptHeaderBackColor.Steel)]
   public class FusionBootstrapDebugGUI : Fusion.Behaviour {

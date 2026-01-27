@@ -12,13 +12,14 @@ namespace Fusion {
 
 #if UNITY_EDITOR
   using UnityEditor;
+    using QFSW.QC;
 #endif
 
-  /// <summary>
-  /// A Fusion prototyping class for starting up basic networking. Add this component to your startup scene, and supply a <see cref="RunnerPrefab"/>.
-  /// Can be set to automatically startup the network, display an in-game menu, or allow simplified start calls like <see cref="StartHost()"/>.
-  /// </summary>
-  [DisallowMultipleComponent]
+    /// <summary>
+    /// A Fusion prototyping class for starting up basic networking. Add this component to your startup scene, and supply a <see cref="RunnerPrefab"/>.
+    /// Can be set to automatically startup the network, display an in-game menu, or allow simplified start calls like <see cref="StartHost()"/>.
+    /// </summary>
+    [DisallowMultipleComponent]
   [AddComponentMenu("Fusion/Fusion Bootstrap")]
   [ScriptHelp(BackColor = ScriptHeaderBackColor.Steel)]
   public class FusionBootstrap : Fusion.Behaviour {
@@ -305,6 +306,7 @@ namespace Fusion {
     /// </summary>
     [EditorButton(EditorButtonVisibility.PlayMode)]
     [DrawIf(nameof(IsShutdown), Hide = true)]
+    [Command("StartServer", "Starts a Fusion Server instance")]
     public virtual void StartServer() {
       if (TryGetSceneRef(out var sceneRef)) {
         StartCoroutine(StartWithClients(GameMode.Server, sceneRef, 0));
@@ -316,6 +318,7 @@ namespace Fusion {
     /// </summary>
     [EditorButton(EditorButtonVisibility.PlayMode)]
     [DrawIf(nameof(IsShutdown), Hide = true)]
+    [Command("StartHost", "Starts a Fusion Host instance (server with local player)")]
     public virtual void StartHost() {
       if (TryGetSceneRef(out var sceneRef)) {
         StartCoroutine(StartWithClients(GameMode.Host, sceneRef, 0));
@@ -327,6 +330,7 @@ namespace Fusion {
     /// </summary>
     [EditorButton(EditorButtonVisibility.PlayMode)]
     [DrawIf(nameof(IsShutdown), Hide = true)]
+    [Command("StartClient", "Starts a Fusion Client instance")]
     public virtual void StartClient() {
       StartCoroutine(StartWithClients(GameMode.Client, default, 1));
     }
@@ -369,6 +373,7 @@ namespace Fusion {
 
     [EditorButton(EditorButtonVisibility.PlayMode)]
     [DrawIf(nameof(CurrentStage), Hide = true)]
+    [Command("ShutdownNetwork", "Shuts down all running NetworkRunners and returns to initial scene")]
     public void Shutdown() {
       ShutdownAll();
     }

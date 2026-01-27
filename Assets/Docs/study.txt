@@ -1,0 +1,88 @@
+game của tôi thật non nớt hãy giúp tôi
+200 bản anh / credit
+quảng cáo tự nghiện
+chiều sâu của gameplay là vua
+người ta đến vì đồ họa, tò mò, khác biệt và ở lại vì lối chơi
+Chúng ta không làm game để bán, mà bán game để kiếm tiền
+
+để 1 game kiếm được viral và kiếm được tiền
+	- nó phải quản bá được thì phải có content quảng bá
+		- vui, fun => content
+			- coop 
+				- phối hợp để đặt được mục đích gì đó, Game phải phối hợp hỗn loạn cuồng nộ
+			- silly physics (vật lý kỳ quặc) => tạo sự vô tri, sự ngáo ngơ dumby => dễ thương và hài
+				- active ragdoll
+				- ném vật
+	- để kiếm được tiền, phải có tính giữ chân đễ giữ kiếm được tiền không bị refund
+		- game phải đủ content, content không làm qua lơ phải có sự sáng tạo và chất lượng
+		- game ít lỗi và không để bị lỗi chí mạng
+			- các lỗi chí mạng	
+				- điều khiển không được
+				- nhân vật bị kẹt trong vật lý
+				- không kết nối được với người chơi khác
+		- tính gây nghiện (yếu tố gây nghiện) đặc biệt là game offline
+			- khả năng thăng cấp
+			- khả năng chơi chơi được sáng tạo có thể chơi theo lối chơi của mình
+
+"Easy Mode" (Cách tiếp cận dễ dàng hơn) bao gồm:
+
+Chọn đúng thể loại: Đừng làm thể loại khó bán như Puzzle Platformer. Hãy chọn những thể loại mà người dùng Steam yêu thích như Kinh dị (Horror), Idle/Incremental, hoặc Auto Battler [35:45].
+
+Làm game nhỏ trước: Thay vì dồn 5 năm cho "game trong mơ" (như RPG), hãy làm các game nhỏ để tích lũy mã nguồn và tệp khách hàng [27:31].
+
+Đầu tư hình ảnh chuyên nghiệp: Đừng tự làm ảnh đại diện (thumbnail) nếu không chuyên; hãy thuê họa sĩ chuyên nghiệp để thu hút các streamer [06:44].
+
+Phát hành thẳng bản 1.0: Bỏ qua Early Access để tập trung vào một cú hích marketing duy nhất và hiệu quả [46:38].
+
+Dựa trên nội dung video, dưới đây là các bài học và câu nói triết lý được tác giả đúc kết:
+Dựa trên nội dung video, dưới đây là các bài học và câu nói triết lý được tác giả đúc kết:
+
+### Các bài học về làm game
+
+1. **Đừng ám ảnh về "Hook" cơ chế:** Việc cố tạo ra một cơ chế độc lạ (ví dụ: game đi cảnh *nhưng* trọng lực đảo chiều) không quan trọng bằng việc tạo ra một trải nghiệm tổng thể hấp dẫn.
+2. **Người chơi mua "Fantasy", không mua "Mechanic":** Khách hàng không quan tâm bạn lập trình cơ chế click chuột thế nào, họ quan tâm cảm giác được làm trùm tội phạm hay được bay lượn.
+3. **Tập trung vào Appeal (Sự hấp dẫn) và Scope (Phạm vi) trước:** Thay vì lo về kiếm tiền (Monetization) hay độ vui (Fun) ngay từ đầu, hãy giải quyết bài toán khó nhất: Làm sao để game trông hấp dẫn ngay từ cái nhìn đầu tiên và làm sao để sản xuất nó hiệu quả.
+4. **Quy trình sai lầm:** Rất nhiều nhà phát triển nghĩ: "Tôi muốn làm game thể loại X, *nhưng* tôi phải làm nó khác đi". Tư duy điền vào chỗ trống sau chữ "nhưng" là sai lầm.
+5. **7 Chiến lược thay thế cho Hook cơ chế:**
+* Dùng Hook như một phần thưởng thêm, không phải món chính (ví dụ: Portal).
+* Cải tiến các công thức đã thành công (Iterate on proven formulas).
+* Tìm khoảng trống thị trường (Find a gap).
+* Bắt đầu từ một giấc mơ/trải nghiệm (Start with a fantasy).
+* Chuyển thể cảm giác từ các phương tiện truyền thông khác (Translate other media).
+* Thiết kế sự hấp dẫn trước khi làm game (Design appeal first - ví dụ làm trailer trước).
+* Dùng lợi thế công nghệ (Tech advantage).
+
+
+
+### Các câu nói mang tính triết lý
+
+* **"Người chơi không phải là cá, họ là những con người đang tìm kiếm những trải nghiệm thú vị."** ("Players aren't fish, they are people looking for cool experiences").
+* **"Sự hấp dẫn là một ham muốn chưa được thỏa mãn."** ("Appeal is an unsatisfied urge... I want to be that, I want to explore that").
+* **"Vấn đề sai lầm cần tập trung là những gì nằm sau chữ 'Nhưng'."** ("The wrong problem to focus on is... what goes after the 'but'").
+* **"Bạn không cần một cái móc câu (hook), bạn cần một trải nghiệm."**.Dựa trên nội dung video, dưới đây là các bài học và câu nói triết lý được tác giả đúc kết:
+
+### Các bài học về làm game
+
+1. **Đừng ám ảnh về "Hook" cơ chế:** Việc cố tạo ra một cơ chế độc lạ (ví dụ: game đi cảnh *nhưng* trọng lực đảo chiều) không quan trọng bằng việc tạo ra một trải nghiệm tổng thể hấp dẫn.
+2. **Người chơi mua "Fantasy", không mua "Mechanic":** Khách hàng không quan tâm bạn lập trình cơ chế click chuột thế nào, họ quan tâm cảm giác được làm trùm tội phạm hay được bay lượn.
+3. **Tập trung vào Appeal (Sự hấp dẫn) và Scope (Phạm vi) trước:** Thay vì lo về kiếm tiền (Monetization) hay độ vui (Fun) ngay từ đầu, hãy giải quyết bài toán khó nhất: Làm sao để game trông hấp dẫn ngay từ cái nhìn đầu tiên và làm sao để sản xuất nó hiệu quả.
+4. **Quy trình sai lầm:** Rất nhiều nhà phát triển nghĩ: "Tôi muốn làm game thể loại X, *nhưng* tôi phải làm nó khác đi". Tư duy điền vào chỗ trống sau chữ "nhưng" là sai lầm.
+5. **7 Chiến lược thay thế cho Hook cơ chế:**
+* Dùng Hook như một phần thưởng thêm, không phải món chính (ví dụ: Portal).
+* Cải tiến các công thức đã thành công (Iterate on proven formulas).
+* Tìm khoảng trống thị trường (Find a gap).
+* Bắt đầu từ một giấc mơ/trải nghiệm (Start with a fantasy).
+* Chuyển thể cảm giác từ các phương tiện truyền thông khác (Translate other media).
+* Thiết kế sự hấp dẫn trước khi làm game (Design appeal first - ví dụ làm trailer trước).
+* Dùng lợi thế công nghệ (Tech advantage).
+
+
+
+### Các câu nói mang tính triết lý
+
+* **"Người chơi không phải là cá, họ là những con người đang tìm kiếm những trải nghiệm thú vị."** ("Players aren't fish, they are people looking for cool experiences").
+* **"Sự hấp dẫn là một ham muốn chưa được thỏa mãn."** ("Appeal is an unsatisfied urge... I want to be that, I want to explore that").
+* **"Vấn đề sai lầm cần tập trung là những gì nằm sau chữ 'Nhưng'."** ("The wrong problem to focus on is... what goes after the 'but'").
+* **"Bạn không cần một cái móc câu (hook), bạn cần một trải nghiệm."**.
+
+Đa số lập trình viên thường bắt đầu với "Fun" hoặc "Monetization". Tuy nhiên, tác giả khuyên bạn nên giải quyết hai bài toán Appeal (Làm sao để người ta muốn chơi?) và Scope (Làm sao làm cho nhanh?) trước tiên, vì đây là hai phần khó nhất và dễ gây thất bại nhất cho các dự án indie.

@@ -1,4 +1,5 @@
 using Fusion;
+using QFSW.QC;
 using UnityEngine;
 
 // Script này chỉ lo Logic: Mở hay Đóng
@@ -15,7 +16,8 @@ public class NetworkToggleState : NetworkBehaviour, IToggleState
     }
 
     // Hàm gọi từ UI hoặc Raycast
-    [ContextMenu("Toggle State")]
+    [ContextMenu("Toggle Door")]
+    [Command("ToggleDoor", "Toggles the state of the object")]
     public void Toggle()
     {
         RPC_SetState(!IsOn);
