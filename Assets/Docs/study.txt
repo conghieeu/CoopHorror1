@@ -1,3 +1,9 @@
+entity relation graph
+UML diagram class
+
+
+luồng sự kiện cơ chế
+
 game của tôi thật non nớt hãy giúp tôi
 200 bản anh / credit
 quảng cáo tự nghiện

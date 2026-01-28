@@ -7,7 +7,7 @@ using QFSW.QC;
 public class GameManager : MonoBehaviour
 {
     // hàm start host với netcode
-    [Command("starthost")]
+    [Command("/start-host")]
     public void StartHost()
     {
         // code để khởi động host với netcode
@@ -15,7 +15,7 @@ public class GameManager : MonoBehaviour
     }
 
     // hàm start client với netcode
-    [Command("startclient")]
+    [Command("/start-client")]
     public void StartClient()
     {
         // code để khởi động client với netcode
@@ -23,7 +23,7 @@ public class GameManager : MonoBehaviour
     }
 
     // hàm shutdown với netcode
-    [Command("shutdown")]
+    [Command("/shutdown")]
     public void Shutdown()
     {
         // code để tắt mạng với netcode
@@ -31,7 +31,7 @@ public class GameManager : MonoBehaviour
     }
 
     // log ra thông tin người chơi - đây là người chơi số mấy - id là gì
-    [Command("logplayerinfo")]
+    [Command("/log-player-info")]
     public void LogPlayerInfo()
     {
         foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
@@ -41,7 +41,7 @@ public class GameManager : MonoBehaviour
     }
 
     // log ra thông tin id của người chơi hiện tại
-    [Command("logmyid")]
+    [Command("/log-my-id")]
     public void LogMyId()
     {
         Debug.Log($"My Client ID: {NetworkManager.Singleton.LocalClientId}");

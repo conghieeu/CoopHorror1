@@ -35,7 +35,6 @@ MonoBehaviour:
     referenceMode: 2
     serializationDepthLimit: 64
     assemblyNames:
-    - Assembly-CSharp
     - Assembly-CSharp-firstpass
     - BetterHierarchyDemoScripts
     - Cinemachine
@@ -50,6 +49,7 @@ MonoBehaviour:
     - QFSW.QC.UI
     - SingularityGroup.HotReload.Runtime
     - SingularityGroup.HotReload.Runtime.Public
+    - Test
     showAdvancedSettings: 0
   addMgrToSceneAutomatically: 0
   autoUpdateReferences: 1

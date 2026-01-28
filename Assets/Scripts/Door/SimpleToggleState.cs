@@ -13,7 +13,7 @@ public class SimpleToggleState : NetworkBehaviour, IToggleState
     public bool IsActive => _isActive.Value;
 
     // Hàm gọi để đổi trạng thái (Chỉ gọi từ Server)
-    [Command("ToggleState")]
+    [Command("/toggle-door")]
     public void Toggle()
     {
         if (IsServer)
