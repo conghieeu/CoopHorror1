@@ -1,16 +1,10 @@
 using Unity.Netcode;
 using UnityEngine;
 
-// Interface này giữ nguyên (hoặc tự định nghĩa nếu chưa có)
-public interface IToggleState 
-{ 
-    bool IsActive { get; } 
-}
-
 public class ToggleRotator : NetworkBehaviour 
 {
     [Header("Dependencies")]
-    private IToggleState _stateSource; 
+    [SerializeField] private SimpleToggleState _stateSource; 
 
     [Header("Settings")]
     public Transform TargetToRotate; 
@@ -23,12 +17,10 @@ public class ToggleRotator : NetworkBehaviour
 
     // Thay thế Spawned()
     public override void OnNetworkSpawn()
-    {
-        _stateSource = GetComponentInParent<IToggleState>();
-        
+    {   
         if (_stateSource == null)
         {
-            Debug.LogError("Thiếu script quản lý trạng thái (IToggleState)!");
+            Debug.LogError("Thiếu script quản lý trạng thái (SimpleToggleState)!");
             return;
         }
 

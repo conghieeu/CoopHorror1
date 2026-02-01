@@ -2,7 +2,7 @@ using QFSW.QC;
 using Unity.Netcode;
 using UnityEngine;
 
-public class SimpleToggleState : NetworkBehaviour, IToggleState, IInteractable
+public class SimpleToggleState : NetworkBehaviour, IInteractable
 {
     // Biến mạng đồng bộ bool
     private readonly NetworkVariable<bool> _isActive = new NetworkVariable<bool>(false,

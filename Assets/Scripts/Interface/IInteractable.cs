@@ -1,5 +1,17 @@
+using UnityEngine;
+
 public interface IInteractable
 {
-    string GetInteractText(); // Trả về chữ hiện lên màn hình (ví dụ: "Mở cửa")
-    void Interact();           // Hàm thực hiện hành động
+    // Chữ hiện lên màn hình (VD: "Mở cửa", "Sửa máy")
+    string GetInteractText();
+
+    // Hành động khi tương tác thành công
+    void Interact();
+
+    // --- Phần mở rộng cho tính năng HOLD (Giữ phím) ---
+    // Vật này có cần giữ phím không? (Mặc định là false)
+    bool IsHoldable() => false; 
+
+    // Cần giữ trong bao lâu? (Mặc định 0 giây)
+    float GetHoldDuration() => 0f;
 }
