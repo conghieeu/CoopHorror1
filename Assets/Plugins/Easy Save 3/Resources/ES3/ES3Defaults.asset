@@ -35,9 +35,11 @@ MonoBehaviour:
     referenceMode: 2
     serializationDepthLimit: 64
     assemblyNames:
+    - Assembly-CSharp
     - Assembly-CSharp-firstpass
     - BetterHierarchyDemoScripts
     - Cinemachine
+    - Discord.Sdk
     - QFSW.QC
     - QFSW.QC.Demo
     - QFSW.QC.Extras

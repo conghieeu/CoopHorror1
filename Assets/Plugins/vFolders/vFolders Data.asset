@@ -29,13 +29,13 @@ MonoBehaviour:
       iconNameOrGuid: TextAsset Icon
     - colorIndex: 0
       iconNameOrGuid: Settings Icon
-    - colorIndex: 1
+    - colorIndex: 4
       iconNameOrGuid: cs Script Icon
     - colorIndex: 7
       iconNameOrGuid: SceneAsset Icon
-    - colorIndex: 4
+    - colorIndex: 9
       iconNameOrGuid: Material Icon
-    - colorIndex: 10
+    - colorIndex: 8
       iconNameOrGuid: AnimationClip Icon
     - colorIndex: 0
       iconNameOrGuid: PrefabModel Icon
@@ -43,5 +43,5 @@ MonoBehaviour:
       iconNameOrGuid: Texture Icon
     - colorIndex: 0
       iconNameOrGuid: Font Icon
-    - colorIndex: 3
+    - colorIndex: 5
       iconNameOrGuid: Prefab Icon
