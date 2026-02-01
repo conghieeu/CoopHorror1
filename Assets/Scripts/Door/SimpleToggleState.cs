@@ -2,7 +2,7 @@ using QFSW.QC;
 using Unity.Netcode;
 using UnityEngine;
 
-public class SimpleToggleState : NetworkBehaviour, IToggleState
+public class SimpleToggleState : NetworkBehaviour, IToggleState, IInteractable
 {
     // Biến mạng đồng bộ bool
     private readonly NetworkVariable<bool> _isActive = new NetworkVariable<bool>(false,
@@ -11,6 +11,17 @@ public class SimpleToggleState : NetworkBehaviour, IToggleState
 
     // Triển khai interface để ToggleRotator đọc được
     public bool IsActive => _isActive.Value;
+
+    public string GetInteractText()
+    {
+        return IsActive ? "Đóng cửa" : "Mở cửa";
+    }
+
+    public void Interact()
+    {
+        Debug.Log("<color=green>Thực hiện: </color>" + (IsActive ? "Đóng cửa" : "Mở cửa"));
+        Toggle();
+    }
 
     // Hàm gọi để đổi trạng thái (Chỉ gọi từ Server)
     [Command("/toggle-door")]

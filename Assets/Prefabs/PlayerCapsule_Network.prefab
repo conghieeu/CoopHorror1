@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4135013735270702856}
+  - component: {fileID: 2524094989424644862}
   m_Layer: 6
   m_Name: PlayerCameraRoot
   m_TagString: CinemachineTarget
@@ -31,6 +32,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8997996947095583982}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2524094989424644862
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4135013735270702863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e51211e180a194a4280876357077477d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _interactionDistance: 3
+  _interactableLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _playerCamera: {fileID: 5599476720525974068}
+  _input: {fileID: 1937087812424884925}
 --- !u!1 &5393215578589016642
 GameObject:
   m_ObjectHideFlags: 0
