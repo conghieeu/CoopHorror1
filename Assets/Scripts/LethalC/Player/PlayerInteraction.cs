@@ -7,6 +7,7 @@ public class PlayerInteraction : NetworkBehaviour
     [Header("Settings")]
     [SerializeField] private float _interactionDistance = 5f;
     [SerializeField] private LayerMask _interactableLayer;
+    [SerializeField] private PlayerInventory inventory; // Kéo script Inventory vào đây
 
     [Header("References")]
     [SerializeField] private Camera _playerCamera;
@@ -105,6 +106,11 @@ public class PlayerInteraction : NetworkBehaviour
             if (Input.GetKeyDown(KeyCode.E))
             {
                 _currentInteractable.Interact();
+
+                if (_currentInteractable is GrabbableObject)
+                {
+                    inventory.GrabObject(_currentInteractable as GrabbableObject);
+                }
             }
         }
     }

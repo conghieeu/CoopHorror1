@@ -17,19 +17,17 @@ public class SimpleToggleState : NetworkBehaviour, IInteractable
         return IsActive ? "Đóng cửa" : "Mở cửa";
     }
 
+    [Command("/toggle-door")]
     public void Interact()
     {
         Debug.Log("<color=green>Thực hiện: </color>" + (IsActive ? "Đóng cửa" : "Mở cửa"));
-        Toggle();
+        ToggleServerRpc();
     }
 
     // Hàm gọi để đổi trạng thái (Chỉ gọi từ Server)
-    [Command("/toggle-door")]
-    public void Toggle()
+    [ServerRpc(RequireOwnership = false)]
+    public void ToggleServerRpc()
     {
-        if (IsServer)
-        {
-            _isActive.Value = !_isActive.Value;
-        }
+        _isActive.Value = !_isActive.Value;
     }
 }

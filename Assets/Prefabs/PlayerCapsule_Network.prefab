@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &960253380583790685
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1538947899942178661}
+  m_Layer: 6
+  m_Name: handAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1538947899942178661
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 960253380583790685}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.622, y: -0.191, z: 0.939}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4135013735270702856}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4135013735270702863
 GameObject:
   m_ObjectHideFlags: 0
@@ -30,6 +61,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1538947899942178661}
   - {fileID: 2372490590459941971}
   m_Father: {fileID: 8997996947095583982}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -45,10 +77,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e51211e180a194a4280876357077477d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _interactionDistance: 3
+  _interactionDistance: 5
   _interactableLayer:
     serializedVersion: 2
     m_Bits: 4
+  inventory: {fileID: 4715732454584420311}
   _playerCamera: {fileID: 5599476720525974068}
 --- !u!1 &5393215578589016642
 GameObject:
@@ -159,8 +192,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7179255013444290543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.000000022351736, y: 0, z: 0.3749999}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.3749999}
   m_LocalScale: {x: 0.25, y: 0.249975, z: 0.75}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -391,9 +424,11 @@ GameObject:
   - component: {fileID: 8616685848737228376}
   - component: {fileID: 2028302801455026314}
   - component: {fileID: 2970755161160155219}
-  - component: {fileID: 8757814110019958644}
   - component: {fileID: 1937087812424884925}
   - component: {fileID: 427141832758122879}
+  - component: {fileID: 8102144788602729548}
+  - component: {fileID: 4715732454584420311}
+  - component: {fileID: 1252535757598317606}
   m_Layer: 6
   m_Name: PlayerCapsule_Network
   m_TagString: Player
@@ -656,18 +691,6 @@ MonoBehaviour:
   onRemotePlayerSpawned:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 5599476720525974070}
-        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
-        m_MethodName: SetActive
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
       - m_Target: {fileID: 8397111817434169503}
         m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
         m_MethodName: SetActive
@@ -680,25 +703,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &8757814110019958644
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8616685848737228372}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 710982cf2f79279498704155cdde3ffb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _input: {fileID: 1937087812424884925}
-  _cameraHolder: {fileID: 4135013735270702856}
-  _mainCamera: {fileID: 5599476720525974068}
-  sensitivity: 0.2
-  smoothSpeed: 20
-  topClamp: 85
-  bottomClamp: -85
+      - m_Target: {fileID: 5599476720525974070}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1937087812424884925
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -737,6 +753,59 @@ MonoBehaviour:
   speedChangeRate: 12.5
   gravity: -15
   jumpHeight: 1.2
+--- !u!114 &8102144788602729548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8616685848737228372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 710982cf2f79279498704155cdde3ffb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _input: {fileID: 1937087812424884925}
+  _cameraHolder: {fileID: 4135013735270702856}
+  _mainCamera: {fileID: 5599476720525974068}
+  sensitivity: 0.2
+  smoothSpeed: 20
+  topClamp: 85
+  bottomClamp: -85
+  _networkSendThreshold: 2
+--- !u!114 &4715732454584420311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8616685848737228372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7df722254573df54490da7b2dac8a68b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  localHandsVisuals: {fileID: 0}
+  serverHandBone: {fileID: 0}
+  dropPosition: {fileID: 0}
+  maxSlots: 4
+  throwForce: 15
+--- !u!114 &1252535757598317606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8616685848737228372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f5f9b62801041346be8adc036f37b84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  handAnchor: {fileID: 1538947899942178661}
+  swayAmount: 0.02
+  maxSway: 0.06
+  smoothSway: 5
 --- !u!1001 &3552687075865978321
 PrefabInstance:
   m_ObjectHideFlags: 0
