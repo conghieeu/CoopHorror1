@@ -59,43 +59,83 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
 
     // --- PHẦN 2: LOGIC CẦM / THẢ (GỌI TỪ INVENTORY) ---
 
+    // Server là source of truth cho physics/collider; client chỉ apply visual/sync state.
+    public void SetInventoryStateServer(bool inInventory)
+    {
+        if (!IsServer) return;
+
+        ApplyInventoryVisualState(inInventory);
+
+        if (inInventory)
+        {
+            ApplyInventoryPhysicsHeldServer();
+        }
+        else
+        {
+            ApplyInventoryPhysicsDroppedServer();
+        }
+    }
+
+    public void ApplyInventoryVisualState(bool inInventory)
+    {
+        isHeld = inInventory;
+
+        // Important: clients also need to adjust NetworkTransform behavior to avoid fighting hand-follow visuals.
+        if (_netTransform != null)
+        {
+            _netTransform.InLocalSpace = inInventory;
+        }
+
+        if (!inInventory)
+        {
+            // Visual reset when leaving inventory/hand
+            transform.SetParent(null);
+            transform.localScale = Vector3.one;
+            gameObject.SetActive(true);
+        }
+    }
+
     // Được gọi khi Player nhặt thành công (Inventory gọi)
     public void OnGrabbed()
     {
-        isHeld = true;
+        ApplyInventoryVisualState(true);
 
-        // 1. Tắt Vật Lý (Để không rơi khỏi tay)
-        if (_rb)
+        // Server applies physics/collider state. Clients should avoid side effects.
+        if (IsServer)
         {
-            _rb.isKinematic = true;
-            _rb.useGravity = false;
-            _rb.detectCollisions = false; // Tắt va chạm vật lý hoàn toàn
-        }
-
-        // 2. Tắt Collider (Để không đẩy Player khi đi)
-        foreach (var col in _colliders) col.enabled = false;
-
-        // 3. QUAN TRỌNG: Ngắt đồng bộ vị trí khi đang cầm
-        // Nếu không tắt, Server sẽ cố kéo vật thể về vị trí server tính toán,
-        // gây xung đột với việc "gắn vào tay" ở máy Client -> Rung lắc dữ dội.
-        if (_netTransform != null)
-        {
-            _netTransform.InLocalSpace = true; // Chuyển sang tính toán cục bộ (hoặc disable)
+            ApplyInventoryPhysicsHeldServer();
         }
     }
 
     // Được gọi khi Player vứt đồ (Inventory gọi)
     public void OnDropped()
     {
-        isHeld = false;
+        ApplyInventoryVisualState(false);
 
-        // 1. Tách khỏi tay (Unparent)
-        transform.SetParent(null);
+        // Server applies physics/collider state. Clients should avoid side effects.
+        if (IsServer)
+        {
+            ApplyInventoryPhysicsDroppedServer();
+        }
+    }
 
-        // 2. Reset Scale (Đề phòng lúc cầm bị méo, lúc vứt ra phải về 1)
-        transform.localScale = Vector3.one;
+    private void ApplyInventoryPhysicsHeldServer()
+    {
+        // 1. Tắt Vật Lý (Để không rơi khỏi tay)
+        if (_rb)
+        {
+            _rb.isKinematic = true;
+            _rb.useGravity = false;
+            _rb.detectCollisions = false;
+        }
 
-        // 3. Bật lại Vật Lý
+        // 2. Tắt Collider (Để không đẩy Player khi đi)
+        foreach (var col in _colliders) col.enabled = false;
+    }
+
+    private void ApplyInventoryPhysicsDroppedServer()
+    {
+        // 1. Bật lại Vật Lý
         if (_rb)
         {
             _rb.isKinematic = false;
@@ -103,23 +143,14 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
             _rb.detectCollisions = true;
         }
 
-        // 4. Bật lại Collider
+        // 2. Bật lại Collider
         foreach (var col in _colliders) col.enabled = true;
 
-        // 5. Bật lại đồng bộ vị trí (Để Server đồng bộ vị trí rơi cho mọi người thấy)
+        // 3. Teleport ngay lập tức để tránh lerp từ tay xuống đất
         if (_netTransform != null)
         {
-            _netTransform.InLocalSpace = false; // Trả về đồng bộ toàn cầu
-
-            // Nếu là Server thì phải Teleport ngay lập tức để tránh lerp từ tay xuống đất
-            if (IsServer)
-            {
-                _netTransform.Teleport(transform.position, transform.rotation, transform.localScale);
-            }
+            _netTransform.Teleport(transform.position, transform.rotation, transform.localScale);
         }
-
-        // Đảm bảo object hiện hình (nếu trước đó bị ẩn trong túi)
-        gameObject.SetActive(true);
     }
 
     // --- PHẦN 3: LOGIC DÙNG ĐỒ (VIRTUAL METHODS) ---

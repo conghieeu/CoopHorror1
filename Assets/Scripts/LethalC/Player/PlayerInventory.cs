@@ -14,11 +14,31 @@ public class PlayerInventory : NetworkBehaviour
     public int maxSlots = 4;
     public float throwForce = 15f; 
 
-    // Mảng lưu trữ các món đồ (Server và Owner cần biết)
+    // Client cache (nguồn sự thật nằm ở server qua NetworkList).
     private GrabbableObject[] _inventorySlots;
+
+    // Server authoritative inventory state (fixed-size = maxSlots).
+    private readonly NetworkList<NetworkObjectReference> _inventoryRefs = new NetworkList<NetworkObjectReference>(
+        null,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
     
     // Biến mạng đồng bộ Slot đang chọn (0, 1, 2, 3)
     private NetworkVariable<int> _currentSlotIndex = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    // Input/use event state (owner-only)
+    private bool _useHeld;
+    private int _useHeldSlotIndex = -1;
+
+    // Cache rebuild (client-side)
+    private bool _pendingInventoryRebuild;
+    private int _pendingInventoryRebuildFrame;
+    private int _unresolvedRebuildRetryBudget;
+
+    // 3rd person pose optimization
+    private bool _handPoseInitialized;
+    private Vector3 _lastHandPos;
+    private Quaternion _lastHandRot;
 
     private void Awake()
     {
@@ -30,7 +50,16 @@ public class PlayerInventory : NetworkBehaviour
         // Khi biến Slot thay đổi -> Cập nhật hiển thị (Tắt đồ cũ, bật đồ mới)
         _currentSlotIndex.OnValueChanged += OnSlotChanged;
 
+        // Khi inventory state thay đổi -> client rebuild cache + refresh visuals
+        _inventoryRefs.OnListChanged += OnInventoryRefsListChanged;
+
+        if (IsServer)
+        {
+            EnsureInventoryRefsInitializedServer();
+        }
+
         EnsureInventorySlotsInitialized();
+        RequestInventoryRebuild();
 
         // Owner cần tham chiếu FirstPersonHands để hiển thị đồ ở tay 1st person.
         // Nếu prefab không kéo sẵn trong Inspector, thử tự tìm để tránh NullReferenceException.
@@ -44,8 +73,18 @@ public class PlayerInventory : NetworkBehaviour
         }
     }
 
+    public override void OnNetworkDespawn()
+    {
+        _currentSlotIndex.OnValueChanged -= OnSlotChanged;
+        _inventoryRefs.OnListChanged -= OnInventoryRefsListChanged;
+        base.OnNetworkDespawn();
+    }
+
     private void Update()
     {
+        // Inventory cache rebuild should run on all clients (owner + non-owner)
+        ProcessPendingInventoryRebuild();
+
         // Chỉ chủ sở hữu mới được điều khiển
         if (!IsOwner) return;
 
@@ -57,13 +96,26 @@ public class PlayerInventory : NetworkBehaviour
         {
             if (_inventorySlots[_currentSlotIndex.Value] != null)
             {
+                if (_useHeld && _useHeldSlotIndex == _currentSlotIndex.Value)
+                {
+                    UseItemServerRpc(false, _useHeldSlotIndex);
+                    _useHeld = false;
+                    _useHeldSlotIndex = -1;
+                }
+
                 DropItemServerRpc(_currentSlotIndex.Value);
             }
         }
 
-        // 3. Chuột Trái: Dùng đồ (Bật đèn, đánh xẻng)
-        if (Input.GetMouseButtonDown(0)) UseItemServerRpc(true);
-        if (Input.GetMouseButtonUp(0)) UseItemServerRpc(false);
+        // 3. Chuột Trái: Dùng đồ (gửi event, chỉ khi state đổi để tránh spam RPC)
+        bool isMouseDown = Input.GetMouseButton(0);
+        if (isMouseDown != _useHeld)
+        {
+            _useHeld = isMouseDown;
+            int slotIndex = Mathf.Clamp(_currentSlotIndex.Value, 0, maxSlots - 1);
+            _useHeldSlotIndex = _useHeld ? slotIndex : -1;
+            UseItemServerRpc(_useHeld, slotIndex);
+        }
     }
 
     private void LateUpdate()
@@ -79,11 +131,27 @@ public class PlayerInventory : NetworkBehaviour
         // Owner: FirstPersonHands sẽ tự xử lý pose (LateUpdate) khi EquipItem.
         if (IsOwner) return;
 
-        if (serverHandBone != null)
+        if (serverHandBone == null) return;
+
+        // Optimization: if the animator/bone is culled and doesn't move, skip transform writes.
+        Vector3 handPos = serverHandBone.position;
+        Quaternion handRot = serverHandBone.rotation;
+        if (_handPoseInitialized)
         {
-            item.transform.localScale = Vector3.one;
-            item.transform.SetPositionAndRotation(serverHandBone.position, serverHandBone.rotation);
+            const float posEpsilonSqr = 0.000001f;
+            const float rotEpsilonDeg = 0.1f;
+            if ((handPos - _lastHandPos).sqrMagnitude <= posEpsilonSqr && Quaternion.Angle(handRot, _lastHandRot) <= rotEpsilonDeg)
+            {
+                return;
+            }
         }
+
+        _handPoseInitialized = true;
+        _lastHandPos = handPos;
+        _lastHandRot = handRot;
+
+        item.transform.localScale = Vector3.one;
+        item.transform.SetPositionAndRotation(handPos, handRot);
     }
 
     // --- LOGIC GỌI TỪ RAYCAST (INTERACTION) ---
@@ -152,6 +220,7 @@ public class PlayerInventory : NetworkBehaviour
     private void GrabObjectServerRpc(NetworkObjectReference itemRef, int slotIndex)
     {
         EnsureInventorySlotsInitialized();
+        EnsureInventoryRefsInitializedServer();
         if (!IsValidSlotIndex(slotIndex)) return;
 
         if (itemRef.TryGet(out NetworkObject netObj))
@@ -159,18 +228,14 @@ public class PlayerInventory : NetworkBehaviour
             var item = netObj.GetComponent<GrabbableObject>();
             if (item == null) return;
 
-            // 1. Cập nhật dữ liệu Server
-            _inventorySlots[slotIndex] = item;
+            // 1. Cập nhật dữ liệu Server (source of truth)
+            _inventoryRefs[slotIndex] = itemRef;
 
             // 2. Chuyển chủ sở hữu cho Client này
             netObj.ChangeOwnership(OwnerClientId);
 
-            // 3. Gắn tạm vào Player (để ko bị trôi) - Quan trọng: Ép kiểu Transform để tránh lỗi CS0121
-            // Không parent NetworkObject vào bone/anchor không có NetworkObject (sẽ throw InvalidParentException).
-            // Pose hiển thị sẽ được xử lý client-side (FirstPersonHands / LateUpdate).
-
-            // 4. Báo cho tất cả Client biết để hiển thị
-            GrabObjectClientRpc(itemRef, slotIndex);
+            // 3. Server quyết định state (physics/collider). Client sẽ apply visual theo inventoryRefs.
+            item.SetInventoryStateServer(true);
         }
     }
 
@@ -178,27 +243,43 @@ public class PlayerInventory : NetworkBehaviour
     private void DropItemServerRpc(int slotIndex)
     {
         EnsureInventorySlotsInitialized();
+        EnsureInventoryRefsInitializedServer();
         if (!IsValidSlotIndex(slotIndex)) return;
-        if (_inventorySlots[slotIndex] == null) return;
 
-        GrabbableObject item = _inventorySlots[slotIndex];
-        NetworkObject netObj = item.NetworkObject;
+        NetworkObjectReference itemRef = _inventoryRefs[slotIndex];
+        if (itemRef.Equals(default)) return;
 
-        // 1. Xóa dữ liệu
-        _inventorySlots[slotIndex] = null;
+        if (!itemRef.TryGet(out NetworkObject netObj) || netObj == null) return;
 
-        // 2. Trả quyền sở hữu về Server (hoặc xóa Owner)
+        var item = netObj.GetComponent<GrabbableObject>();
+        if (item == null) return;
+
+        // 1. Xóa dữ liệu (source of truth)
+        _inventoryRefs[slotIndex] = default;
+
+        // 2. Trả quyền sở hữu về Server
         netObj.RemoveOwnership();
-        netObj.TrySetParent((Transform)null); // Tách khỏi cha
+        netObj.TrySetParent((Transform)null);
 
-        // 3. Báo cho Client để hiển thị vứt ra
+        // 3. Đặt vị trí thả và bật lại vật lý
         Vector3 forward = dropPosition != null ? dropPosition.forward : transform.forward;
-        DropItemClientRpc(netObj, forward * throwForce);
+        Vector3 dropPos = dropPosition != null ? dropPosition.position : (transform.position + forward * 0.8f);
+        item.transform.position = dropPos;
+        item.SetInventoryStateServer(false);
+
+        // 4. Ném (Server-authority physics)
+        Rigidbody rb = item.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.velocity = Vector3.zero;
+            rb.AddForce(forward * throwForce, ForceMode.Impulse);
+        }
     }
 
     [ServerRpc]
     private void SwitchSlotServerRpc(int newSlot)
     {
+        newSlot = Mathf.Clamp(newSlot, 0, maxSlots - 1);
         _currentSlotIndex.Value = newSlot;
     }
 
@@ -206,120 +287,36 @@ public class PlayerInventory : NetworkBehaviour
     private void SwapSlotsServerRpc(int slotA, int slotB)
     {
         EnsureInventorySlotsInitialized();
+        EnsureInventoryRefsInitializedServer();
         if (slotA == slotB) return;
         if (!IsValidSlotIndex(slotA) || !IsValidSlotIndex(slotB)) return;
 
-        // Swap dữ liệu server
-        var tmp = _inventorySlots[slotA];
-        _inventorySlots[slotA] = _inventorySlots[slotB];
-        _inventorySlots[slotB] = tmp;
-
-        NetworkObjectReference aRef = _inventorySlots[slotA] != null ? _inventorySlots[slotA].NetworkObject : default;
-        NetworkObjectReference bRef = _inventorySlots[slotB] != null ? _inventorySlots[slotB].NetworkObject : default;
-
-        // Báo cho tất cả client cập nhật mảng + hiển thị
-        SwapSlotsClientRpc(slotA, slotB, aRef, bRef);
+        // Swap dữ liệu server (source of truth)
+        var tmp = _inventoryRefs[slotA];
+        _inventoryRefs[slotA] = _inventoryRefs[slotB];
+        _inventoryRefs[slotB] = tmp;
     }
 
     [ServerRpc]
-    private void UseItemServerRpc(bool isDown)
+    private void UseItemServerRpc(bool isDown, int slotIndex, ServerRpcParams rpcParams = default)
     {
-        // Server làm trung gian báo cho mọi người
-        UseItemClientRpc(isDown, _currentSlotIndex.Value);
-    }
+        EnsureInventoryRefsInitializedServer();
 
-    // --- CLIENT RPCS (XỬ LÝ HIỂN THỊ) ---
+        // This NetworkBehaviour is owned by the player, but validate sender anyway.
+        if (rpcParams.Receive.SenderClientId != OwnerClientId) return;
 
-    [ClientRpc]
-    private void GrabObjectClientRpc(NetworkObjectReference itemRef, int slotIndex)
-    {
-        EnsureInventorySlotsInitialized();
-        if (!IsValidSlotIndex(slotIndex))
-        {
-            Debug.LogWarning($"[{nameof(PlayerInventory)}] Invalid slotIndex={slotIndex} in {nameof(GrabObjectClientRpc)} (maxSlots={maxSlots}, slotsLen={_inventorySlots?.Length}).", this);
-            return;
-        }
+        slotIndex = Mathf.Clamp(slotIndex, 0, maxSlots - 1);
+        if (slotIndex < 0 || slotIndex >= _inventoryRefs.Count) return;
 
-        if (itemRef.TryGet(out NetworkObject netObj))
-        {
-            var item = netObj.GetComponent<GrabbableObject>();
-            if (item == null)
-            {
-                Debug.LogWarning($"[{nameof(PlayerInventory)}] NetworkObject '{netObj.name}' is missing {nameof(GrabbableObject)}.", netObj);
-                return;
-            }
-            
-            // Cập nhật mảng ở Client (để đồng bộ)
-            _inventorySlots[slotIndex] = item;
+        var itemRef = _inventoryRefs[slotIndex];
+        if (itemRef.Equals(default)) return;
 
-            // Tắt vật lý (Gọi hàm bên GrabbableObject)
-            item.OnGrabbed();
+        if (!itemRef.TryGet(out NetworkObject netObj) || netObj == null) return;
 
-            // XỬ LÝ HIỂN THỊ "ẢO THUẬT"
-            if (IsOwner)
-            {
-                // Nếu là mình: Giao cho script FirstPersonHands lo (gắn vào Camera, chỉnh Offset...)
-                if (localHandsVisuals != null)
-                {
-                    localHandsVisuals.EquipItem(item);
-                }
-                else
-                {
-                    Debug.LogError($"[{nameof(PlayerInventory)}] {nameof(localHandsVisuals)} is null on Owner. Item will be grabbed but not equipped visually.", this);
-                }
-            }
-            else
-            {
-                // Nếu là người khác: Gắn vào tay nhân vật 3D
-                if (serverHandBone != null)
-                {
-                    item.transform.localScale = Vector3.one;
-                    item.transform.SetPositionAndRotation(serverHandBone.position, serverHandBone.rotation);
-                }
-            }
+        // Ensure the item is actually owned by this player before allowing use.
+        if (netObj.OwnerClientId != OwnerClientId) return;
 
-            // Ẩn hiện đúng slot
-            RefreshSlotVisibility();
-        }
-        else
-        {
-            Debug.LogWarning($"[{nameof(PlayerInventory)}] Failed to resolve itemRef in {nameof(GrabObjectClientRpc)}. Object may not be spawned yet.", this);
-        }
-    }
-
-    [ClientRpc]
-    private void DropItemClientRpc(NetworkObjectReference itemRef, Vector3 throwVelocity)
-    {
-        EnsureInventorySlotsInitialized();
-
-        if (itemRef.TryGet(out NetworkObject netObj))
-        {
-            var item = netObj.GetComponent<GrabbableObject>();
-            if (item == null) return;
-
-            // Xóa khỏi mảng Client
-            for (int i = 0; i < maxSlots; i++)
-            {
-                if (_inventorySlots[i] == item) _inventorySlots[i] = null;
-            }
-
-            // Bật lại vật lý
-            item.OnDropped();
-
-            // Nếu là mình thì gỡ khỏi tay ảo
-            if (IsOwner && localHandsVisuals != null) localHandsVisuals.UnequipItem(item);
-
-            // Server đẩy lực ném (Server Authority Physics)
-            if (IsServer)
-            {
-                Rigidbody rb = item.GetComponent<Rigidbody>();
-                if (rb != null)
-                {
-                    rb.velocity = Vector3.zero;
-                    rb.AddForce(throwVelocity, ForceMode.Impulse);
-                }
-            }
-        }
+        UseItemClientRpc(isDown, slotIndex);
     }
 
     [ClientRpc]
@@ -333,80 +330,6 @@ public class PlayerInventory : NetworkBehaviour
         if (item != null)
         {
             item.ItemActivate(isDown);
-        }
-    }
-
-    [ClientRpc]
-    private void SwapSlotsClientRpc(int slotA, int slotB, NetworkObjectReference slotAItemRef, NetworkObjectReference slotBItemRef)
-    {
-        EnsureInventorySlotsInitialized();
-        if (slotA == slotB) return;
-        if (!IsValidSlotIndex(slotA) || !IsValidSlotIndex(slotB)) return;
-
-        // Swap local trước để không bị rơi vào null trong trường hợp ref chưa resolve kịp (spawn order / late join).
-        var tmp = _inventorySlots[slotA];
-        _inventorySlots[slotA] = _inventorySlots[slotB];
-        _inventorySlots[slotB] = tmp;
-
-        GrabbableObject itemA = null;
-        if (slotAItemRef.TryGet(out NetworkObject aObj) && aObj != null)
-        {
-            itemA = aObj.GetComponent<GrabbableObject>();
-        }
-
-        GrabbableObject itemB = null;
-        if (slotBItemRef.TryGet(out NetworkObject bObj) && bObj != null)
-        {
-            itemB = bObj.GetComponent<GrabbableObject>();
-        }
-
-        // Nếu resolve được ref thì ghi đè để đồng bộ chắc chắn theo server.
-        if (itemA != null || slotAItemRef.Equals(default)) _inventorySlots[slotA] = itemA;
-        if (itemB != null || slotBItemRef.Equals(default)) _inventorySlots[slotB] = itemB;
-
-        RefreshSlotVisibility();
-
-        // Nếu là owner, cần cập nhật lại item đang cầm (vì swap không đổi _currentSlotIndex).
-        if (IsOwner && localHandsVisuals != null)
-        {
-            int activeSlot = Mathf.Clamp(_currentSlotIndex.Value, 0, _inventorySlots.Length - 1);
-            var activeItem = _inventorySlots[activeSlot];
-            if (activeItem != null) localHandsVisuals.EquipItem(activeItem);
-            else localHandsVisuals.ClearEquippedItem();
-        }
-    }
-
-    [ClientRpc]
-    private void SetInventorySlotClientRpc(int slotIndex, NetworkObjectReference itemRef)
-    {
-        EnsureInventorySlotsInitialized();
-        if (!IsValidSlotIndex(slotIndex)) return;
-
-        GrabbableObject item = null;
-        if (itemRef.TryGet(out NetworkObject netObj) && netObj != null)
-        {
-            item = netObj.GetComponent<GrabbableObject>();
-        }
-
-        _inventorySlots[slotIndex] = item;
-
-        if (item != null)
-        {
-            // Item đang ở trong inventory -> tắt vật lý/collider
-            item.OnGrabbed();
-        }
-
-        RefreshSlotVisibility();
-
-        // Nếu là owner và slot được set chính là slot đang active -> cập nhật tay 1st person
-        if (IsOwner && localHandsVisuals != null)
-        {
-            int activeSlot = Mathf.Clamp(_currentSlotIndex.Value, 0, _inventorySlots.Length - 1);
-            if (slotIndex == activeSlot)
-            {
-                if (item != null) localHandsVisuals.EquipItem(item);
-                else localHandsVisuals.ClearEquippedItem();
-            }
         }
     }
 
@@ -435,6 +358,21 @@ public class PlayerInventory : NetworkBehaviour
 
     private void OnSlotChanged(int oldSlot, int newSlot)
     {
+        // If owner is holding-use and changes slot, send stop/start events.
+        if (IsOwner && _useHeld)
+        {
+            int oldClamped = Mathf.Clamp(oldSlot, 0, maxSlots - 1);
+            int newClamped = Mathf.Clamp(newSlot, 0, maxSlots - 1);
+            if (oldClamped != newClamped)
+            {
+                UseItemServerRpc(false, oldClamped);
+                UseItemServerRpc(true, newClamped);
+                _useHeldSlotIndex = newClamped;
+            }
+        }
+
+        // Reset 3rd person pose cache so the next LateUpdate updates immediately
+        _handPoseInitialized = false;
         RefreshSlotVisibility();
     }
 
@@ -454,11 +392,122 @@ public class PlayerInventory : NetworkBehaviour
         }
     }
 
+    private void OnInventoryRefsListChanged(NetworkListEvent<NetworkObjectReference> changeEvent)
+    {
+        // Treat inventory on clients as cache; rebuild from server truth.
+        _unresolvedRebuildRetryBudget = 60; // ~1s @ 60fps to resolve late-spawned objects
+        RequestInventoryRebuild();
+    }
+
+    private void RequestInventoryRebuild()
+    {
+        _pendingInventoryRebuild = true;
+        _pendingInventoryRebuildFrame = Time.frameCount;
+    }
+
+    private void ProcessPendingInventoryRebuild()
+    {
+        if (!_pendingInventoryRebuild) return;
+
+        // Wait one frame so spawned objects have a chance to resolve.
+        if (Time.frameCount == _pendingInventoryRebuildFrame) return;
+
+        _pendingInventoryRebuild = false;
+        RebuildInventoryCacheFromRefs();
+    }
+
+    private void RebuildInventoryCacheFromRefs()
+    {
+        EnsureInventorySlotsInitialized();
+
+        int slotCount = _inventorySlots.Length;
+        var oldItems = new HashSet<GrabbableObject>();
+        var newItems = new HashSet<GrabbableObject>();
+        bool hasUnresolvedRefs = false;
+
+        for (int i = 0; i < slotCount; i++)
+        {
+            if (_inventorySlots[i] != null) oldItems.Add(_inventorySlots[i]);
+        }
+
+        // Resolve refs into cache
+        for (int i = 0; i < slotCount; i++)
+        {
+            GrabbableObject resolved = null;
+            if (i < _inventoryRefs.Count)
+            {
+                var itemRef = _inventoryRefs[i];
+                if (!itemRef.Equals(default))
+                {
+                    if (itemRef.TryGet(out NetworkObject netObj) && netObj != null)
+                    {
+                        resolved = netObj.GetComponent<GrabbableObject>();
+                    }
+                    else
+                    {
+                        hasUnresolvedRefs = true;
+                    }
+                }
+            }
+
+            _inventorySlots[i] = resolved;
+            if (resolved != null) newItems.Add(resolved);
+        }
+
+        // Apply state transitions for items actually entering/leaving the inventory.
+        foreach (var item in newItems)
+        {
+            if (!oldItems.Contains(item)) item.ApplyInventoryVisualState(true);
+        }
+        // Only run removal transitions when we are confident the snapshot fully resolved.
+        if (!hasUnresolvedRefs)
+        {
+            foreach (var item in oldItems)
+            {
+                if (!newItems.Contains(item)) item.ApplyInventoryVisualState(false);
+            }
+        }
+
+        RefreshSlotVisibility();
+
+        // Owner: keep FirstPersonHands in sync.
+        if (IsOwner && localHandsVisuals != null)
+        {
+            int activeSlot = Mathf.Clamp(_currentSlotIndex.Value, 0, slotCount - 1);
+            var activeItem = _inventorySlots[activeSlot];
+            if (activeItem != null) localHandsVisuals.EquipItem(activeItem);
+            else localHandsVisuals.ClearEquippedItem();
+        }
+
+        // Reset pose cache so remote visuals update immediately.
+        _handPoseInitialized = false;
+
+        // Late-join/spawn-order: retry rebuild a bit if some refs couldn't resolve yet.
+        if (hasUnresolvedRefs && _unresolvedRebuildRetryBudget > 0)
+        {
+            _unresolvedRebuildRetryBudget--;
+            RequestInventoryRebuild();
+        }
+    }
+
     private void EnsureInventorySlotsInitialized()
     {
         if (_inventorySlots == null || _inventorySlots.Length != maxSlots)
         {
             _inventorySlots = new GrabbableObject[Mathf.Max(1, maxSlots)];
+        }
+    }
+
+    private void EnsureInventoryRefsInitializedServer()
+    {
+        if (!IsServer) return;
+        int desired = Mathf.Max(1, maxSlots);
+        if (_inventoryRefs.Count == desired) return;
+
+        _inventoryRefs.Clear();
+        for (int i = 0; i < desired; i++)
+        {
+            _inventoryRefs.Add(default);
         }
     }
 

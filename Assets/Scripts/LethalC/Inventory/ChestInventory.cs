@@ -80,8 +80,8 @@ public class ChestInventory : NetworkBehaviour
                 netObj.RemoveOwnership();
             }
 
-            // Disable physics/colliders to keep it out of the world.
-            item.OnGrabbed();
+            // Server quyết định state (physics/collider). Client chỉ apply visual.
+            item.SetInventoryStateServer(true);
 
             // Teleport to storage anchor / chest position to avoid interaction in the scene.
             Vector3 targetPos = storageAnchor != null ? storageAnchor.position : transform.position;
@@ -102,10 +102,21 @@ public class ChestInventory : NetworkBehaviour
 
         if (itemRef.TryGet(out NetworkObject netObj) && netObj != null)
         {
-            _slots[slotIndex] = netObj.GetComponent<GrabbableObject>();
+            var item = netObj.GetComponent<GrabbableObject>();
+            _slots[slotIndex] = item;
+
+            // Client: apply visual-only state so NetworkTransform doesn't fight any local visuals.
+            if (item != null)
+            {
+                item.ApplyInventoryVisualState(true);
+            }
         }
         else
         {
+            if (_slots[slotIndex] != null)
+            {
+                _slots[slotIndex].ApplyInventoryVisualState(false);
+            }
             _slots[slotIndex] = null;
         }
     }
