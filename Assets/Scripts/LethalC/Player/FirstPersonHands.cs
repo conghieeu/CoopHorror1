@@ -74,6 +74,15 @@ public class FirstPersonHands : MonoBehaviour
         // Trả về Layer mặc định (Default) để người khác nhìn thấy bình thường
         SetLayerRecursively(item.gameObject, LayerMask.NameToLayer("Default"));
     }
+    
+    public void ClearEquippedItem()
+    {
+        if (_equippedItem != null)
+        {
+            UnequipItem(_equippedItem);
+            _equippedItem = null;
+        }
+    }
 
     private void ApplyPose(GrabbableObject item)
     {

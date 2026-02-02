@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using QFSW.QC;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -131,6 +132,20 @@ public class PlayerInventory : NetworkBehaviour
         }
     }
 
+    // Tráo 2 slot (ví dụ: kéo thả hotbar/UI hoặc phím tắt).
+    // Lưu ý: Vì slot ảnh hưởng gameplay (Use/Drop), swap phải qua Server để tránh desync.
+    public void SwapSlots(int slotA, int slotB)
+    {
+        if (!IsOwner) return;
+        EnsureInventorySlotsInitialized();
+
+        if (slotA == slotB) return;
+        if (!IsValidSlotIndex(slotA) || !IsValidSlotIndex(slotB)) return;
+
+        SwapSlotsServerRpc(slotA, slotB);
+    }
+
+
     // --- SERVER RPCS (XỬ LÝ DỮ LIỆU & QUYỀN) ---
 
     [ServerRpc]
@@ -185,6 +200,25 @@ public class PlayerInventory : NetworkBehaviour
     private void SwitchSlotServerRpc(int newSlot)
     {
         _currentSlotIndex.Value = newSlot;
+    }
+
+    [ServerRpc]
+    private void SwapSlotsServerRpc(int slotA, int slotB)
+    {
+        EnsureInventorySlotsInitialized();
+        if (slotA == slotB) return;
+        if (!IsValidSlotIndex(slotA) || !IsValidSlotIndex(slotB)) return;
+
+        // Swap dữ liệu server
+        var tmp = _inventorySlots[slotA];
+        _inventorySlots[slotA] = _inventorySlots[slotB];
+        _inventorySlots[slotB] = tmp;
+
+        NetworkObjectReference aRef = _inventorySlots[slotA] != null ? _inventorySlots[slotA].NetworkObject : default;
+        NetworkObjectReference bRef = _inventorySlots[slotB] != null ? _inventorySlots[slotB].NetworkObject : default;
+
+        // Báo cho tất cả client cập nhật mảng + hiển thị
+        SwapSlotsClientRpc(slotA, slotB, aRef, bRef);
     }
 
     [ServerRpc]
@@ -302,6 +336,80 @@ public class PlayerInventory : NetworkBehaviour
         }
     }
 
+    [ClientRpc]
+    private void SwapSlotsClientRpc(int slotA, int slotB, NetworkObjectReference slotAItemRef, NetworkObjectReference slotBItemRef)
+    {
+        EnsureInventorySlotsInitialized();
+        if (slotA == slotB) return;
+        if (!IsValidSlotIndex(slotA) || !IsValidSlotIndex(slotB)) return;
+
+        // Swap local trước để không bị rơi vào null trong trường hợp ref chưa resolve kịp (spawn order / late join).
+        var tmp = _inventorySlots[slotA];
+        _inventorySlots[slotA] = _inventorySlots[slotB];
+        _inventorySlots[slotB] = tmp;
+
+        GrabbableObject itemA = null;
+        if (slotAItemRef.TryGet(out NetworkObject aObj) && aObj != null)
+        {
+            itemA = aObj.GetComponent<GrabbableObject>();
+        }
+
+        GrabbableObject itemB = null;
+        if (slotBItemRef.TryGet(out NetworkObject bObj) && bObj != null)
+        {
+            itemB = bObj.GetComponent<GrabbableObject>();
+        }
+
+        // Nếu resolve được ref thì ghi đè để đồng bộ chắc chắn theo server.
+        if (itemA != null || slotAItemRef.Equals(default)) _inventorySlots[slotA] = itemA;
+        if (itemB != null || slotBItemRef.Equals(default)) _inventorySlots[slotB] = itemB;
+
+        RefreshSlotVisibility();
+
+        // Nếu là owner, cần cập nhật lại item đang cầm (vì swap không đổi _currentSlotIndex).
+        if (IsOwner && localHandsVisuals != null)
+        {
+            int activeSlot = Mathf.Clamp(_currentSlotIndex.Value, 0, _inventorySlots.Length - 1);
+            var activeItem = _inventorySlots[activeSlot];
+            if (activeItem != null) localHandsVisuals.EquipItem(activeItem);
+            else localHandsVisuals.ClearEquippedItem();
+        }
+    }
+
+    [ClientRpc]
+    private void SetInventorySlotClientRpc(int slotIndex, NetworkObjectReference itemRef)
+    {
+        EnsureInventorySlotsInitialized();
+        if (!IsValidSlotIndex(slotIndex)) return;
+
+        GrabbableObject item = null;
+        if (itemRef.TryGet(out NetworkObject netObj) && netObj != null)
+        {
+            item = netObj.GetComponent<GrabbableObject>();
+        }
+
+        _inventorySlots[slotIndex] = item;
+
+        if (item != null)
+        {
+            // Item đang ở trong inventory -> tắt vật lý/collider
+            item.OnGrabbed();
+        }
+
+        RefreshSlotVisibility();
+
+        // Nếu là owner và slot được set chính là slot đang active -> cập nhật tay 1st person
+        if (IsOwner && localHandsVisuals != null)
+        {
+            int activeSlot = Mathf.Clamp(_currentSlotIndex.Value, 0, _inventorySlots.Length - 1);
+            if (slotIndex == activeSlot)
+            {
+                if (item != null) localHandsVisuals.EquipItem(item);
+                else localHandsVisuals.ClearEquippedItem();
+            }
+        }
+    }
+
     // --- HELPER FUNCTIONS ---
 
     private void HandleSlotSwitching()
@@ -357,5 +465,24 @@ public class PlayerInventory : NetworkBehaviour
     private bool IsValidSlotIndex(int slotIndex)
     {
         return _inventorySlots != null && slotIndex >= 0 && slotIndex < _inventorySlots.Length;
+    }
+
+    // hàm này check xem các món đồ trong inventory, debug các món đồ
+    [Command("/check_inventory")]
+    public void DebugInventoryContents()
+    {
+        EnsureInventorySlotsInitialized();
+        for (int i = 0; i < _inventorySlots.Length; i++)
+        {
+            var item = _inventorySlots[i];
+            if (item != null)
+            {
+                Debug.Log($"Slot {i}: {item.itemData.itemName} (NetId: {item.NetworkObject.NetworkObjectId})");
+            }
+            else
+            {
+                Debug.Log($"Slot {i}: Empty");
+            }
+        }
     }
 }
