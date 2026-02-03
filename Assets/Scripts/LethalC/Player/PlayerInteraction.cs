@@ -1,13 +1,12 @@
 using UnityEngine;
 using Unity.Netcode;
-using StarterAssets;
 
 public class PlayerInteraction : NetworkBehaviour
 {
     [Header("Settings")]
     [SerializeField] private float _interactionDistance = 5f;
     [SerializeField] private LayerMask _interactableLayer;
-    [SerializeField] private PlayerInventory inventory; // Kéo script Inventory vào đây
+    [SerializeField] private global::PlayerInventory inventory; // Kéo script Inventory vào đây
 
     [Header("References")]
     [SerializeField] private Camera _playerCamera;
@@ -105,11 +104,15 @@ public class PlayerInteraction : NetworkBehaviour
         {
             if (Input.GetKeyDown(KeyCode.E))
             {
-                _currentInteractable.Interact();
-
-                if (_currentInteractable is GrabbableObject)
+                // Lethal-style: picking up a grabbable is its own action (client requests; server decides).
+                if (_currentInteractable is GrabbableObject grabbable)
                 {
-                    inventory.GrabObject(_currentInteractable as GrabbableObject);
+                    Debug.Log("Client A: Tôi nhấn E để thử nhặt đồ.", this);
+                    inventory.TryGrab(grabbable);
+                }
+                else
+                {
+                    _currentInteractable.Interact();
                 }
             }
         }

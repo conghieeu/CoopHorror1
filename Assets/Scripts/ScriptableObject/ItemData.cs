@@ -10,6 +10,7 @@ public class ItemData : ScriptableObject
     
     [Header("Prefabs")]
     public GameObject spawnPrefab; // Prefab ném ra đất, dùng cho trường hợp mua, spawn ra từ List...
+    public GameObject firstPersonPrefab; // Prefab hiển thị trên tay 1st person (local-only). Nếu null sẽ fallback spawnPrefab.
     public Vector3 positionOffset; // Vị trí ướm vào tay cho vừa
     public Vector3 rotationOffset; // Góc xoay ướm vào tay cho vừa
 }

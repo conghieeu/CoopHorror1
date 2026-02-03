@@ -12,17 +12,16 @@ public class PlayerInventory : NetworkBehaviour
 
     [Header("Settings")]
     public int maxSlots = 4;
-    public float throwForce = 15f; 
+    public float throwForce = 15f;
 
     // Client cache (nguồn sự thật nằm ở server qua NetworkList).
     private GrabbableObject[] _inventorySlots;
 
     // Server authoritative inventory state (fixed-size = maxSlots).
-    private readonly NetworkList<NetworkObjectReference> _inventoryRefs = new NetworkList<NetworkObjectReference>(
-        null,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server);
-    
+    // NOTE: NetworkList allocates native memory and MUST be disposed.
+    // Do not allocate it in a field initializer to avoid leaks on domain reload / object destroy.
+    private NetworkList<NetworkObjectReference> _inventoryRefs;
+
     // Biến mạng đồng bộ Slot đang chọn (0, 1, 2, 3)
     private NetworkVariable<int> _currentSlotIndex = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -42,11 +41,25 @@ public class PlayerInventory : NetworkBehaviour
 
     private void Awake()
     {
+        EnsureInventoryRefsAllocated();
         EnsureInventorySlotsInitialized();
+
+        // Best-effort auto wire for remote visuals.
+        // If your player uses a Humanoid avatar, this will find the right-hand bone.
+        if (serverHandBone == null)
+        {
+            var animator = GetComponentInChildren<Animator>(true);
+            if (animator != null && animator.isHuman)
+            {
+                serverHandBone = animator.GetBoneTransform(HumanBodyBones.RightHand);
+            }
+        }
     }
 
     public override void OnNetworkSpawn()
     {
+        EnsureInventoryRefsAllocated();
+
         // Khi biến Slot thay đổi -> Cập nhật hiển thị (Tắt đồ cũ, bật đồ mới)
         _currentSlotIndex.OnValueChanged += OnSlotChanged;
 
@@ -76,8 +89,25 @@ public class PlayerInventory : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         _currentSlotIndex.OnValueChanged -= OnSlotChanged;
-        _inventoryRefs.OnListChanged -= OnInventoryRefsListChanged;
+        if (_inventoryRefs != null)
+        {
+            _inventoryRefs.OnListChanged -= OnInventoryRefsListChanged;
+        }
         base.OnNetworkDespawn();
+    }
+
+    public override void OnDestroy()
+    {
+        // In case Unity destroys the object without a clean network despawn.
+        _currentSlotIndex.OnValueChanged -= OnSlotChanged;
+
+        if (_inventoryRefs != null)
+        {
+            _inventoryRefs.OnListChanged -= OnInventoryRefsListChanged;
+            _inventoryRefs.Dispose();
+            _inventoryRefs = null;
+        }
+        base.OnDestroy();
     }
 
     private void Update()
@@ -120,38 +150,8 @@ public class PlayerInventory : NetworkBehaviour
 
     private void LateUpdate()
     {
-        // Đồng bộ pose hiển thị cho người khác (3rd person) mà không parenting NetworkObject vào bone.
-        if (!IsSpawned) return;
-
-        EnsureInventorySlotsInitialized();
-        int activeSlot = Mathf.Clamp(_currentSlotIndex.Value, 0, _inventorySlots.Length - 1);
-        var item = _inventorySlots[activeSlot];
-        if (item == null) return;
-
-        // Owner: FirstPersonHands sẽ tự xử lý pose (LateUpdate) khi EquipItem.
-        if (IsOwner) return;
-
-        if (serverHandBone == null) return;
-
-        // Optimization: if the animator/bone is culled and doesn't move, skip transform writes.
-        Vector3 handPos = serverHandBone.position;
-        Quaternion handRot = serverHandBone.rotation;
-        if (_handPoseInitialized)
-        {
-            const float posEpsilonSqr = 0.000001f;
-            const float rotEpsilonDeg = 0.1f;
-            if ((handPos - _lastHandPos).sqrMagnitude <= posEpsilonSqr && Quaternion.Angle(handRot, _lastHandRot) <= rotEpsilonDeg)
-            {
-                return;
-            }
-        }
-
-        _handPoseInitialized = true;
-        _lastHandPos = handPos;
-        _lastHandRot = handRot;
-
-        item.transform.localScale = Vector3.one;
-        item.transform.SetPositionAndRotation(handPos, handRot);
+        // Lethal-style: world items disappear while held. Do not sync a world item to hand bones.
+        // 1st-person visuals are handled by local-only viewmodels (FirstPersonHands).
     }
 
     // --- LOGIC GỌI TỪ RAYCAST (INTERACTION) ---
@@ -159,6 +159,13 @@ public class PlayerInventory : NetworkBehaviour
     // Hàm này được gọi từ script PlayerInteraction khi Raycast trúng đồ và bấm E
     public void GrabObject(GrabbableObject grabbable)
     {
+        TryGrab(grabbable);
+    }
+
+    // Pick-up request entrypoint (client intent only; server validates)
+    public void TryGrab(GrabbableObject grabbable)
+    {
+        Debug.Log("Client A: Tôi thử nhặt đồ.", this);
         if (!IsOwner) return;
         if (grabbable == null || grabbable.NetworkObject == null) return;
         EnsureInventorySlotsInitialized();
@@ -192,6 +199,7 @@ public class PlayerInventory : NetworkBehaviour
             }
 
             // Gửi yêu cầu nhặt lên Server
+            Debug.Log("Client A: Gửi yêu cầu nhặt đồ lên Server.", this);
             GrabObjectServerRpc(grabbable.NetworkObject, targetSlot);
         }
         else
@@ -227,6 +235,11 @@ public class PlayerInventory : NetworkBehaviour
         {
             var item = netObj.GetComponent<GrabbableObject>();
             if (item == null) return;
+
+            Debug.Log("Server: Xử lý yêu cầu nhặt đồ từ Client.", this);
+
+            // Server-authoritative: reject if already held by someone else.
+            if (item.IsHeld) return;
 
             // 1. Cập nhật dữ liệu Server (source of truth)
             _inventoryRefs[slotIndex] = itemRef;
@@ -331,6 +344,12 @@ public class PlayerInventory : NetworkBehaviour
         {
             item.ItemActivate(isDown);
         }
+
+        // Owner: also forward to local-only viewmodel.
+        if (IsOwner && localHandsVisuals != null)
+        {
+            localHandsVisuals.ForwardItemActivate(isDown);
+        }
     }
 
     // --- HELPER FUNCTIONS ---
@@ -341,7 +360,7 @@ public class PlayerInventory : NetworkBehaviour
         if (scroll != 0)
         {
             int newSlot = _currentSlotIndex.Value + (scroll > 0 ? 1 : -1);
-            
+
             // Loop slot (0-3)
             if (newSlot > maxSlots - 1) newSlot = 0;
             if (newSlot < 0) newSlot = maxSlots - 1;
@@ -373,22 +392,15 @@ public class PlayerInventory : NetworkBehaviour
 
         // Reset 3rd person pose cache so the next LateUpdate updates immediately
         _handPoseInitialized = false;
-        RefreshSlotVisibility();
-    }
 
-    private void RefreshSlotVisibility()
-    {
-        EnsureInventorySlotsInitialized();
-        int slotCount = _inventorySlots.Length;
-        int activeSlot = Mathf.Clamp(_currentSlotIndex.Value, 0, slotCount - 1);
-
-        for (int i = 0; i < slotCount; i++)
+        // Owner: update the local viewmodel based on active slot.
+        if (IsOwner && localHandsVisuals != null)
         {
-            if (_inventorySlots[i] != null)
-            {
-                // Chỉ hiện món đồ ở Slot hiện tại
-                _inventorySlots[i].gameObject.SetActive(i == activeSlot);
-            }
+            EnsureInventorySlotsInitialized();
+            int activeSlot = Mathf.Clamp(_currentSlotIndex.Value, 0, _inventorySlots.Length - 1);
+            var activeItem = _inventorySlots[activeSlot];
+            if (activeItem != null) localHandsVisuals.EquipItem(activeItem);
+            else localHandsVisuals.ClearEquippedItem();
         }
     }
 
@@ -419,6 +431,7 @@ public class PlayerInventory : NetworkBehaviour
     private void RebuildInventoryCacheFromRefs()
     {
         EnsureInventorySlotsInitialized();
+        EnsureInventoryRefsAllocated();
 
         int slotCount = _inventorySlots.Length;
         var oldItems = new HashSet<GrabbableObject>();
@@ -455,20 +468,8 @@ public class PlayerInventory : NetworkBehaviour
         }
 
         // Apply state transitions for items actually entering/leaving the inventory.
-        foreach (var item in newItems)
-        {
-            if (!oldItems.Contains(item)) item.ApplyInventoryVisualState(true);
-        }
-        // Only run removal transitions when we are confident the snapshot fully resolved.
-        if (!hasUnresolvedRefs)
-        {
-            foreach (var item in oldItems)
-            {
-                if (!newItems.Contains(item)) item.ApplyInventoryVisualState(false);
-            }
-        }
-
-        RefreshSlotVisibility();
+        // Visual presentation is derived from each item's networked held state.
+        // Inventory here is a cache; avoid mutating item state locally to prevent desync.
 
         // Owner: keep FirstPersonHands in sync.
         if (IsOwner && localHandsVisuals != null)
@@ -500,6 +501,7 @@ public class PlayerInventory : NetworkBehaviour
 
     private void EnsureInventoryRefsInitializedServer()
     {
+        EnsureInventoryRefsAllocated();
         if (!IsServer) return;
         int desired = Mathf.Max(1, maxSlots);
         if (_inventoryRefs.Count == desired) return;
@@ -514,6 +516,16 @@ public class PlayerInventory : NetworkBehaviour
     private bool IsValidSlotIndex(int slotIndex)
     {
         return _inventorySlots != null && slotIndex >= 0 && slotIndex < _inventorySlots.Length;
+    }
+
+    private void EnsureInventoryRefsAllocated()
+    {
+        if (_inventoryRefs != null) return;
+
+        _inventoryRefs = new NetworkList<NetworkObjectReference>(
+            null,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
     }
 
     // hàm này check xem các món đồ trong inventory, debug các món đồ

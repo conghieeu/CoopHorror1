@@ -12,8 +12,23 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
     public ItemData itemData; // File dữ liệu (Tên, Cân nặng, Prefab...)
 
     [Header("State (Debug)")]
-    public bool isHeld = false;
+    [SerializeField] private bool heldDebug;
+    [SerializeField] private ulong heldByClientIdDebug;
     public bool isHoarded = false; // Dành cho Enemy sau này
+
+    // Networked held state (single source of truth, server authoritative)
+    private readonly NetworkVariable<bool> _isHeldNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    private readonly NetworkVariable<ulong> _heldByClientIdNet = new NetworkVariable<ulong>(
+        0,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    public bool IsHeld => IsSpawned ? _isHeldNet.Value : heldDebug;
+    public ulong HeldByClientId => IsSpawned ? _heldByClientIdNet.Value : heldByClientIdDebug;
 
     [Header("Usage")]
     public bool isBeingUsed = false; // Biến kiểm tra xem đang bật hay tắt
@@ -24,6 +39,7 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
     private NetworkObject _netObj;
     private Collider[] _colliders;
     private NetworkTransform _netTransform; // Component đồng bộ vị trí của Unity
+    private Renderer[] _renderers;
     
 
     private void Awake()
@@ -32,6 +48,7 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
         _netObj = GetComponent<NetworkObject>();
         _colliders = GetComponentsInChildren<Collider>();
         _netTransform = GetComponent<NetworkTransform>();
+        _renderers = GetComponentsInChildren<Renderer>(true);
 
         // Setup mặc định khi vừa sinh ra
         if (itemData != null)
@@ -41,12 +58,27 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
         }
     }
 
+    public override void OnNetworkSpawn()
+    {
+        _isHeldNet.OnValueChanged += OnHeldNetChanged;
+
+        ApplyHeldPresentation(_isHeldNet.Value, _heldByClientIdNet.Value);
+        base.OnNetworkSpawn();
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        _isHeldNet.OnValueChanged -= OnHeldNetChanged;
+        base.OnNetworkDespawn();
+    }
+
     // --- PHẦN 1: LOGIC TƯƠNG TÁC (INTERFACE) ---
 
     public string GetInteractText()
     {
         // Nếu đang bị người khác cầm thì không hiện chữ nhặt
-        return isHeld ? "" : $"Nhặt {itemData.itemName}";
+        bool held = IsHeld;
+        return held ? "" : $"Nhặt {itemData.itemName}";
     }
 
     public void Interact()
@@ -64,56 +96,14 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
     {
         if (!IsServer) return;
 
-        ApplyInventoryVisualState(inInventory);
+        // Inventory/held state is authoritative on server; clients react via NetworkVariables.
+        SetHeldStateServer(inInventory, inInventory ? NetworkObject.OwnerClientId : 0);
 
         if (inInventory)
         {
             ApplyInventoryPhysicsHeldServer();
         }
         else
-        {
-            ApplyInventoryPhysicsDroppedServer();
-        }
-    }
-
-    public void ApplyInventoryVisualState(bool inInventory)
-    {
-        isHeld = inInventory;
-
-        // Important: clients also need to adjust NetworkTransform behavior to avoid fighting hand-follow visuals.
-        if (_netTransform != null)
-        {
-            _netTransform.InLocalSpace = inInventory;
-        }
-
-        if (!inInventory)
-        {
-            // Visual reset when leaving inventory/hand
-            transform.SetParent(null);
-            transform.localScale = Vector3.one;
-            gameObject.SetActive(true);
-        }
-    }
-
-    // Được gọi khi Player nhặt thành công (Inventory gọi)
-    public void OnGrabbed()
-    {
-        ApplyInventoryVisualState(true);
-
-        // Server applies physics/collider state. Clients should avoid side effects.
-        if (IsServer)
-        {
-            ApplyInventoryPhysicsHeldServer();
-        }
-    }
-
-    // Được gọi khi Player vứt đồ (Inventory gọi)
-    public void OnDropped()
-    {
-        ApplyInventoryVisualState(false);
-
-        // Server applies physics/collider state. Clients should avoid side effects.
-        if (IsServer)
         {
             ApplyInventoryPhysicsDroppedServer();
         }
@@ -149,8 +139,67 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
         // 3. Teleport ngay lập tức để tránh lerp từ tay xuống đất
         if (_netTransform != null)
         {
+            // Ensure the component is enabled so Teleport is applied & replicated.
+            if (!_netTransform.enabled) _netTransform.enabled = true;
             _netTransform.Teleport(transform.position, transform.rotation, transform.localScale);
         }
+    }
+
+    private void SetHeldStateServer(bool held, ulong holderClientId)
+    {
+        if (!IsServer) return;
+
+        if (held)
+        {
+            _heldByClientIdNet.Value = holderClientId;
+            _isHeldNet.Value = true;
+        }
+        else
+        {
+            _isHeldNet.Value = false;
+            _heldByClientIdNet.Value = 0;
+        }
+    }
+
+    private void OnHeldNetChanged(bool previous, bool current)
+    {
+        Debug.Log($"OnHeldNetChanged: {previous} -> {current}, HeldByClientId: {_heldByClientIdNet.Value}", this);
+        ApplyHeldPresentation(current, _heldByClientIdNet.Value);
+    }
+
+    private void ApplyHeldPresentation(bool held, ulong holderClientId)
+    {
+        // Debug-only mirrors for inspector (not a source of truth).
+        heldDebug = held;
+        heldByClientIdDebug = holderClientId;
+
+        // NetworkTransform: disable while held so it doesn't fight hand-follow.
+        if (_netTransform != null)
+        {
+            _netTransform.enabled = !held;
+        }
+
+        // Lethal-style: world item disappears for everyone while held.
+        bool shouldHide = held;
+
+        if (_renderers != null)
+        {
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                if (_renderers[i] != null) _renderers[i].enabled = !shouldHide;
+            }
+        }
+
+        // Unity does not replicate Collider.enabled across the network.
+        // To match lethal-style disappearance (as-if SetActive(false)), mirror collider state locally.
+        if (_colliders != null)
+        {
+            for (int i = 0; i < _colliders.Length; i++)
+            {
+                if (_colliders[i] != null) _colliders[i].enabled = !shouldHide;
+            }
+        }
+
     }
 
     // --- PHẦN 3: LOGIC DÙNG ĐỒ (VIRTUAL METHODS) ---

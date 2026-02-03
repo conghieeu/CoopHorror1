@@ -785,9 +785,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7df722254573df54490da7b2dac8a68b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  localHandsVisuals: {fileID: 0}
-  serverHandBone: {fileID: 0}
-  dropPosition: {fileID: 0}
+  localHandsVisuals: {fileID: 1252535757598317606}
+  serverHandBone: {fileID: 1538947899942178661}
+  dropPosition: {fileID: 2372490590459941971}
   maxSlots: 4
   throwForce: 15
 --- !u!114 &1252535757598317606

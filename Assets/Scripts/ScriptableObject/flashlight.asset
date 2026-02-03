@@ -16,6 +16,8 @@ MonoBehaviour:
   baseValue: 10
   weight: 1.05
   isTwoHanded: 0
-  spawnPrefab: {fileID: 0}
+  spawnPrefab: {fileID: 7441093105689797648, guid: 499f91082754b744fbf13b861601a0c9,
+    type: 3}
+  firstPersonPrefab: {fileID: 0}
   positionOffset: {x: 0, y: 0, z: 0}
   rotationOffset: {x: 0, y: 0, z: 0}

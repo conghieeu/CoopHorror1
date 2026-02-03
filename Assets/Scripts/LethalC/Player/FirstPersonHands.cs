@@ -1,4 +1,6 @@
 using UnityEngine;
+using Unity.Netcode;
+using Unity.Netcode.Components;
 
 public class FirstPersonHands : MonoBehaviour
 {
@@ -12,7 +14,9 @@ public class FirstPersonHands : MonoBehaviour
 
     private Vector3 _initialLocalPos;
 
-    private GrabbableObject _equippedItem;
+    private GameObject _equippedViewModel;
+    private MonoBehaviour _equippedViewModelUsable;
+    private ItemData _equippedData;
 
     private void Start()
     {
@@ -38,10 +42,10 @@ public class FirstPersonHands : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (_equippedItem == null) return;
+        if (_equippedViewModel == null) return;
         if (handAnchor == null) return;
 
-        ApplyPose(_equippedItem);
+        ApplyPose(_equippedViewModel.transform, _equippedData);
     }
 
     // --- HÀM QUAN TRỌNG: GẮN ĐỒ VÀO TAY ---
@@ -54,52 +58,113 @@ public class FirstPersonHands : MonoBehaviour
             return;
         }
 
-        _equippedItem = item;
-
-        // Không được parent NetworkObject vào non-NetworkObject parent (Netcode sẽ throw InvalidParentException).
-        // Chỉ "follow" tay bằng cách set world pose.
-        ApplyPose(item);
-
-        // 4. Đổi Layer sang "FirstPersonObjects" (Để camera render đẹp, không bị xuyên tường)
-        // Lưu ý: Bạn cần tạo Layer này trong Unity Editor trước
-        SetLayerRecursively(item.gameObject, LayerMask.NameToLayer("FirstPersonObjects")); 
-    }
-
-    public void UnequipItem(GrabbableObject item)
-    {
-        if (item == null) return;
-
-        if (_equippedItem == item) _equippedItem = null;
-        
-        // Trả về Layer mặc định (Default) để người khác nhìn thấy bình thường
-        SetLayerRecursively(item.gameObject, LayerMask.NameToLayer("Default"));
+        EquipItemData(item.itemData);
     }
     
     public void ClearEquippedItem()
     {
-        if (_equippedItem != null)
+        _equippedData = null;
+
+        if (_equippedViewModel != null)
         {
-            UnequipItem(_equippedItem);
-            _equippedItem = null;
+            Destroy(_equippedViewModel);
+            _equippedViewModel = null;
+            _equippedViewModelUsable = null;
         }
     }
 
-    private void ApplyPose(GrabbableObject item)
+    public void EquipItemData(ItemData itemData)
     {
-        if (item == null || handAnchor == null) return;
+        ClearEquippedItem();
+        if (itemData == null) return;
+        if (handAnchor == null) return;
+
+        _equippedData = itemData;
+
+        GameObject prefab = itemData.firstPersonPrefab != null ? itemData.firstPersonPrefab : itemData.spawnPrefab;
+        if (prefab == null)
+        {
+            Debug.LogWarning($"[{nameof(FirstPersonHands)}] No prefab assigned for item '{itemData.itemName}'.", this);
+            return;
+        }
+
+        // Strongly recommended: firstPersonPrefab should NOT contain NetworkObject/NetworkTransform.
+        // If it does (or we had to fallback to spawnPrefab), disable those components on the local instance.
+
+        _equippedViewModel = Instantiate(prefab);
+        _equippedViewModel.name = $"FP_{prefab.name}";
+        _equippedViewModel.transform.SetParent(handAnchor, worldPositionStays: false);
+
+        foreach (var netObj in _equippedViewModel.GetComponentsInChildren<NetworkObject>(true))
+        {
+            netObj.enabled = false;
+        }
+        foreach (var netTransform in _equippedViewModel.GetComponentsInChildren<NetworkTransform>(true))
+        {
+            netTransform.enabled = false;
+        }
+
+        // Disable physics/colliders on the local viewmodel.
+        foreach (var rb in _equippedViewModel.GetComponentsInChildren<Rigidbody>(true))
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+        foreach (var col in _equippedViewModel.GetComponentsInChildren<Collider>(true))
+        {
+            col.enabled = false;
+        }
+
+        // Render in 1st person layer if present.
+        SetLayerRecursively(_equippedViewModel, LayerMask.NameToLayer("FirstPersonObjects"));
+
+        // Prefer a dedicated local-only interface. Fall back to GrabbableObject for older prefabs.
+        _equippedViewModelUsable = _equippedViewModel.GetComponentInChildren<MonoBehaviour>(true);
+        var usables = _equippedViewModel.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < usables.Length; i++)
+        {
+            if (usables[i] is IFirstPersonViewModelUsable)
+            {
+                _equippedViewModelUsable = usables[i];
+                break;
+            }
+        }
+
+        ApplyPose(_equippedViewModel.transform, _equippedData);
+    }
+
+    public void ForwardItemActivate(bool isDown)
+    {
+        if (_equippedViewModelUsable == null) return;
+        if (_equippedViewModelUsable is IFirstPersonViewModelUsable usable)
+        {
+            usable.OnUseChanged(isDown);
+            return;
+        }
+
+        // Backward compatibility: allow viewmodel prefabs that still ship with a GrabbableObject-derived script.
+        if (_equippedViewModelUsable is GrabbableObject legacy)
+        {
+            legacy.ItemActivate(isDown);
+        }
+    }
+
+    private void ApplyPose(Transform target, ItemData data)
+    {
+        if (target == null || handAnchor == null) return;
 
         // Reset Scale (đề phòng model bị méo). Lưu ý: scale chịu ảnh hưởng hierarchy hiện tại.
-        item.transform.localScale = Vector3.one;
+        target.localScale = Vector3.one;
 
-        if (item.itemData != null)
+        if (data != null)
         {
-            Vector3 worldPos = handAnchor.TransformPoint(item.itemData.positionOffset);
-            Quaternion worldRot = handAnchor.rotation * Quaternion.Euler(item.itemData.rotationOffset);
-            item.transform.SetPositionAndRotation(worldPos, worldRot);
+            target.localPosition = data.positionOffset;
+            target.localRotation = Quaternion.Euler(data.rotationOffset);
         }
         else
         {
-            item.transform.SetPositionAndRotation(handAnchor.position, handAnchor.rotation);
+            target.localPosition = Vector3.zero;
+            target.localRotation = Quaternion.identity;
         }
     }
 
@@ -114,4 +179,11 @@ public class FirstPersonHands : MonoBehaviour
             SetLayerRecursively(child.gameObject, layer);
         }
     }
+}
+
+// Local-only first-person item behaviour (viewmodel). Not networked.
+// Implement this on first-person prefabs to react to use input.
+public interface IFirstPersonViewModelUsable
+{
+    void OnUseChanged(bool isDown);
 }
