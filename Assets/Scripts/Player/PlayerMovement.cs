@@ -7,6 +7,15 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private CharacterController _controller;
     [SerializeField] private StarterAssetsInputs _input;
 
+    [Header("Physical Status")]
+    [SerializeField] private float maxStamina = 10f;
+    [SerializeField] private float currentStamina;
+    [SerializeField] private float staminaRegenRate = 2f;
+    [SerializeField] private float staminaDrainRate = 3f;
+    [SerializeField] private float currentWeight = 1f;
+    [SerializeField] private bool isExhausted;
+    [SerializeField, Range(0.05f, 1f)] private float exhaustedRecoverThreshold = 0.2f;
+
     [Header("Movement Settings")]
     public float moveSpeed = 5.0f;
     public float sprintSpeed = 8.0f;
@@ -21,9 +30,18 @@ public class PlayerMovement : NetworkBehaviour
     // Các biến lưu trữ trạng thái để làm mượt
     private float _speed;
     private float _animationBlend;
+
+    public void SetCarryWeight(float weight)
+    {
+        currentWeight = Mathf.Clamp(weight, 1f, 10f);
+    }
     
     public override void OnNetworkSpawn()
     {
+        maxStamina = Mathf.Max(0.01f, maxStamina);
+        currentStamina = Mathf.Clamp(currentStamina <= 0f ? maxStamina : currentStamina, 0f, maxStamina);
+        currentWeight = Mathf.Clamp(currentWeight, 1f, 10f);
+
         // Chỉ bật CharacterController nếu là chủ sở hữu để tránh xung đột vật lý
         if (!IsOwner)
         {
@@ -36,15 +54,52 @@ public class PlayerMovement : NetworkBehaviour
         // Quan trọng: Chỉ chủ sở hữu mới xử lý di chuyển (Client-authoritative)
         if (!IsOwner) return;
 
+        UpdateStamina();
+
         ApplyGravity();
         ApplyJump();
         Move();
     }
 
+    private void UpdateStamina()
+    {
+        // "Thực sự di chuyển" theo velocity (theo yêu cầu)
+        float horizontalVelocityMagnitude = new Vector3(_controller.velocity.x, 0.0f, _controller.velocity.z).magnitude;
+        bool isActuallyMoving = horizontalVelocityMagnitude > 0.1f;
+        bool wantsSprint = _input.sprint;
+
+        if (wantsSprint && isActuallyMoving && !isExhausted)
+        {
+            currentStamina -= staminaDrainRate * currentWeight * Time.deltaTime;
+            if (currentStamina <= 0f)
+            {
+                currentStamina = 0f;
+                isExhausted = true;
+            }
+        }
+        else
+        {
+            currentStamina += staminaRegenRate * Time.deltaTime;
+            if (currentStamina >= maxStamina)
+            {
+                currentStamina = maxStamina;
+            }
+
+            if (isExhausted && currentStamina >= maxStamina * exhaustedRecoverThreshold)
+            {
+                isExhausted = false;
+            }
+        }
+    }
+
     private void Move()
     {
-        // 1. Xác định tốc độ mục tiêu dựa trên trạng thái Sprint
-        float targetSpeed = _input.sprint ? sprintSpeed : moveSpeed;
+        // 1. Xác định tốc độ mục tiêu dựa trên trạng thái Sprint + Stamina
+        bool canSprint = _input.sprint && !isExhausted && currentStamina > 0f;
+        float baseSpeed = canSprint ? sprintSpeed : moveSpeed;
+
+        // Mang càng nặng đi càng chậm (không bao giờ đứng yên vì weight đã bị kẹp >= 1)
+        float targetSpeed = baseSpeed / currentWeight;
 
         // Nếu không nhấn nút di chuyển, tốc độ mục tiêu là 0
         if (_input.move == Vector2.zero) targetSpeed = 0.0f;

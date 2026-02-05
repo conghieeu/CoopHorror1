@@ -676,6 +676,7 @@ GameObject:
   - component: {fileID: 8102144788602729548}
   - component: {fileID: 4715732454584420311}
   - component: {fileID: 1252535757598317606}
+  - component: {fileID: 6737199864978708331}
   m_Layer: 6
   m_Name: PlayerCapsule_Network
   m_TagString: Player
@@ -995,6 +996,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _controller: {fileID: 8616685848737228382}
   _input: {fileID: 1937087812424884925}
+  maxStamina: 10
+  currentStamina: 0
+  staminaRegenRate: 2
+  staminaDrainRate: 3
+  currentWeight: 1
+  isExhausted: 0
+  exhaustedRecoverThreshold: 0.2
   moveSpeed: 5
   sprintSpeed: 8
   speedChangeRate: 12.5
@@ -1053,3 +1061,17 @@ MonoBehaviour:
   swayAmount: 0.02
   maxSway: 0.06
   smoothSway: 5
+--- !u!114 &6737199864978708331
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8616685848737228372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b656dcffe17faec4683d931311e1dd88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CurrentHealth:
+    m_InternalValue: 100
