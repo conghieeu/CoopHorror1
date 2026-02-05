@@ -4,8 +4,36 @@ using UnityEngine;
 
 public class PlayerHealth : NetworkBehaviour
 {
+    [SerializeField] private int maxHealth = 100;
     public NetworkVariable<int> CurrentHealth = new NetworkVariable<int>(100);
+    public int MaxHealth => maxHealth;
     public bool IsDead => CurrentHealth.Value <= 0;
+
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer)
+        {
+            maxHealth = Mathf.Max(1, maxHealth);
+            if (CurrentHealth.Value > maxHealth)
+            {
+                CurrentHealth.Value = maxHealth;
+            }
+        }
+
+        // Chỉ người chơi local (owner) mới nối với UI để tối ưu
+        if (IsOwner)
+        {
+            PlayerHealthUI.Instance.Initialize(this);
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (IsOwner)
+        {
+            PlayerHealthUI.Instance.Unbind();
+        }
+    }
 
     // --- LỆNH CONSOLE DÀNH CHO ADMIN ---
     
