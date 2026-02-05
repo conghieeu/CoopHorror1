@@ -30,6 +30,9 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
     public bool IsHeld => IsSpawned ? _isHeldNet.Value : heldDebug;
     public ulong HeldByClientId => IsSpawned ? _heldByClientIdNet.Value : heldByClientIdDebug;
 
+    public delegate void HeldStateChangedHandler(bool held, ulong holderClientId);
+    public event HeldStateChangedHandler HeldStateChanged;
+
     [Header("Usage")]
     public bool isBeingUsed = false; // Biến kiểm tra xem đang bật hay tắt
     public int scrapValue = 0; // Giá trị tiền khi vứt ra đất
@@ -61,14 +64,17 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
     public override void OnNetworkSpawn()
     {
         _isHeldNet.OnValueChanged += OnHeldNetChanged;
+        _heldByClientIdNet.OnValueChanged += OnHeldByClientIdNetChanged;
 
         ApplyHeldPresentation(_isHeldNet.Value, _heldByClientIdNet.Value);
+        HeldStateChanged?.Invoke(_isHeldNet.Value, _heldByClientIdNet.Value);
         base.OnNetworkSpawn();
     }
 
     public override void OnNetworkDespawn()
     {
         _isHeldNet.OnValueChanged -= OnHeldNetChanged;
+        _heldByClientIdNet.OnValueChanged -= OnHeldByClientIdNetChanged;
         base.OnNetworkDespawn();
     }
 
@@ -165,6 +171,14 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
     {
         Debug.Log($"OnHeldNetChanged: {previous} -> {current}, HeldByClientId: {_heldByClientIdNet.Value}", this);
         ApplyHeldPresentation(current, _heldByClientIdNet.Value);
+        HeldStateChanged?.Invoke(current, _heldByClientIdNet.Value);
+    }
+
+    private void OnHeldByClientIdNetChanged(ulong previous, ulong current)
+    {
+        // Holder can be set before/after held; re-apply presentation for safety.
+        ApplyHeldPresentation(_isHeldNet.Value, current);
+        HeldStateChanged?.Invoke(_isHeldNet.Value, current);
     }
 
     private void ApplyHeldPresentation(bool held, ulong holderClientId)
@@ -173,11 +187,9 @@ public class GrabbableObject : NetworkBehaviour, IInteractable
         heldDebug = held;
         heldByClientIdDebug = holderClientId;
 
-        // NetworkTransform: disable while held so it doesn't fight hand-follow.
-        if (_netTransform != null)
-        {
-            _netTransform.enabled = !held;
-        }
+        // Keep NetworkTransform enabled even while held.
+        // World items are hidden while held (lethal-style), and the server still needs to
+        // replicate Teleport/transform updates reliably to observers when dropping/throwing.
 
         // Lethal-style: world item disappears for everyone while held.
         bool shouldHide = held;

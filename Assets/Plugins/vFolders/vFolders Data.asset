@@ -24,6 +24,9 @@ MonoBehaviour:
     - f731e1ab1db760f47ad490e867ee277d
     - f4b9f7012c1718d42906de5e8028f40a
     - 26d61781186ad0242b1fe07ac5142238
+    - d42840d3f8de2c846889c690951c46d7
+    - ed5cc06472bb24d419458b6ece5b79eb
+    - bc688fc4c70b02044b054f994d6e36e6
     values:
     - colorIndex: 0
       iconNameOrGuid: TextAsset Icon
@@ -45,3 +48,9 @@ MonoBehaviour:
       iconNameOrGuid: Font Icon
     - colorIndex: 5
       iconNameOrGuid: Prefab Icon
+    - colorIndex: 0
+      iconNameOrGuid: ScriptableObject Icon
+    - colorIndex: 0
+      iconNameOrGuid: Texture Icon
+    - colorIndex: 9
+      iconNameOrGuid: 
