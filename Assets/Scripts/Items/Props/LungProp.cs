@@ -76,13 +76,5 @@ public class LungProp : GrabbableObject
 		roundManager = Object.FindObjectOfType<RoundManager>();
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "LungProp";
-	}
 }

@@ -5,13 +5,5 @@ public class PhysicsProp : GrabbableObject
 		base.EquipItem();
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "PhysicsProp";
-	}
 }

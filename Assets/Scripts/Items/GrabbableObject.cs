@@ -1,11 +1,71 @@
 using System;
 using GameNetcodeStuff;
 using Unity.Netcode;
-using Unity.Netcode.Samples;
 using UnityEngine;
 
 public abstract class GrabbableObject : NetworkBehaviour
 {
+	// --- Properties added for PlayerInventory compatibility ---
+	
+	/// <summary>Item data asset (set in Inspector or at spawn time)</summary>
+	public ItemData itemData;
+	
+	/// <summary>Whether this item is currently held by any player (server-authoritative)</summary>
+	public bool IsHeld => isHeld;
+	
+	/// <summary>Client ID of the player holding this item</summary>
+	public ulong HeldByClientId { get; private set; }
+	
+	/// <summary>Event fired when held state changes. Parameters: (isHeld, holderClientId)</summary>
+	public event System.Action<bool, ulong> HeldStateChanged;
+	
+	/// <summary>Server-only: set up the item for being in an inventory (disable physics/collider) or dropped</summary>
+	public void SetInventoryStateServer(bool inInventory)
+	{
+		if (!NetworkManager.Singleton.IsServer) return;
+		
+		isHeld = inInventory;
+		HeldByClientId = inInventory ? OwnerClientId : 0;
+		
+		// Toggle physics
+		Rigidbody rb = GetComponent<Rigidbody>();
+		if (rb != null)
+		{
+			rb.isKinematic = inInventory;
+			rb.useGravity = !inInventory;
+		}
+		
+		// Toggle colliders
+		EnablePhysics(!inInventory);
+		
+		// Hide/show mesh
+		EnableItemMeshes(!inInventory);
+		
+		// Notify clients
+		SetInventoryStateClientRpc(inInventory, HeldByClientId);
+	}
+	
+	[ClientRpc]
+	private void SetInventoryStateClientRpc(bool inInventory, ulong holderClientId)
+	{
+		isHeld = inInventory;
+		HeldByClientId = holderClientId;
+		
+		Rigidbody rb = GetComponent<Rigidbody>();
+		if (rb != null)
+		{
+			rb.isKinematic = inInventory;
+			rb.useGravity = !inInventory;
+		}
+		
+		EnablePhysics(!inInventory);
+		EnableItemMeshes(!inInventory);
+		
+		HeldStateChanged?.Invoke(inInventory, holderClientId);
+	}
+	
+	// --- End PlayerInventory compatibility ---
+	
 	public bool grabbable;
 
 	public bool isHeld;
@@ -376,52 +436,15 @@ public abstract class GrabbableObject : NetworkBehaviour
 	[ServerRpc]
 	public void SyncBatteryServerRpc(int charge)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3484508350u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, charge);
-			__endSendServerRpc(ref bufferWriter, 3484508350u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			SyncBatteryClientRpc(charge);
-		}
+		SyncBatteryClientRpc(charge);
 	}
 
 	[ClientRpc]
 	public void SyncBatteryClientRpc(int charge)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2670202430u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, charge);
-				__endSendClientRpc(ref bufferWriter, 2670202430u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				float num = (float)charge / 100f;
-				insertedBattery = new Battery(num <= 0f, num);
-				ChargeBatteries();
-			}
-		}
+		float num = (float)charge / 100f;
+		insertedBattery = new Battery(num <= 0f, num);
+		ChargeBatteries();
 	}
 
 	public virtual void DiscardItem()
@@ -608,273 +631,106 @@ public abstract class GrabbableObject : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void InteractLeftRightServerRpc(bool right)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1469591241u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in right, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 1469591241u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				InteractLeftRightClientRpc(right);
-			}
-		}
+		InteractLeftRightClientRpc(right);
 	}
 
 	[ClientRpc]
 	private void InteractLeftRightClientRpc(bool right)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3081511085u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in right, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 3081511085u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				ItemInteractLeftRight(right);
-			}
+			ItemInteractLeftRight(right);
 		}
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	private void GrabServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2618697776u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 2618697776u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				GrabClientRpc();
-			}
-		}
+		GrabClientRpc();
 	}
 
 	[ClientRpc]
 	private void GrabClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1334815929u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1334815929u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				GrabItem();
-			}
+			GrabItem();
 		}
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	private void ActivateItemServerRpc(bool onOff, bool buttonDown)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(4280509730u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in onOff, default(FastBufferWriter.ForPrimitives));
-				bufferWriter.WriteValueSafe(in buttonDown, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 4280509730u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ActivateItemClientRpc(onOff, buttonDown);
-			}
-		}
+		ActivateItemClientRpc(onOff, buttonDown);
 	}
 
 	[ClientRpc]
 	private void ActivateItemClientRpc(bool onOff, bool buttonDown)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1761213193u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in onOff, default(FastBufferWriter.ForPrimitives));
-				bufferWriter.WriteValueSafe(in buttonDown, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 1761213193u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				isBeingUsed = onOff;
-				ItemActivate(onOff, buttonDown);
-			}
+			isBeingUsed = onOff;
+			ItemActivate(onOff, buttonDown);
 		}
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	private void DiscardItemServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1974688543u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 1974688543u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				DiscardItemClientRpc();
-			}
-		}
+		DiscardItemClientRpc();
 	}
 
 	[ClientRpc]
 	private void DiscardItemClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(335835173u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 335835173u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				DiscardItem();
-			}
+			DiscardItem();
 		}
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	private void UseUpItemBatteriesServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2025123357u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 2025123357u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				UseUpItemBatteriesClientRpc();
-			}
-		}
+		UseUpItemBatteriesClientRpc();
 	}
 
 	[ClientRpc]
 	private void UseUpItemBatteriesClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(738171084u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 738171084u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				UseUpBatteries();
-			}
+			UseUpBatteries();
 		}
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	private void EquipItemServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(947748389u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 947748389u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				EquipItemClientRpc();
-			}
-		}
+		EquipItemClientRpc();
 	}
 
 	[ClientRpc]
 	private void EquipItemClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1898191537u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1898191537u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				EquipItem();
-			}
+			EquipItem();
 		}
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	private void PocketItemServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(101807903u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 101807903u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				PocketItemClientRpc();
-			}
-		}
+		PocketItemClientRpc();
 	}
 
 	[ClientRpc]
 	private void PocketItemClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3399384424u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 3399384424u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				PocketItem();
-			}
+			PocketItem();
 		}
 	}
 
@@ -886,7 +742,6 @@ public abstract class GrabbableObject : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void ChangeOwnershipOfPropServerRpc(ulong NewOwner)
 	{
-		NetworkManager networkManager = base.NetworkManager;
 		if ((object)networkManager == null || !networkManager.IsListening)
 		{
 			return;
@@ -949,242 +804,5 @@ public abstract class GrabbableObject : NetworkBehaviour
 		return startPosition;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_GrabbableObject()
-	{
-		NetworkManager.__rpc_func_table.Add(3484508350u, __rpc_handler_3484508350);
-		NetworkManager.__rpc_func_table.Add(2670202430u, __rpc_handler_2670202430);
-		NetworkManager.__rpc_func_table.Add(1469591241u, __rpc_handler_1469591241);
-		NetworkManager.__rpc_func_table.Add(3081511085u, __rpc_handler_3081511085);
-		NetworkManager.__rpc_func_table.Add(2618697776u, __rpc_handler_2618697776);
-		NetworkManager.__rpc_func_table.Add(1334815929u, __rpc_handler_1334815929);
-		NetworkManager.__rpc_func_table.Add(4280509730u, __rpc_handler_4280509730);
-		NetworkManager.__rpc_func_table.Add(1761213193u, __rpc_handler_1761213193);
-		NetworkManager.__rpc_func_table.Add(1974688543u, __rpc_handler_1974688543);
-		NetworkManager.__rpc_func_table.Add(335835173u, __rpc_handler_335835173);
-		NetworkManager.__rpc_func_table.Add(2025123357u, __rpc_handler_2025123357);
-		NetworkManager.__rpc_func_table.Add(738171084u, __rpc_handler_738171084);
-		NetworkManager.__rpc_func_table.Add(947748389u, __rpc_handler_947748389);
-		NetworkManager.__rpc_func_table.Add(1898191537u, __rpc_handler_1898191537);
-		NetworkManager.__rpc_func_table.Add(101807903u, __rpc_handler_101807903);
-		NetworkManager.__rpc_func_table.Add(3399384424u, __rpc_handler_3399384424);
-		NetworkManager.__rpc_func_table.Add(1391130874u, __rpc_handler_1391130874);
-	}
-
-	private static void __rpc_handler_3484508350(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((GrabbableObject)target).SyncBatteryServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2670202430(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((GrabbableObject)target).SyncBatteryClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1469591241(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((GrabbableObject)target).InteractLeftRightServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3081511085(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((GrabbableObject)target).InteractLeftRightClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2618697776(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((GrabbableObject)target).GrabServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1334815929(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((GrabbableObject)target).GrabClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4280509730(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((GrabbableObject)target).ActivateItemServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1761213193(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((GrabbableObject)target).ActivateItemClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1974688543(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((GrabbableObject)target).DiscardItemServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_335835173(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((GrabbableObject)target).DiscardItemClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2025123357(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((GrabbableObject)target).UseUpItemBatteriesServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_738171084(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((GrabbableObject)target).UseUpItemBatteriesClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_947748389(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((GrabbableObject)target).EquipItemServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1898191537(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((GrabbableObject)target).EquipItemClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_101807903(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((GrabbableObject)target).PocketItemServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3399384424(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((GrabbableObject)target).PocketItemClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1391130874(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((GrabbableObject)target).ChangeOwnershipOfPropServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "GrabbableObject";
-	}
 }

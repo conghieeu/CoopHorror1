@@ -76,38 +76,15 @@ public class RadarBoosterItem : GrabbableObject
 	[ServerRpc(RequireOwnership = false)]
 	public void RadarBoosterFlashServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3971038271u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 3971038271u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				RadarBoosterFlashClientRpc();
-			}
-		}
+		RadarBoosterFlashClientRpc();
 	}
 
 	[ClientRpc]
 	public void RadarBoosterFlashClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!(flashCooldown >= 0f))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(720948839u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 720948839u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !(flashCooldown >= 0f))
-			{
-				Flash();
-			}
+			Flash();
 		}
 	}
 
@@ -194,40 +171,15 @@ public class RadarBoosterItem : GrabbableObject
 	[ServerRpc(RequireOwnership = false)]
 	public void PingRadarBoosterServerRpc(int playerWhoPlayedPing)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(577640837u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoPlayedPing);
-				__endSendServerRpc(ref bufferWriter, 577640837u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				PingRadarBoosterClientRpc(playerWhoPlayedPing);
-			}
-		}
+		PingRadarBoosterClientRpc(playerWhoPlayedPing);
 	}
 
 	[ClientRpc]
 	public void PingRadarBoosterClientRpc(int playerWhoPlayedPing)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!(GameNetworkManager.Instance.localPlayerController == null) && playerWhoPlayedPing != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3675855655u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoPlayedPing);
-				__endSendClientRpc(ref bufferWriter, 3675855655u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !(GameNetworkManager.Instance.localPlayerController == null) && playerWhoPlayedPing != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
-			{
-				PlayPingAudio();
-			}
+			PlayPingAudio();
 		}
 	}
 
@@ -277,68 +229,5 @@ public class RadarBoosterItem : GrabbableObject
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_RadarBoosterItem()
-	{
-		NetworkManager.__rpc_func_table.Add(3971038271u, __rpc_handler_3971038271);
-		NetworkManager.__rpc_func_table.Add(720948839u, __rpc_handler_720948839);
-		NetworkManager.__rpc_func_table.Add(577640837u, __rpc_handler_577640837);
-		NetworkManager.__rpc_func_table.Add(3675855655u, __rpc_handler_3675855655);
-	}
-
-	private static void __rpc_handler_3971038271(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RadarBoosterItem)target).RadarBoosterFlashServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_720948839(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RadarBoosterItem)target).RadarBoosterFlashClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_577640837(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RadarBoosterItem)target).PingRadarBoosterServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3675855655(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RadarBoosterItem)target).PingRadarBoosterClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "RadarBoosterItem";
-	}
 }

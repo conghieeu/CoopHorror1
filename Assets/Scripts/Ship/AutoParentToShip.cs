@@ -84,13 +84,5 @@ public class AutoParentToShip : NetworkBehaviour
 		base.transform.position += vector;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "AutoParentToShip";
-	}
 }

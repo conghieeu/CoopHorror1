@@ -270,13 +270,5 @@ public class AudioReverbTrigger : NetworkBehaviour
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "AudioReverbTrigger";
-	}
 }

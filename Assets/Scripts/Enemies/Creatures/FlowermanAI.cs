@@ -214,53 +214,16 @@ public class FlowermanAI : EnemyAI
 	[ServerRpc]
 	public void EnterAngerModeServerRpc(float angerTime)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(80027368u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in angerTime, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 80027368u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			EnterAngerModeClientRpc(angerTime);
-		}
+		EnterAngerModeClientRpc(angerTime);
 	}
 
 	[ClientRpc]
 	public void EnterAngerModeClientRpc(float angerTime)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2307050878u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in angerTime, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 2307050878u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				angerMeter = angerTime;
-				agent.speed = 9f;
-				SwitchToBehaviourStateOnLocalClient(2);
-				waitAroundEntrancePosition = RoundManager.Instance.GetRandomNavMeshPositionInRadius(mainEntrancePosition, 6f);
-			}
-		}
+		angerMeter = angerTime;
+		agent.speed = 9f;
+		SwitchToBehaviourStateOnLocalClient(2);
+		waitAroundEntrancePosition = RoundManager.Instance.GetRandomNavMeshPositionInRadius(mainEntrancePosition, 6f);
 	}
 
 	public void ChooseClosestNodeToPlayer()
@@ -499,48 +462,13 @@ public class FlowermanAI : EnemyAI
 	[ServerRpc]
 	public void DropPlayerBodyServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2817453984u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 2817453984u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			DropPlayerBodyClientRpc();
-		}
+		DropPlayerBodyClientRpc();
 	}
 
 	[ClientRpc]
 	public void DropPlayerBodyClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1942952026u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1942952026u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				DropPlayerBody();
-			}
-		}
+		DropPlayerBody();
 	}
 
 	private void DropPlayerBody()
@@ -596,103 +524,62 @@ public class FlowermanAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void KillPlayerAnimationServerRpc(int playerObjectId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (!inKillAnimation && !carryingPlayerBody)
 		{
-			return;
+			inKillAnimation = true;
+			inSpecialAnimation = true;
+			isClientCalculatingAI = false;
+			inSpecialAnimationWithPlayer = StartOfRound.Instance.allPlayerScripts[playerObjectId];
+			inSpecialAnimationWithPlayer.inAnimationWithEnemy = this;
+			KillPlayerAnimationClientRpc(playerObjectId);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2920701539u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerObjectId);
-			__endSendServerRpc(ref bufferWriter, 2920701539u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (!inKillAnimation && !carryingPlayerBody)
-			{
-				inKillAnimation = true;
-				inSpecialAnimation = true;
-				isClientCalculatingAI = false;
-				inSpecialAnimationWithPlayer = StartOfRound.Instance.allPlayerScripts[playerObjectId];
-				inSpecialAnimationWithPlayer.inAnimationWithEnemy = this;
-				KillPlayerAnimationClientRpc(playerObjectId);
-			}
-			else
-			{
-				CancelKillAnimationClientRpc(playerObjectId);
-			}
+			CancelKillAnimationClientRpc(playerObjectId);
 		}
 	}
 
 	[ClientRpc]
 	public void CancelKillAnimationClientRpc(int playerObjectId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if ((int)GameNetworkManager.Instance.localPlayerController.playerClientId == playerObjectId)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2215703370u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObjectId);
-				__endSendClientRpc(ref bufferWriter, 2215703370u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && (int)GameNetworkManager.Instance.localPlayerController.playerClientId == playerObjectId)
-			{
-				startingKillAnimationLocalClient = false;
-			}
+			startingKillAnimationLocalClient = false;
 		}
 	}
 
 	[ClientRpc]
 	public void KillPlayerAnimationClientRpc(int playerObjectId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		inSpecialAnimationWithPlayer = StartOfRound.Instance.allPlayerScripts[playerObjectId];
+		if (inSpecialAnimationWithPlayer == GameNetworkManager.Instance.localPlayerController)
 		{
-			return;
+			startingKillAnimationLocalClient = false;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		if (inSpecialAnimationWithPlayer == null || inSpecialAnimationWithPlayer.isPlayerDead || !inSpecialAnimationWithPlayer.isInsideFactory)
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(114605325u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerObjectId);
-			__endSendClientRpc(ref bufferWriter, 114605325u, clientRpcParams, RpcDelivery.Reliable);
+			FinishKillAnimation(carryingBody: false);
 		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
+		inSpecialAnimationWithPlayer.inAnimationWithEnemy = this;
+		inKillAnimation = true;
+		inSpecialAnimation = true;
+		creatureAnimator.SetBool("killing", value: true);
+		agent.enabled = false;
+		inSpecialAnimationWithPlayer.inSpecialInteractAnimation = true;
+		inSpecialAnimationWithPlayer.snapToServerPosition = true;
+		Vector3 vector = ((!inSpecialAnimationWithPlayer.IsOwner) ? inSpecialAnimationWithPlayer.transform.parent.TransformPoint(inSpecialAnimationWithPlayer.serverPlayerPosition) : inSpecialAnimationWithPlayer.transform.position);
+		Vector3 position = base.transform.position;
+		position.y = inSpecialAnimationWithPlayer.transform.position.y;
+		playerRay = new Ray(vector, position - inSpecialAnimationWithPlayer.transform.position);
+		turnCompass.LookAt(vector);
+		position = base.transform.eulerAngles;
+		position.y = turnCompass.eulerAngles.y;
+		base.transform.eulerAngles = position;
+		if (killAnimationCoroutine != null)
 		{
-			inSpecialAnimationWithPlayer = StartOfRound.Instance.allPlayerScripts[playerObjectId];
-			if (inSpecialAnimationWithPlayer == GameNetworkManager.Instance.localPlayerController)
-			{
-				startingKillAnimationLocalClient = false;
-			}
-			if (inSpecialAnimationWithPlayer == null || inSpecialAnimationWithPlayer.isPlayerDead || !inSpecialAnimationWithPlayer.isInsideFactory)
-			{
-				FinishKillAnimation(carryingBody: false);
-			}
-			inSpecialAnimationWithPlayer.inAnimationWithEnemy = this;
-			inKillAnimation = true;
-			inSpecialAnimation = true;
-			creatureAnimator.SetBool("killing", value: true);
-			agent.enabled = false;
-			inSpecialAnimationWithPlayer.inSpecialInteractAnimation = true;
-			inSpecialAnimationWithPlayer.snapToServerPosition = true;
-			Vector3 vector = ((!inSpecialAnimationWithPlayer.IsOwner) ? inSpecialAnimationWithPlayer.transform.parent.TransformPoint(inSpecialAnimationWithPlayer.serverPlayerPosition) : inSpecialAnimationWithPlayer.transform.position);
-			Vector3 position = base.transform.position;
-			position.y = inSpecialAnimationWithPlayer.transform.position.y;
-			playerRay = new Ray(vector, position - inSpecialAnimationWithPlayer.transform.position);
-			turnCompass.LookAt(vector);
-			position = base.transform.eulerAngles;
-			position.y = turnCompass.eulerAngles.y;
-			base.transform.eulerAngles = position;
-			if (killAnimationCoroutine != null)
-			{
-				StopCoroutine(killAnimationCoroutine);
-			}
-			killAnimationCoroutine = StartCoroutine(killAnimation());
+			StopCoroutine(killAnimationCoroutine);
 		}
+		killAnimationCoroutine = StartCoroutine(killAnimation());
 	}
 
 	private IEnumerator killAnimation()
@@ -785,40 +672,15 @@ public class FlowermanAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void ResetFlowermanStealthTimerServerRpc(int playerObj)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(843847125u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObj);
-				__endSendServerRpc(ref bufferWriter, 843847125u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ResetFlowermanStealthClientRpc(playerObj);
-			}
-		}
+		ResetFlowermanStealthClientRpc(playerObj);
 	}
 
 	[ClientRpc]
 	public void ResetFlowermanStealthClientRpc(int playerObj)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (playerObj != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3273050u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObj);
-				__endSendClientRpc(ref bufferWriter, 3273050u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && playerObj != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
-			{
-				LookAtFlowermanTrigger(playerObj);
-			}
+			LookAtFlowermanTrigger(playerObj);
 		}
 	}
 
@@ -893,155 +755,5 @@ public class FlowermanAI : EnemyAI
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_FlowermanAI()
-	{
-		NetworkManager.__rpc_func_table.Add(80027368u, __rpc_handler_80027368);
-		NetworkManager.__rpc_func_table.Add(2307050878u, __rpc_handler_2307050878);
-		NetworkManager.__rpc_func_table.Add(2817453984u, __rpc_handler_2817453984);
-		NetworkManager.__rpc_func_table.Add(1942952026u, __rpc_handler_1942952026);
-		NetworkManager.__rpc_func_table.Add(2920701539u, __rpc_handler_2920701539);
-		NetworkManager.__rpc_func_table.Add(2215703370u, __rpc_handler_2215703370);
-		NetworkManager.__rpc_func_table.Add(114605325u, __rpc_handler_114605325);
-		NetworkManager.__rpc_func_table.Add(843847125u, __rpc_handler_843847125);
-		NetworkManager.__rpc_func_table.Add(3273050u, __rpc_handler_3273050);
-	}
-
-	private static void __rpc_handler_80027368(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out float value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((FlowermanAI)target).EnterAngerModeServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2307050878(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out float value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((FlowermanAI)target).EnterAngerModeClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2817453984(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((FlowermanAI)target).DropPlayerBodyServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1942952026(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((FlowermanAI)target).DropPlayerBodyClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2920701539(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((FlowermanAI)target).KillPlayerAnimationServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2215703370(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((FlowermanAI)target).CancelKillAnimationClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_114605325(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((FlowermanAI)target).KillPlayerAnimationClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_843847125(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((FlowermanAI)target).ResetFlowermanStealthTimerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3273050(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((FlowermanAI)target).ResetFlowermanStealthClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "FlowermanAI";
-	}
 }

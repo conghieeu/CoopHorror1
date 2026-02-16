@@ -184,52 +184,21 @@ public class ShotgunItem : GrabbableObject
 	[ServerRpc(RequireOwnership = false)]
 	public void ShootGunServerRpc(Vector3 shotgunPosition, Vector3 shotgunForward)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1329927282u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in shotgunPosition);
-				bufferWriter.WriteValueSafe(in shotgunForward);
-				__endSendServerRpc(ref bufferWriter, 1329927282u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ShootGunClientRpc(shotgunPosition, shotgunForward);
-			}
-		}
+		ShootGunClientRpc(shotgunPosition, shotgunForward);
 	}
 
 	[ClientRpc]
 	public void ShootGunClientRpc(Vector3 shotgunPosition, Vector3 shotgunForward)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log("Shoot gun client rpc received");
+		if (localClientSendingShootGunRPC)
 		{
-			return;
+			localClientSendingShootGunRPC = false;
+			Debug.Log("localClientSendingShootGunRPC was true");
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		else
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(4176294522u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in shotgunPosition);
-			bufferWriter.WriteValueSafe(in shotgunForward);
-			__endSendClientRpc(ref bufferWriter, 4176294522u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			Debug.Log("Shoot gun client rpc received");
-			if (localClientSendingShootGunRPC)
-			{
-				localClientSendingShootGunRPC = false;
-				Debug.Log("localClientSendingShootGunRPC was true");
-			}
-			else
-			{
-				ShootGun(shotgunPosition, shotgunForward);
-			}
+			ShootGun(shotgunPosition, shotgunForward);
 		}
 	}
 
@@ -431,62 +400,27 @@ public class ShotgunItem : GrabbableObject
 	[ServerRpc]
 	public void ReloadGunEffectsServerRpc(bool start = true)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3349119596u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in start, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 3349119596u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ReloadGunEffectsClientRpc(start);
-		}
+		ReloadGunEffectsClientRpc(start);
 	}
 
 	[ClientRpc]
 	public void ReloadGunEffectsClientRpc(bool start = true)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2673645315u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in start, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 2673645315u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
+		if (!base.IsOwner)
 		{
 			if (start)
 			{
-				gunAudio.PlayOneShot(gunReloadSFX);
-				WalkieTalkie.TransmitOneShotAudio(gunAudio, gunReloadSFX);
-				gunAnimator.SetBool("Reloading", value: true);
-				isReloading = true;
+			gunAudio.PlayOneShot(gunReloadSFX);
+			WalkieTalkie.TransmitOneShotAudio(gunAudio, gunReloadSFX);
+			gunAnimator.SetBool("Reloading", value: true);
+			isReloading = true;
 			}
 			else
 			{
-				shellsLoaded = Mathf.Clamp(shellsLoaded + 1, 0, 2);
-				gunAudio.PlayOneShot(gunReloadFinishSFX);
-				gunAnimator.SetBool("Reloading", value: false);
-				isReloading = false;
+			shellsLoaded = Mathf.Clamp(shellsLoaded + 1, 0, 2);
+			gunAudio.PlayOneShot(gunReloadFinishSFX);
+			gunAnimator.SetBool("Reloading", value: false);
+			isReloading = false;
 			}
 		}
 	}
@@ -602,83 +536,5 @@ public class ShotgunItem : GrabbableObject
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_ShotgunItem()
-	{
-		NetworkManager.__rpc_func_table.Add(1329927282u, __rpc_handler_1329927282);
-		NetworkManager.__rpc_func_table.Add(4176294522u, __rpc_handler_4176294522);
-		NetworkManager.__rpc_func_table.Add(3349119596u, __rpc_handler_3349119596);
-		NetworkManager.__rpc_func_table.Add(2673645315u, __rpc_handler_2673645315);
-	}
-
-	private static void __rpc_handler_1329927282(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			reader.ReadValueSafe(out Vector3 value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ShotgunItem)target).ShootGunServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4176294522(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			reader.ReadValueSafe(out Vector3 value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ShotgunItem)target).ShootGunClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3349119596(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ShotgunItem)target).ReloadGunEffectsServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2673645315(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ShotgunItem)target).ReloadGunEffectsClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "ShotgunItem";
-	}
 }

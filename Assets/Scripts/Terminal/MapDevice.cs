@@ -61,13 +61,5 @@ public class MapDevice : GrabbableObject
 		playerHeldBy.equippedUsableItemQE = true;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "MapDevice";
-	}
 }

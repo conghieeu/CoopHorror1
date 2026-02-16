@@ -113,27 +113,12 @@ public class EntranceTeleport : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void TeleportPlayerServerRpc(int playerObj)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(4279190381u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObj);
-				__endSendServerRpc(ref bufferWriter, 4279190381u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				TeleportPlayerClientRpc(playerObj);
-			}
-		}
+		TeleportPlayerClientRpc(playerObj);
 	}
 
 	[ClientRpc]
 	public void TeleportPlayerClientRpc(int playerObj)
 	{
-		NetworkManager networkManager = base.NetworkManager;
 		if ((object)networkManager == null || !networkManager.IsListening)
 		{
 			return;
@@ -232,44 +217,5 @@ public class EntranceTeleport : NetworkBehaviour
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_EntranceTeleport()
-	{
-		NetworkManager.__rpc_func_table.Add(4279190381u, __rpc_handler_4279190381);
-		NetworkManager.__rpc_func_table.Add(3168414823u, __rpc_handler_3168414823);
-	}
-
-	private static void __rpc_handler_4279190381(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((EntranceTeleport)target).TeleportPlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3168414823(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((EntranceTeleport)target).TeleportPlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "EntranceTeleport";
-	}
 }

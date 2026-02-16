@@ -120,85 +120,18 @@ public class ShipAlarmCord : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void PullCordServerRpc(int playerPullingCord)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(504098657u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerPullingCord);
-				__endSendServerRpc(ref bufferWriter, 504098657u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				PullCordClientRpc(playerPullingCord);
-			}
-		}
+		PullCordClientRpc(playerPullingCord);
 	}
 
 	[ClientRpc]
 	public void PullCordClientRpc(int playerPullingCord)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1428666593u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerPullingCord);
-			__endSendClientRpc(ref bufferWriter, 1428666593u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		Debug.Log("Received pull cord client rpc");
-		if (!(GameNetworkManager.Instance.localPlayerController == null) && (int)GameNetworkManager.Instance.localPlayerController.playerClientId != playerPullingCord)
-		{
-			otherClientHoldingCord = true;
-			hornBlaring = true;
-			cordAnimator.SetBool("pulled", value: true);
-			cordAudio.PlayOneShot(cordPullSFX);
-			WalkieTalkie.TransmitOneShotAudio(cordAudio, cordPullSFX);
-			if (!hornClose.isPlaying)
-			{
-				hornClose.Play();
-			}
-			if (!hornFar.isPlaying)
-			{
-				hornFar.Play();
-			}
-		}
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void StopPullingCordServerRpc(int playerPullingCord)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(967408504u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerPullingCord);
-				__endSendServerRpc(ref bufferWriter, 967408504u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				StopPullingCordClientRpc(playerPullingCord);
-			}
-		}
+		StopPullingCordClientRpc(playerPullingCord);
 	}
 
 	[ClientRpc]
 	public void StopPullingCordClientRpc(int playerPullingCord)
 	{
-		NetworkManager networkManager = base.NetworkManager;
 		if ((object)networkManager == null || !networkManager.IsListening)
 		{
 			return;
@@ -230,70 +163,5 @@ public class ShipAlarmCord : NetworkBehaviour
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_ShipAlarmCord()
-	{
-		NetworkManager.__rpc_func_table.Add(504098657u, __rpc_handler_504098657);
-		NetworkManager.__rpc_func_table.Add(1428666593u, __rpc_handler_1428666593);
-		NetworkManager.__rpc_func_table.Add(967408504u, __rpc_handler_967408504);
-		NetworkManager.__rpc_func_table.Add(2882145839u, __rpc_handler_2882145839);
-	}
-
-	private static void __rpc_handler_504098657(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ShipAlarmCord)target).PullCordServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1428666593(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ShipAlarmCord)target).PullCordClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_967408504(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ShipAlarmCord)target).StopPullingCordServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2882145839(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ShipAlarmCord)target).StopPullingCordClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "ShipAlarmCord";
-	}
 }

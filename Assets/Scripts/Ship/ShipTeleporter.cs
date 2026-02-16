@@ -121,250 +121,21 @@ public class ShipTeleporter : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void PressTeleportButtonServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(389447712u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 389447712u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				PressTeleportButtonClientRpc();
-			}
-		}
+		PressTeleportButtonClientRpc();
 	}
 
 	[ClientRpc]
 	public void PressTeleportButtonClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2773756087u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 2773756087u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		PressButtonEffects();
-		if (beamUpPlayerCoroutine != null)
-		{
-			StopCoroutine(beamUpPlayerCoroutine);
-		}
-		cooldownTime = cooldownAmount;
-		buttonTrigger.interactable = false;
-		if (isInverseTeleporter)
-		{
-			if (CanUseInverseTeleporter())
-			{
-				beamUpPlayerCoroutine = StartCoroutine(beamOutPlayer());
-			}
-		}
-		else
-		{
-			beamUpPlayerCoroutine = StartCoroutine(beamUpPlayer());
-		}
-	}
-
-	private void PressButtonEffects()
-	{
-		buttonAnimator.SetTrigger("press");
-		buttonAnimator.SetBool("GlassOpen", value: false);
-		buttonAnimator.GetComponentInChildren<AnimatedObjectTrigger>().boolValue = false;
-		if (isInverseTeleporter)
-		{
-			if (CanUseInverseTeleporter())
-			{
-				teleporterAnimator.SetTrigger("useInverseTeleporter");
-			}
-			else
-			{
-				Debug.Log($"Using inverse teleporter was not allowed; {StartOfRound.Instance.inShipPhase}; {StartOfRound.Instance.currentLevel.PlanetName}");
-			}
-		}
-		else
-		{
-			teleporterAnimator.SetTrigger("useTeleporter");
-		}
-		buttonAudio.PlayOneShot(buttonPressSFX);
-		WalkieTalkie.TransmitOneShotAudio(buttonAudio, buttonPressSFX);
-	}
-
-	private bool CanUseInverseTeleporter()
-	{
-		if (!StartOfRound.Instance.inShipPhase)
-		{
-			return StartOfRound.Instance.currentLevel.spawnEnemiesAndScrap;
-		}
-		return false;
-	}
-
-	private IEnumerator beamOutPlayer()
-	{
-		if (GameNetworkManager.Instance.localPlayerController == null)
-		{
-			yield break;
-		}
-		if (StartOfRound.Instance.inShipPhase)
-		{
-			Debug.Log("Attempted using teleporter while in ship phase");
-			yield break;
-		}
-		shipTeleporterAudio.PlayOneShot(teleporterSpinSFX);
-		for (int b = 0; b < 5; b++)
-		{
-			for (int i = 0; i < StartOfRound.Instance.allPlayerObjects.Length; i++)
-			{
-				PlayerControllerB playerControllerB = StartOfRound.Instance.allPlayerScripts[i];
-				Vector3 position = playerControllerB.transform.position;
-				if (playerControllerB.deadBody != null)
-				{
-					position = playerControllerB.deadBody.bodyParts[5].transform.position;
-				}
-				if (Vector3.Distance(position, teleportOutPosition.position) > 2f)
-				{
-					if (playerControllerB.shipTeleporterId != 1)
-					{
-						if (playerControllerB.deadBody != null)
-						{
-							playerControllerB.deadBody.beamOutParticle.Stop();
-							playerControllerB.deadBody.bodyAudio.Stop();
-						}
-						else
-						{
-							playerControllerB.beamOutBuildupParticle.Stop();
-							playerControllerB.movementAudio.Stop();
-						}
-					}
-					continue;
-				}
-				if (playerControllerB.shipTeleporterId == 1)
-				{
-					Debug.Log($"Cancelled teleporting #{playerControllerB.playerClientId} with inverse teleporter; {playerControllerB.shipTeleporterId}");
-					continue;
-				}
-				SetPlayerTeleporterId(playerControllerB, 2);
-				if (playerControllerB.deadBody != null)
-				{
-					if (playerControllerB.deadBody.beamUpParticle == null)
-					{
-						yield break;
-					}
-					if (!playerControllerB.deadBody.beamOutParticle.isPlaying)
-					{
-						playerControllerB.deadBody.beamOutParticle.Play();
-						playerControllerB.deadBody.bodyAudio.PlayOneShot(beamUpPlayerBodySFX);
-					}
-				}
-				else if (!playerControllerB.beamOutBuildupParticle.isPlaying)
-				{
-					playerControllerB.beamOutBuildupParticle.Play();
-					playerControllerB.movementAudio.PlayOneShot(beamUpPlayerBodySFX);
-				}
-			}
-			yield return new WaitForSeconds(1f);
-		}
-		for (int j = 0; j < StartOfRound.Instance.allPlayerObjects.Length; j++)
-		{
-			PlayerControllerB playerControllerB = StartOfRound.Instance.allPlayerScripts[j];
-			if (playerControllerB.shipTeleporterId == 1)
-			{
-				Debug.Log($"Player #{playerControllerB.playerClientId} is in teleport 1, skipping");
-				continue;
-			}
-			SetPlayerTeleporterId(playerControllerB, -1);
-			if (playerControllerB.deadBody != null)
-			{
-				playerControllerB.deadBody.beamOutParticle.Stop();
-				playerControllerB.deadBody.bodyAudio.Stop();
-			}
-			else
-			{
-				playerControllerB.beamOutBuildupParticle.Stop();
-				playerControllerB.movementAudio.Stop();
-			}
-			if (playerControllerB != GameNetworkManager.Instance.localPlayerController || StartOfRound.Instance.inShipPhase)
-			{
-				continue;
-			}
-			Vector3 position2 = playerControllerB.transform.position;
-			if (playerControllerB.deadBody != null)
-			{
-				position2 = playerControllerB.deadBody.bodyParts[5].transform.position;
-			}
-			if (Vector3.Distance(position2, teleportOutPosition.position) < 2f)
-			{
-				if (RoundManager.Instance.insideAINodes.Length != 0)
-				{
-					Vector3 position3 = RoundManager.Instance.insideAINodes[shipTeleporterSeed.Next(0, RoundManager.Instance.insideAINodes.Length)].transform.position;
-					Debug.DrawRay(position3, Vector3.up * 1f, Color.red);
-					position3 = RoundManager.Instance.GetRandomNavMeshPositionInBoxPredictable(position3, 10f, default(NavMeshHit), shipTeleporterSeed);
-					Debug.DrawRay(position3 + Vector3.right * 0.01f, Vector3.up * 3f, Color.green);
-					SetPlayerTeleporterId(playerControllerB, 2);
-					if (playerControllerB.deadBody != null)
-					{
-						TeleportPlayerBodyOutServerRpc((int)playerControllerB.playerClientId, position3);
-						continue;
-					}
-					TeleportPlayerOutWithInverseTeleporter((int)playerControllerB.playerClientId, position3);
-					TeleportPlayerOutServerRpc((int)playerControllerB.playerClientId, position3);
-				}
-			}
-			else
-			{
-				Debug.Log($"Player #{playerControllerB.playerClientId} is not close enough to teleporter to beam out");
-			}
-		}
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void TeleportPlayerOutServerRpc(int playerObj, Vector3 teleportPos)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3033548568u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObj);
-				bufferWriter.WriteValueSafe(in teleportPos);
-				__endSendServerRpc(ref bufferWriter, 3033548568u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				TeleportPlayerOutClientRpc(playerObj, teleportPos);
-			}
-		}
+		TeleportPlayerOutClientRpc(playerObj, teleportPos);
 	}
 
 	[ClientRpc]
 	public void TeleportPlayerOutClientRpc(int playerObj, Vector3 teleportPos)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!StartOfRound.Instance.inShipPhase && !StartOfRound.Instance.allPlayerScripts[playerObj].IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3527914562u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObj);
-				bufferWriter.WriteValueSafe(in teleportPos);
-				__endSendClientRpc(ref bufferWriter, 3527914562u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !StartOfRound.Instance.inShipPhase && !StartOfRound.Instance.allPlayerScripts[playerObj].IsOwner)
-			{
-				TeleportPlayerOutWithInverseTeleporter(playerObj, teleportPos);
-			}
+			TeleportPlayerOutWithInverseTeleporter(playerObj, teleportPos);
 		}
 	}
 
@@ -401,43 +172,13 @@ public class ShipTeleporter : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void TeleportPlayerBodyOutServerRpc(int playerObj, Vector3 teleportPos)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(660932683u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObj);
-				bufferWriter.WriteValueSafe(in teleportPos);
-				__endSendServerRpc(ref bufferWriter, 660932683u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				TeleportPlayerBodyOutClientRpc(playerObj, teleportPos);
-			}
-		}
+		TeleportPlayerBodyOutClientRpc(playerObj, teleportPos);
 	}
 
 	[ClientRpc]
 	public void TeleportPlayerBodyOutClientRpc(int playerObj, Vector3 teleportPos)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1544539621u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObj);
-				bufferWriter.WriteValueSafe(in teleportPos);
-				__endSendClientRpc(ref bufferWriter, 1544539621u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				StartCoroutine(teleportBodyOut(playerObj, teleportPos));
-			}
-		}
+		StartCoroutine(teleportBodyOut(playerObj, teleportPos));
 	}
 
 	private IEnumerator teleportBodyOut(int playerObj, Vector3 teleportPosition)
@@ -560,98 +301,5 @@ public class ShipTeleporter : NetworkBehaviour
 		playersBeingTeleported[playerScript.playerClientId] = (int)playerScript.playerClientId;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_ShipTeleporter()
-	{
-		NetworkManager.__rpc_func_table.Add(389447712u, __rpc_handler_389447712);
-		NetworkManager.__rpc_func_table.Add(2773756087u, __rpc_handler_2773756087);
-		NetworkManager.__rpc_func_table.Add(3033548568u, __rpc_handler_3033548568);
-		NetworkManager.__rpc_func_table.Add(3527914562u, __rpc_handler_3527914562);
-		NetworkManager.__rpc_func_table.Add(660932683u, __rpc_handler_660932683);
-		NetworkManager.__rpc_func_table.Add(1544539621u, __rpc_handler_1544539621);
-	}
-
-	private static void __rpc_handler_389447712(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ShipTeleporter)target).PressTeleportButtonServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2773756087(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ShipTeleporter)target).PressTeleportButtonClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3033548568(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out Vector3 value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ShipTeleporter)target).TeleportPlayerOutServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3527914562(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out Vector3 value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ShipTeleporter)target).TeleportPlayerOutClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_660932683(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out Vector3 value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ShipTeleporter)target).TeleportPlayerBodyOutServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1544539621(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out Vector3 value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ShipTeleporter)target).TeleportPlayerBodyOutClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "ShipTeleporter";
-	}
 }

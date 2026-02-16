@@ -92,62 +92,26 @@ public class BridgeTrigger : NetworkBehaviour
 	[ServerRpc]
 	public void BridgeFallServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2883846656u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 2883846656u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			BridgeFallClientRpc();
-		}
+		BridgeFallClientRpc();
 	}
 
 	[ClientRpc]
 	public void BridgeFallClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log("Bridge collapsed! On client");
+		hasBridgeFallen = true;
+		bridgeAnimator.SetTrigger("Fall");
+		EnableFallenBridgeColliders();
+		bridgeAudioSource.PlayOneShot(bridgeFallSFX);
+		float num = Vector3.Distance(GameNetworkManager.Instance.localPlayerController.transform.position, bridgeAudioSource.transform.position);
+		if (num < 30f)
 		{
-			return;
+			HUDManager.Instance.ShakeCamera(ScreenShakeType.VeryStrong);
+			Debug.Log("Shaking screen!!!");
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		else if (num < 50f)
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(123213822u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 123213822u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			Debug.Log("Bridge collapsed! On client");
-			hasBridgeFallen = true;
-			bridgeAnimator.SetTrigger("Fall");
-			EnableFallenBridgeColliders();
-			bridgeAudioSource.PlayOneShot(bridgeFallSFX);
-			float num = Vector3.Distance(GameNetworkManager.Instance.localPlayerController.transform.position, bridgeAudioSource.transform.position);
-			if (num < 30f)
-			{
-				HUDManager.Instance.ShakeCamera(ScreenShakeType.VeryStrong);
-				Debug.Log("Shaking screen!!!");
-			}
-			else if (num < 50f)
-			{
-				HUDManager.Instance.ShakeCamera(ScreenShakeType.Long);
-			}
+			HUDManager.Instance.ShakeCamera(ScreenShakeType.Long);
 		}
 	}
 
@@ -201,53 +165,5 @@ public class BridgeTrigger : NetworkBehaviour
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_BridgeTrigger()
-	{
-		NetworkManager.__rpc_func_table.Add(2883846656u, __rpc_handler_2883846656);
-		NetworkManager.__rpc_func_table.Add(123213822u, __rpc_handler_123213822);
-	}
-
-	private static void __rpc_handler_2883846656(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BridgeTrigger)target).BridgeFallServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_123213822(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BridgeTrigger)target).BridgeFallClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "BridgeTrigger";
-	}
 }

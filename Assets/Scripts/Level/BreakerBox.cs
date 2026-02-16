@@ -127,13 +127,5 @@ public class BreakerBox : NetworkBehaviour, IShockableWithGun
 		return base.NetworkObject;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "BreakerBox";
-	}
 }

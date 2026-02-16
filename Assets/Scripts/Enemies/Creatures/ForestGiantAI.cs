@@ -532,100 +532,36 @@ public class ForestGiantAI : EnemyAI, IVisibleThreat
 	[ServerRpc]
 	private void BeginChasingNewPlayerServerRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(344062384u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendServerRpc(ref bufferWriter, 344062384u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			BeginChasingNewPlayerClientRpc(playerId);
-		}
+		BeginChasingNewPlayerClientRpc(playerId);
 	}
 
 	[ClientRpc]
 	private void BeginChasingNewPlayerClientRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		noticePlayerTimer = 0f;
+		timeSinceChangingTarget = 0f;
+		chasingPlayer = StartOfRound.Instance.allPlayerScripts[playerId];
+		hasLostPlayerInChaseDebounce = false;
+		lostPlayerInChase = false;
+		if (timeSinceChangingTarget > 1f)
 		{
-			return;
+			agent.speed = 0f;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1296181132u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendClientRpc(ref bufferWriter, 1296181132u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			noticePlayerTimer = 0f;
-			timeSinceChangingTarget = 0f;
-			chasingPlayer = StartOfRound.Instance.allPlayerScripts[playerId];
-			hasLostPlayerInChaseDebounce = false;
-			lostPlayerInChase = false;
-			if (timeSinceChangingTarget > 1f)
-			{
-				agent.speed = 0f;
-			}
-			SwitchToBehaviourStateOnLocalClient(1);
-		}
+		SwitchToBehaviourStateOnLocalClient(1);
 	}
 
 	[ClientRpc]
 	private void HasLostPlayerInChaseClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3295708237u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 3295708237u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				lostPlayerInChase = true;
-				lookingAtTarget = false;
-			}
-		}
+		lostPlayerInChase = true;
+		lookingAtTarget = false;
 	}
 
 	[ClientRpc]
 	private void HasFoundPlayerInChaseClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2685047264u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2685047264u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				lostPlayerInChase = false;
-				lookingAtTarget = true;
-			}
-		}
+		lostPlayerInChase = false;
+		lookingAtTarget = true;
 	}
 
 	private void CalculateAnimationDirection(float maxSpeed = 1f)
@@ -672,25 +608,13 @@ public class ForestGiantAI : EnemyAI, IVisibleThreat
 	[ServerRpc(RequireOwnership = false)]
 	public void GrabPlayerServerRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2965927486u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendServerRpc(ref bufferWriter, 2965927486u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && !(inSpecialAnimationWithPlayer != null))
+		if (!(inSpecialAnimationWithPlayer != null))
 		{
 			Vector3 position = base.transform.position;
 			int enemyYRot = (int)base.transform.eulerAngles.y;
 			if (Physics.Raycast(centerPosition.position, centerPosition.forward, out var _, 6f, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore))
 			{
-				enemyYRot = (int)RoundManager.Instance.YRotationThatFacesTheFarthestFromPosition(position, 20f, 5);
+			enemyYRot = (int)RoundManager.Instance.YRotationThatFacesTheFarthestFromPosition(position, 20f, 5);
 			}
 			GrabPlayerClientRpc(playerId, position, enemyYRot);
 		}
@@ -699,22 +623,9 @@ public class ForestGiantAI : EnemyAI, IVisibleThreat
 	[ClientRpc]
 	public void GrabPlayerClientRpc(int playerId, Vector3 enemyPosition, int enemyYRot)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!(inSpecialAnimationWithPlayer != null))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3924255731u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				bufferWriter.WriteValueSafe(in enemyPosition);
-				BytePacker.WriteValueBitPacked(bufferWriter, enemyYRot);
-				__endSendClientRpc(ref bufferWriter, 3924255731u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !(inSpecialAnimationWithPlayer != null))
-			{
-				BeginEatPlayer(StartOfRound.Instance.allPlayerScripts[playerId], enemyPosition, enemyYRot);
-			}
+			BeginEatPlayer(StartOfRound.Instance.allPlayerScripts[playerId], enemyPosition, enemyYRot);
 		}
 	}
 
@@ -838,31 +749,8 @@ public class ForestGiantAI : EnemyAI, IVisibleThreat
 	[ServerRpc]
 	public void DetectPlayerVoiceServerRpc(Vector3 noisePosition)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1714423781u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in noisePosition);
-			__endSendServerRpc(ref bufferWriter, 1714423781u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			float distanceToNoise = Vector3.Distance(noisePosition, base.transform.position);
-			ReactToNoise(distanceToNoise, noisePosition);
-		}
+		float distanceToNoise = Vector3.Distance(noisePosition, base.transform.position);
+		ReactToNoise(distanceToNoise, noisePosition);
 	}
 
 	public override void KillEnemy(bool destroy = false)
@@ -875,131 +763,5 @@ public class ForestGiantAI : EnemyAI, IVisibleThreat
 		DropPlayerBody();
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_ForestGiantAI()
-	{
-		NetworkManager.__rpc_func_table.Add(344062384u, __rpc_handler_344062384);
-		NetworkManager.__rpc_func_table.Add(1296181132u, __rpc_handler_1296181132);
-		NetworkManager.__rpc_func_table.Add(3295708237u, __rpc_handler_3295708237);
-		NetworkManager.__rpc_func_table.Add(2685047264u, __rpc_handler_2685047264);
-		NetworkManager.__rpc_func_table.Add(2965927486u, __rpc_handler_2965927486);
-		NetworkManager.__rpc_func_table.Add(3924255731u, __rpc_handler_3924255731);
-		NetworkManager.__rpc_func_table.Add(1714423781u, __rpc_handler_1714423781);
-	}
-
-	private static void __rpc_handler_344062384(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ForestGiantAI)target).BeginChasingNewPlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1296181132(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ForestGiantAI)target).BeginChasingNewPlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3295708237(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ForestGiantAI)target).HasLostPlayerInChaseClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2685047264(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ForestGiantAI)target).HasFoundPlayerInChaseClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2965927486(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ForestGiantAI)target).GrabPlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3924255731(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out Vector3 value2);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ForestGiantAI)target).GrabPlayerClientRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1714423781(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ForestGiantAI)target).DetectPlayerVoiceServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "ForestGiantAI";
-	}
 }

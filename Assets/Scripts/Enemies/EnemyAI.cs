@@ -279,40 +279,18 @@ public abstract class EnemyAI : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void SwitchToBehaviourServerRpc(int stateIndex)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (base.NetworkObject.IsSpawned)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2081148948u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, stateIndex);
-				__endSendServerRpc(ref bufferWriter, 2081148948u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && base.NetworkObject.IsSpawned)
-			{
-				SwitchToBehaviourClientRpc(stateIndex);
-			}
+			SwitchToBehaviourClientRpc(stateIndex);
 		}
 	}
 
 	[ClientRpc]
 	public void SwitchToBehaviourClientRpc(int stateIndex)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (stateIndex != currentBehaviourStateIndex)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2962895088u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, stateIndex);
-				__endSendClientRpc(ref bufferWriter, 2962895088u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && stateIndex != currentBehaviourStateIndex)
-			{
-				SwitchToBehaviourStateOnLocalClient(stateIndex);
-			}
+			SwitchToBehaviourStateOnLocalClient(stateIndex);
 		}
 	}
 
@@ -1199,54 +1177,24 @@ public abstract class EnemyAI : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void KillEnemyServerRpc(bool destroy)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log($"Kill enemy server rpc called with destroy {destroy}");
+		if (destroy)
 		{
-			return;
+			KillEnemy(destroy);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1810146992u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in destroy, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 1810146992u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			Debug.Log($"Kill enemy server rpc called with destroy {destroy}");
-			if (destroy)
-			{
-				KillEnemy(destroy);
-			}
-			else
-			{
-				KillEnemyClientRpc(destroy);
-			}
+			KillEnemyClientRpc(destroy);
 		}
 	}
 
 	[ClientRpc]
 	public void KillEnemyClientRpc(bool destroy)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log($"Kill enemy client rpc called; {destroy}");
+		if (!isEnemyDead)
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1614111717u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in destroy, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 1614111717u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			Debug.Log($"Kill enemy client rpc called; {destroy}");
-			if (!isEnemyDead)
-			{
-				KillEnemy(destroy);
-			}
+			KillEnemy(destroy);
 		}
 	}
 
@@ -1349,100 +1297,29 @@ public abstract class EnemyAI : NetworkBehaviour
 	[ServerRpc]
 	private void UpdateEnemyRotationServerRpc(short rotationY)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3079913705u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, rotationY);
-			__endSendServerRpc(ref bufferWriter, 3079913705u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			UpdateEnemyRotationClientRpc(rotationY);
-		}
+		UpdateEnemyRotationClientRpc(rotationY);
 	}
 
 	[ClientRpc]
 	private void UpdateEnemyRotationClientRpc(short rotationY)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1258118513u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, rotationY);
-				__endSendClientRpc(ref bufferWriter, 1258118513u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				previousYRotation = base.transform.eulerAngles.y;
-				targetYRotation = rotationY;
-			}
-		}
+		previousYRotation = base.transform.eulerAngles.y;
+		targetYRotation = rotationY;
 	}
 
 	[ServerRpc]
 	private void UpdateEnemyPositionServerRpc(Vector3 newPos)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(255411420u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in newPos);
-			__endSendServerRpc(ref bufferWriter, 255411420u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			UpdateEnemyPositionClientRpc(newPos);
-		}
+		UpdateEnemyPositionClientRpc(newPos);
 	}
 
 	[ClientRpc]
 	private void UpdateEnemyPositionClientRpc(Vector3 newPos)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(4287979896u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in newPos);
-				__endSendClientRpc(ref bufferWriter, 4287979896u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				serverPosition = newPos;
-				OnSyncPositionFromServer(newPos);
-			}
+			serverPosition = newPos;
+			OnSyncPositionFromServer(newPos);
 		}
 	}
 
@@ -1495,49 +1372,20 @@ public abstract class EnemyAI : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void ChangeEnemyOwnerServerRpc(ulong clientId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (base.gameObject.GetComponent<NetworkObject>().OwnerClientId != clientId)
 		{
-			return;
+			thisNetworkObject.ChangeOwnership(clientId);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		if (StartOfRound.Instance.ClientPlayerList.TryGetValue(clientId, out var value))
 		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3587030867u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, clientId);
-			__endSendServerRpc(ref bufferWriter, 3587030867u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (base.gameObject.GetComponent<NetworkObject>().OwnerClientId != clientId)
-			{
-				thisNetworkObject.ChangeOwnership(clientId);
-			}
-			if (StartOfRound.Instance.ClientPlayerList.TryGetValue(clientId, out var value))
-			{
-				ChangeEnemyOwnerClientRpc(value);
-			}
+			ChangeEnemyOwnerClientRpc(value);
 		}
 	}
 
 	[ClientRpc]
 	public void ChangeEnemyOwnerClientRpc(int playerVal)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(245785831u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerVal);
-				__endSendClientRpc(ref bufferWriter, 245785831u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				currentOwnershipOnThisClient = playerVal;
-			}
-		}
+		currentOwnershipOnThisClient = playerVal;
 	}
 
 	public void SetClientCalculatingAI(bool enable)
@@ -1584,51 +1432,21 @@ public abstract class EnemyAI : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void HitEnemyServerRpc(int force, int playerWhoHit, bool playHitSFX)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2814283679u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, force);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoHit);
-				bufferWriter.WriteValueSafe(in playHitSFX, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 2814283679u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				HitEnemyClientRpc(force, playerWhoHit, playHitSFX);
-			}
-		}
+		HitEnemyClientRpc(force, playerWhoHit, playHitSFX);
 	}
 
 	[ClientRpc]
 	public void HitEnemyClientRpc(int force, int playerWhoHit, bool playHitSFX)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(217059478u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, force);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerWhoHit);
-			bufferWriter.WriteValueSafe(in playHitSFX, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 217059478u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && playerWhoHit != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
+		if (playerWhoHit != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
 		{
 			if (playerWhoHit == -1)
 			{
-				HitEnemy(force, null, playHitSFX);
+			HitEnemy(force, null, playHitSFX);
 			}
 			else
 			{
-				HitEnemy(force, StartOfRound.Instance.allPlayerScripts[playerWhoHit], playHitSFX);
+			HitEnemy(force, StartOfRound.Instance.allPlayerScripts[playerWhoHit], playHitSFX);
 			}
 		}
 	}
@@ -1688,200 +1506,5 @@ public abstract class EnemyAI : NetworkBehaviour
 	{
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_EnemyAI()
-	{
-		NetworkManager.__rpc_func_table.Add(2081148948u, __rpc_handler_2081148948);
-		NetworkManager.__rpc_func_table.Add(2962895088u, __rpc_handler_2962895088);
-		NetworkManager.__rpc_func_table.Add(1810146992u, __rpc_handler_1810146992);
-		NetworkManager.__rpc_func_table.Add(1614111717u, __rpc_handler_1614111717);
-		NetworkManager.__rpc_func_table.Add(3079913705u, __rpc_handler_3079913705);
-		NetworkManager.__rpc_func_table.Add(1258118513u, __rpc_handler_1258118513);
-		NetworkManager.__rpc_func_table.Add(255411420u, __rpc_handler_255411420);
-		NetworkManager.__rpc_func_table.Add(4287979896u, __rpc_handler_4287979896);
-		NetworkManager.__rpc_func_table.Add(3587030867u, __rpc_handler_3587030867);
-		NetworkManager.__rpc_func_table.Add(245785831u, __rpc_handler_245785831);
-		NetworkManager.__rpc_func_table.Add(2814283679u, __rpc_handler_2814283679);
-		NetworkManager.__rpc_func_table.Add(217059478u, __rpc_handler_217059478);
-	}
-
-	private static void __rpc_handler_2081148948(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((EnemyAI)target).SwitchToBehaviourServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2962895088(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((EnemyAI)target).SwitchToBehaviourClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1810146992(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((EnemyAI)target).KillEnemyServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1614111717(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((EnemyAI)target).KillEnemyClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3079913705(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out short value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((EnemyAI)target).UpdateEnemyRotationServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1258118513(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out short value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((EnemyAI)target).UpdateEnemyRotationClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_255411420(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((EnemyAI)target).UpdateEnemyPositionServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4287979896(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((EnemyAI)target).UpdateEnemyPositionClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3587030867(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((EnemyAI)target).ChangeEnemyOwnerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_245785831(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((EnemyAI)target).ChangeEnemyOwnerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2814283679(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((EnemyAI)target).HitEnemyServerRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_217059478(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((EnemyAI)target).HitEnemyClientRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "EnemyAI";
-	}
 }

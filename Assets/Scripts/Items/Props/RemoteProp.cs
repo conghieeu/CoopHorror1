@@ -12,13 +12,5 @@ public class RemoteProp : GrabbableObject
 		Object.FindObjectOfType<ShipLights>().ToggleShipLightsOnLocalClientOnly();
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "RemoteProp";
-	}
 }

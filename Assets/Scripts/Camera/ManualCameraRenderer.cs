@@ -115,48 +115,19 @@ public class ManualCameraRenderer : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void SwitchScreenOnServerRpc(bool on)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1937545459u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in on, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 1937545459u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SwitchScreenOnClientRpc(on);
-			}
-		}
+		SwitchScreenOnClientRpc(on);
 	}
 
 	[ClientRpc]
 	public void SwitchScreenOnClientRpc(bool on)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (syncingSwitchScreen)
 		{
-			return;
+			syncingSwitchScreen = false;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		else
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2637643520u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in on, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 2637643520u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (syncingSwitchScreen)
-			{
-				syncingSwitchScreen = false;
-			}
-			else
-			{
-				SwitchScreenOn(on);
-			}
+			SwitchScreenOn(on);
 		}
 	}
 
@@ -334,27 +305,12 @@ public class ManualCameraRenderer : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void SwitchRadarTargetServerRpc(int targetIndex)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1485069450u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, targetIndex);
-				__endSendServerRpc(ref bufferWriter, 1485069450u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SwitchRadarTargetClientRpc(targetIndex);
-			}
-		}
+		SwitchRadarTargetClientRpc(targetIndex);
 	}
 
 	[ClientRpc]
 	public void SwitchRadarTargetClientRpc(int switchToIndex)
 	{
-		NetworkManager networkManager = base.NetworkManager;
 		if ((object)networkManager == null || !networkManager.IsListening)
 		{
 			return;
@@ -530,70 +486,5 @@ public class ManualCameraRenderer : NetworkBehaviour
 		return true;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_ManualCameraRenderer()
-	{
-		NetworkManager.__rpc_func_table.Add(1937545459u, __rpc_handler_1937545459);
-		NetworkManager.__rpc_func_table.Add(2637643520u, __rpc_handler_2637643520);
-		NetworkManager.__rpc_func_table.Add(1485069450u, __rpc_handler_1485069450);
-		NetworkManager.__rpc_func_table.Add(3551312642u, __rpc_handler_3551312642);
-	}
-
-	private static void __rpc_handler_1937545459(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ManualCameraRenderer)target).SwitchScreenOnServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2637643520(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ManualCameraRenderer)target).SwitchScreenOnClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1485069450(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ManualCameraRenderer)target).SwitchRadarTargetServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3551312642(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ManualCameraRenderer)target).SwitchRadarTargetClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "ManualCameraRenderer";
-	}
 }

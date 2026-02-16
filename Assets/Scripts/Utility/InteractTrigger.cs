@@ -436,54 +436,25 @@ public class InteractTrigger : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void UpdateUsedByPlayerServerRpc(int playerNum)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1430497838u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerNum);
-				__endSendServerRpc(ref bufferWriter, 1430497838u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				UpdateUsedByPlayerClientRpc(playerNum);
-			}
-		}
+		UpdateUsedByPlayerClientRpc(playerNum);
 	}
 
 	[ClientRpc]
 	private void UpdateUsedByPlayerClientRpc(int playerNum)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (hidePlayerItem && StartOfRound.Instance.allPlayerScripts[playerNum].currentlyHeldObjectServer != null)
 		{
-			return;
+			StartOfRound.Instance.allPlayerScripts[playerNum].currentlyHeldObjectServer.EnableItemMeshes(enable: false);
+			playerUsingId = playerNum;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		if (stopAnimationManually)
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(3458599252u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerNum);
-			__endSendClientRpc(ref bufferWriter, 3458599252u, clientRpcParams, RpcDelivery.Reliable);
+			isPlayingSpecialAnimation = true;
+			StartOfRound.Instance.allPlayerScripts[playerNum].currentTriggerInAnimationWith = this;
 		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			if (hidePlayerItem && StartOfRound.Instance.allPlayerScripts[playerNum].currentlyHeldObjectServer != null)
-			{
-				StartOfRound.Instance.allPlayerScripts[playerNum].currentlyHeldObjectServer.EnableItemMeshes(enable: false);
-				playerUsingId = playerNum;
-			}
-			if (stopAnimationManually)
-			{
-				isPlayingSpecialAnimation = true;
-				StartOfRound.Instance.allPlayerScripts[playerNum].currentTriggerInAnimationWith = this;
-			}
-			else
-			{
-				StartCoroutine(isSpecialAnimationPlayingTimer(playerNum));
-			}
+			StartCoroutine(isSpecialAnimationPlayingTimer(playerNum));
 		}
 	}
 
@@ -499,41 +470,13 @@ public class InteractTrigger : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void StopUsingServerRpc(int playerUsing)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(880620475u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerUsing);
-				__endSendServerRpc(ref bufferWriter, 880620475u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				StopUsingClientRpc(playerUsing);
-			}
-		}
+		StopUsingClientRpc(playerUsing);
 	}
 
 	[ClientRpc]
 	private void StopUsingClientRpc(int playerUsing)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(953330655u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerUsing);
-				__endSendClientRpc(ref bufferWriter, 953330655u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				SetInteractTriggerNotInAnimation(playerUsing);
-			}
-		}
+		SetInteractTriggerNotInAnimation(playerUsing);
 	}
 
 	public void SetInteractTriggerNotInAnimation(int playerUsing = -1)
@@ -614,70 +557,5 @@ public class InteractTrigger : NetworkBehaviour
 		timeToHold = Random.Range(min, max);
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_InteractTrigger()
-	{
-		NetworkManager.__rpc_func_table.Add(1430497838u, __rpc_handler_1430497838);
-		NetworkManager.__rpc_func_table.Add(3458599252u, __rpc_handler_3458599252);
-		NetworkManager.__rpc_func_table.Add(880620475u, __rpc_handler_880620475);
-		NetworkManager.__rpc_func_table.Add(953330655u, __rpc_handler_953330655);
-	}
-
-	private static void __rpc_handler_1430497838(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((InteractTrigger)target).UpdateUsedByPlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3458599252(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((InteractTrigger)target).UpdateUsedByPlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_880620475(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((InteractTrigger)target).StopUsingServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_953330655(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((InteractTrigger)target).StopUsingClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "InteractTrigger";
-	}
 }

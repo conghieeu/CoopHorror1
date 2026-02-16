@@ -72,41 +72,13 @@ public class Landmine : NetworkBehaviour, IHittable
 	[ServerRpc(RequireOwnership = false)]
 	public void ToggleMineServerRpc(bool enable)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2763604698u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in enable, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 2763604698u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ToggleMineClientRpc(enable);
-			}
-		}
+		ToggleMineClientRpc(enable);
 	}
 
 	[ClientRpc]
 	public void ToggleMineClientRpc(bool enable)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3479956057u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in enable, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 3479956057u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ToggleMineEnabledLocalClient(enable);
-			}
-		}
+		ToggleMineEnabledLocalClient(enable);
 	}
 
 	public void ToggleMineEnabledLocalClient(bool enabled)
@@ -178,41 +150,15 @@ public class Landmine : NetworkBehaviour, IHittable
 	[ServerRpc(RequireOwnership = false)]
 	public void PressMineServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(4224840819u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 4224840819u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				PressMineClientRpc();
-			}
-		}
+		PressMineClientRpc();
 	}
 
 	[ClientRpc]
 	public void PressMineClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2652432181u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2652432181u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				pressMineDebounceTimer = 0.5f;
-				mineAudio.PlayOneShot(minePress);
-				WalkieTalkie.TransmitOneShotAudio(mineAudio, minePress);
-			}
-		}
+		pressMineDebounceTimer = 0.5f;
+		mineAudio.PlayOneShot(minePress);
+		WalkieTalkie.TransmitOneShotAudio(mineAudio, minePress);
 	}
 
 	private void OnTriggerExit(Collider other)
@@ -266,46 +212,19 @@ public class Landmine : NetworkBehaviour, IHittable
 	[ServerRpc(RequireOwnership = false)]
 	public void ExplodeMineServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3032666565u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 3032666565u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ExplodeMineClientRpc();
-			}
-		}
+		ExplodeMineClientRpc();
 	}
 
 	[ClientRpc]
 	public void ExplodeMineClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (sendingExplosionRPC)
 		{
-			return;
+			sendingExplosionRPC = false;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		else
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(456724201u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 456724201u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (sendingExplosionRPC)
-			{
-				sendingExplosionRPC = false;
-			}
-			else
-			{
-				SetOffMineAnimation();
-			}
+			SetOffMineAnimation();
 		}
 	}
 
@@ -419,92 +338,5 @@ public class Landmine : NetworkBehaviour, IHittable
 		return true;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_Landmine()
-	{
-		NetworkManager.__rpc_func_table.Add(2763604698u, __rpc_handler_2763604698);
-		NetworkManager.__rpc_func_table.Add(3479956057u, __rpc_handler_3479956057);
-		NetworkManager.__rpc_func_table.Add(4224840819u, __rpc_handler_4224840819);
-		NetworkManager.__rpc_func_table.Add(2652432181u, __rpc_handler_2652432181);
-		NetworkManager.__rpc_func_table.Add(3032666565u, __rpc_handler_3032666565);
-		NetworkManager.__rpc_func_table.Add(456724201u, __rpc_handler_456724201);
-	}
-
-	private static void __rpc_handler_2763604698(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Landmine)target).ToggleMineServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3479956057(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Landmine)target).ToggleMineClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4224840819(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Landmine)target).PressMineServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2652432181(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Landmine)target).PressMineClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3032666565(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Landmine)target).ExplodeMineServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_456724201(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Landmine)target).ExplodeMineClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "Landmine";
-	}
 }

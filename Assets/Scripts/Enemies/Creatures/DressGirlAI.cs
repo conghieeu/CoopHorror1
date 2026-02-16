@@ -172,20 +172,7 @@ public class DressGirlAI : EnemyAI
 	[ClientRpc]
 	private void ChooseNewHauntingPlayerClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(67448504u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 67448504u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ChoosePlayerToHaunt();
-			}
-		}
+		ChoosePlayerToHaunt();
 	}
 
 	public override void DoAIInterval()
@@ -373,55 +360,22 @@ public class DressGirlAI : EnemyAI
 	[ServerRpc]
 	private void MessWithLightsServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1320241094u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 1320241094u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			MessWithLightsClientRpc();
-		}
+		MessWithLightsClientRpc();
 	}
 
 	[ClientRpc]
 	private void MessWithLightsClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1481377371u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 1481377371u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
+		if (!base.IsOwner)
 		{
 			RoundManager.Instance.FlickerLights(flickerFlashlights: true, disableFlashlights: true);
 			if (timesSeenByPlayer > 0)
 			{
-				GameNetworkManager.Instance.localPlayerController.JumpToFearLevel(0.9f);
+			GameNetworkManager.Instance.localPlayerController.JumpToFearLevel(0.9f);
 			}
 			else
 			{
-				GameNetworkManager.Instance.localPlayerController.JumpToFearLevel(0.2f);
+			GameNetworkManager.Instance.localPlayerController.JumpToFearLevel(0.2f);
 			}
 		}
 	}
@@ -429,54 +383,18 @@ public class DressGirlAI : EnemyAI
 	[ServerRpc]
 	private void FlipLightsBreakerServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(164274866u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 164274866u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			MessWithLightsClientRpc();
-		}
+		MessWithLightsClientRpc();
 	}
 
 	[ClientRpc]
 	private void FlipLightsBreakerClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		BreakerBox breakerBox = UnityEngine.Object.FindObjectOfType<BreakerBox>();
+		if (breakerBox != null)
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(859211137u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 859211137u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			BreakerBox breakerBox = UnityEngine.Object.FindObjectOfType<BreakerBox>();
-			if (breakerBox != null)
-			{
-				breakerBox.SetSwitchesOff();
-				RoundManager.Instance.TurnOnAllLights(on: false);
-				GameNetworkManager.Instance.localPlayerController.JumpToFearLevel(0.2f);
-			}
+			breakerBox.SetSwitchesOff();
+			RoundManager.Instance.TurnOnAllLights(on: false);
+			GameNetworkManager.Instance.localPlayerController.JumpToFearLevel(0.2f);
 		}
 	}
 
@@ -678,100 +596,5 @@ public class DressGirlAI : EnemyAI
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_DressGirlAI()
-	{
-		NetworkManager.__rpc_func_table.Add(67448504u, __rpc_handler_67448504);
-		NetworkManager.__rpc_func_table.Add(1320241094u, __rpc_handler_1320241094);
-		NetworkManager.__rpc_func_table.Add(1481377371u, __rpc_handler_1481377371);
-		NetworkManager.__rpc_func_table.Add(164274866u, __rpc_handler_164274866);
-		NetworkManager.__rpc_func_table.Add(859211137u, __rpc_handler_859211137);
-	}
-
-	private static void __rpc_handler_67448504(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DressGirlAI)target).ChooseNewHauntingPlayerClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1320241094(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((DressGirlAI)target).MessWithLightsServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1481377371(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DressGirlAI)target).MessWithLightsClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_164274866(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((DressGirlAI)target).FlipLightsBreakerServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_859211137(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DressGirlAI)target).FlipLightsBreakerClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "DressGirlAI";
-	}
 }

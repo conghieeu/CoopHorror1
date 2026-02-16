@@ -176,20 +176,4 @@ public class RagdollGrabbableObject : GrabbableObject
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		if (bodyID == null)
-		{
-			throw new Exception("RagdollGrabbableObject.bodyID cannot be null. All NetworkVariableBase instances must be initialized.");
-		}
-		bodyID.Initialize(this);
-		__nameNetworkVariable(bodyID, "bodyID");
-		NetworkVariableFields.Add(bodyID);
-		base.__initializeVariables();
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "RagdollGrabbableObject";
-	}
 }

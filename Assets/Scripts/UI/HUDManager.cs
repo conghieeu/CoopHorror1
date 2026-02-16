@@ -607,25 +607,7 @@ public class HUDManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void AddPlayerChatMessageServerRpc(string chatMessage, int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2930587515u, serverRpcParams, RpcDelivery.Reliable);
-			bool value = chatMessage != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(chatMessage);
-			}
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendServerRpc(ref bufferWriter, 2930587515u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && chatMessage.Length <= 50)
+		if (chatMessage.Length <= 50)
 		{
 			AddPlayerChatMessageClientRpc(chatMessage, playerId);
 		}
@@ -634,30 +616,12 @@ public class HUDManager : NetworkBehaviour
 	[ClientRpc]
 	private void AddPlayerChatMessageClientRpc(string chatMessage, int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(168728662u, clientRpcParams, RpcDelivery.Reliable);
-			bool value = chatMessage != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(chatMessage);
-			}
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendClientRpc(ref bufferWriter, 168728662u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && playersManager.allPlayerScripts[playerId].isPlayerDead == GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+		if (playersManager.allPlayerScripts[playerId].isPlayerDead == GameNetworkManager.Instance.localPlayerController.isPlayerDead)
 		{
 			bool flag = GameNetworkManager.Instance.localPlayerController.holdingWalkieTalkie && StartOfRound.Instance.allPlayerScripts[playerId].holdingWalkieTalkie;
 			if (!(Vector3.Distance(GameNetworkManager.Instance.localPlayerController.transform.position, playersManager.allPlayerScripts[playerId].transform.position) > 25f) || flag)
 			{
-				AddChatMessage(chatMessage, playersManager.allPlayerScripts[playerId].playerUsername);
+			AddChatMessage(chatMessage, playersManager.allPlayerScripts[playerId].playerUsername);
 			}
 		}
 	}
@@ -665,53 +629,13 @@ public class HUDManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void AddTextMessageServerRpc(string chatMessage)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2787681914u, serverRpcParams, RpcDelivery.Reliable);
-			bool value = chatMessage != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(chatMessage);
-			}
-			__endSendServerRpc(ref bufferWriter, 2787681914u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			AddTextMessageClientRpc(chatMessage);
-		}
+		AddTextMessageClientRpc(chatMessage);
 	}
 
 	[ClientRpc]
 	private void AddTextMessageClientRpc(string chatMessage)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1568596901u, clientRpcParams, RpcDelivery.Reliable);
-			bool value = chatMessage != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(chatMessage);
-			}
-			__endSendClientRpc(ref bufferWriter, 1568596901u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			AddChatMessage(chatMessage);
-		}
+		AddChatMessage(chatMessage);
 	}
 
 	private void SubmitChat_performed(InputAction.CallbackContext context)
@@ -1416,90 +1340,46 @@ public class HUDManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void ScanNewCreatureServerRpc(int enemyID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!terminalScript.scannedEnemyIDs.Contains(enemyID))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1944155956u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, enemyID);
-				__endSendServerRpc(ref bufferWriter, 1944155956u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && !terminalScript.scannedEnemyIDs.Contains(enemyID))
-			{
-				terminalScript.scannedEnemyIDs.Add(enemyID);
-				terminalScript.newlyScannedEnemyIDs.Add(enemyID);
-				DisplayGlobalNotification("New creature data sent to terminal!");
-				ScanNewCreatureClientRpc(enemyID);
-			}
+			terminalScript.scannedEnemyIDs.Add(enemyID);
+			terminalScript.newlyScannedEnemyIDs.Add(enemyID);
+			DisplayGlobalNotification("New creature data sent to terminal!");
+			ScanNewCreatureClientRpc(enemyID);
 		}
 	}
 
 	[ClientRpc]
 	public void ScanNewCreatureClientRpc(int enemyID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!terminalScript.scannedEnemyIDs.Contains(enemyID))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3039261141u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, enemyID);
-				__endSendClientRpc(ref bufferWriter, 3039261141u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !terminalScript.scannedEnemyIDs.Contains(enemyID))
-			{
-				terminalScript.scannedEnemyIDs.Add(enemyID);
-				terminalScript.newlyScannedEnemyIDs.Add(enemyID);
-				DisplayGlobalNotification("New creature data sent to terminal!");
-			}
+			terminalScript.scannedEnemyIDs.Add(enemyID);
+			terminalScript.newlyScannedEnemyIDs.Add(enemyID);
+			DisplayGlobalNotification("New creature data sent to terminal!");
 		}
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	public void GetNewStoryLogServerRpc(int logID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!terminalScript.unlockedStoryLogs.Contains(logID))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3153465849u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, logID);
-				__endSendServerRpc(ref bufferWriter, 3153465849u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && !terminalScript.unlockedStoryLogs.Contains(logID))
-			{
-				terminalScript.unlockedStoryLogs.Add(logID);
-				terminalScript.newlyUnlockedStoryLogs.Add(logID);
-				DisplayGlobalNotification("Found journal entry: '" + terminalScript.logEntryFiles[logID].creatureName);
-				GetNewStoryLogClientRpc(logID);
-			}
+			terminalScript.unlockedStoryLogs.Add(logID);
+			terminalScript.newlyUnlockedStoryLogs.Add(logID);
+			DisplayGlobalNotification("Found journal entry: '" + terminalScript.logEntryFiles[logID].creatureName);
+			GetNewStoryLogClientRpc(logID);
 		}
 	}
 
 	[ClientRpc]
 	public void GetNewStoryLogClientRpc(int logID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!terminalScript.unlockedStoryLogs.Contains(logID))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2416035003u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, logID);
-				__endSendClientRpc(ref bufferWriter, 2416035003u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !terminalScript.unlockedStoryLogs.Contains(logID))
-			{
-				terminalScript.unlockedStoryLogs.Add(logID);
-				terminalScript.newlyUnlockedStoryLogs.Add(logID);
-				DisplayGlobalNotification("Found journal entry: '" + terminalScript.logEntryFiles[logID].creatureName + "'");
-			}
+			terminalScript.unlockedStoryLogs.Add(logID);
+			terminalScript.newlyUnlockedStoryLogs.Add(logID);
+			DisplayGlobalNotification("Found journal entry: '" + terminalScript.logEntryFiles[logID].creatureName + "'");
 		}
 	}
 
@@ -1703,31 +1583,14 @@ public class HUDManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void UseSignalTranslatorServerRpc(string signalMessage)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2436660286u, serverRpcParams, RpcDelivery.Reliable);
-			bool value = signalMessage != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(signalMessage);
-			}
-			__endSendServerRpc(ref bufferWriter, 2436660286u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && (bool)UnityEngine.Object.FindObjectOfType<SignalTranslator>() && !string.IsNullOrEmpty(signalMessage) && signalMessage.Length <= 12)
+		if ((bool)UnityEngine.Object.FindObjectOfType<SignalTranslator>() && !string.IsNullOrEmpty(signalMessage) && signalMessage.Length <= 12)
 		{
 			SignalTranslator signalTranslator = UnityEngine.Object.FindObjectOfType<SignalTranslator>();
 			if (!(Time.realtimeSinceStartup - signalTranslator.timeLastUsingSignalTranslator < 8f))
 			{
-				signalTranslator.timeLastUsingSignalTranslator = Time.realtimeSinceStartup;
-				signalTranslator.timesSendingMessage++;
-				UseSignalTranslatorClientRpc(signalMessage, signalTranslator.timesSendingMessage);
+			signalTranslator.timeLastUsingSignalTranslator = Time.realtimeSinceStartup;
+			signalTranslator.timesSendingMessage++;
+			UseSignalTranslatorClientRpc(signalMessage, signalTranslator.timesSendingMessage);
 			}
 		}
 	}
@@ -1735,31 +1598,13 @@ public class HUDManager : NetworkBehaviour
 	[ClientRpc]
 	public void UseSignalTranslatorClientRpc(string signalMessage, int timesSendingMessage)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1255866175u, clientRpcParams, RpcDelivery.Reliable);
-			bool value = signalMessage != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(signalMessage);
-			}
-			BytePacker.WriteValueBitPacked(bufferWriter, timesSendingMessage);
-			__endSendClientRpc(ref bufferWriter, 1255866175u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !string.IsNullOrEmpty(signalMessage) && (bool)UnityEngine.Object.FindObjectOfType<SignalTranslator>())
+		if (!string.IsNullOrEmpty(signalMessage) && (bool)UnityEngine.Object.FindObjectOfType<SignalTranslator>())
 		{
 			SignalTranslator signalTranslator = UnityEngine.Object.FindObjectOfType<SignalTranslator>();
 			signalTranslator.timeLastUsingSignalTranslator = Time.realtimeSinceStartup;
 			if (signalTranslator.signalTranslatorCoroutine != null)
 			{
-				StopCoroutine(signalTranslator.signalTranslatorCoroutine);
+			StopCoroutine(signalTranslator.signalTranslatorCoroutine);
 			}
 			string signalMessage2 = signalMessage.Substring(0, Mathf.Min(signalMessage.Length, 10));
 			signalTranslator.timesSendingMessage = timesSendingMessage;
@@ -1963,811 +1808,29 @@ public class HUDManager : NetworkBehaviour
 	[ServerRpc]
 	public void SyncAllPlayerLevelsServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2352591293u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 2352591293u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost))
-		{
-			return;
-		}
-		int[] array = new int[4];
-		for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i++)
-		{
-			if (!StartOfRound.Instance.allPlayerScripts[i].isPlayerControlled)
-			{
-				array[i] = -1;
-			}
-			else
-			{
-				array[i] = StartOfRound.Instance.allPlayerScripts[i].playerLevelNumber;
-			}
-		}
-		bool[] array2 = new bool[4];
-		for (int j = 0; j < StartOfRound.Instance.allPlayerScripts.Length; j++)
-		{
-			if (!StartOfRound.Instance.allPlayerScripts[j].isPlayerControlled)
-			{
-				array2[j] = false;
-			}
-			else
-			{
-				array2[j] = StartOfRound.Instance.allPlayerScripts[j].playerBetaBadgeMesh.enabled;
-			}
-		}
-		SyncAllPlayerLevelsClientRpc(array, array2);
-	}
-
-	[ClientRpc]
-	public void SyncAllPlayerLevelsClientRpc(int[] playerLevelNumbers, bool[] playersHaveBeta)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1570713893u, clientRpcParams, RpcDelivery.Reliable);
-			bool value = playerLevelNumbers != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(playerLevelNumbers, default(FastBufferWriter.ForPrimitives));
-			}
-			bool value2 = playersHaveBeta != null;
-			bufferWriter.WriteValueSafe(in value2, default(FastBufferWriter.ForPrimitives));
-			if (value2)
-			{
-				bufferWriter.WriteValueSafe(playersHaveBeta, default(FastBufferWriter.ForPrimitives));
-			}
-			__endSendClientRpc(ref bufferWriter, 1570713893u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		try
-		{
-			for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i++)
-			{
-				SetLevelOfPlayer(StartOfRound.Instance.allPlayerScripts[i], playerLevelNumbers[i], playersHaveBeta[i]);
-			}
-		}
-		catch (Exception arg)
-		{
-			Debug.LogError($"Error while syncing player level from server: {arg}");
-		}
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void SyncPlayerLevelServerRpc(int playerId, int playerLevelIndex, bool hasBeta = false)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1389701054u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerLevelIndex);
-				bufferWriter.WriteValueSafe(in hasBeta, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 1389701054u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SyncPlayerLevelClientRpc(playerId, playerLevelIndex, hasBeta);
-			}
-		}
+		SyncPlayerLevelClientRpc(playerId, playerLevelIndex, hasBeta);
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	public void SyncAllPlayerLevelsServerRpc(int newPlayerLevel, int playerClientId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(4217433937u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, newPlayerLevel);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerClientId);
-			__endSendServerRpc(ref bufferWriter, 4217433937u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost))
-		{
-			return;
-		}
-		List<int> list = new List<int>();
-		for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i++)
-		{
-			if (StartOfRound.Instance.allPlayerScripts[i].isPlayerControlled || StartOfRound.Instance.allPlayerScripts[i].isPlayerDead)
-			{
-				if (i == playerClientId)
-				{
-					list.Add(newPlayerLevel);
-				}
-				else
-				{
-					list.Add(StartOfRound.Instance.allPlayerScripts[i].playerLevelNumber);
-				}
-			}
-		}
-		SyncAllPlayerLevelsClientRpc(list.ToArray(), StartOfRound.Instance.connectedPlayersAmount);
-	}
-
-	[ClientRpc]
-	public void SyncAllPlayerLevelsClientRpc(int[] allPlayerLevels, int connectedPlayers)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2220027482u, clientRpcParams, RpcDelivery.Reliable);
-			bool value = allPlayerLevels != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(allPlayerLevels, default(FastBufferWriter.ForPrimitives));
-			}
-			BytePacker.WriteValueBitPacked(bufferWriter, connectedPlayers);
-			__endSendClientRpc(ref bufferWriter, 2220027482u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || StartOfRound.Instance.connectedPlayersAmount != connectedPlayers)
-		{
-			return;
-		}
-		int num = 0;
-		for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i++)
-		{
-			if (StartOfRound.Instance.allPlayerScripts[i].isPlayerControlled || StartOfRound.Instance.allPlayerScripts[i].isPlayerDead)
-			{
-				if (StartOfRound.Instance.allPlayerScripts[i] == GameNetworkManager.Instance.localPlayerController)
-				{
-					num++;
-					continue;
-				}
-				SetLevelOfPlayer(StartOfRound.Instance.allPlayerScripts[i], allPlayerLevels[num], hasBeta: true);
-				num++;
-			}
-		}
-	}
-
-	[ClientRpc]
-	public void SyncPlayerLevelClientRpc(int playerId, int playerLevelIndex, bool hasBeta)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1676259161u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerLevelIndex);
-			bufferWriter.WriteValueSafe(in hasBeta, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 1676259161u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		try
-		{
-			if (!(GameNetworkManager.Instance.localPlayerController == null) && (int)GameNetworkManager.Instance.localPlayerController.playerClientId != playerId)
-			{
-				if (playerLevelIndex >= playerLevels.Length)
-				{
-					Debug.LogError("Error: Player level synced in client RPC was above the max player level!");
-				}
-				else
-				{
-					SetLevelOfPlayer(StartOfRound.Instance.allPlayerScripts[playerId], playerLevelIndex, hasBeta);
-				}
-			}
-		}
-		catch (Exception arg)
-		{
-			Debug.LogError($"Error while syncing player level from client #{playerId}: {arg}");
-		}
-	}
-
-	public void SetLevelOfPlayer(PlayerControllerB playerScript, int playerLevelIndex, bool hasBeta)
-	{
-		playerScript.playerLevelNumber = playerLevelIndex;
-		playerScript.playerBetaBadgeMesh.enabled = hasBeta;
-		playerScript.playerBadgeMesh.mesh = playerLevels[playerLevelIndex].badgeMesh;
-	}
-
-	public void SetPlayerLevel(bool isDead, bool mostProfitable, bool allPlayersDead)
-	{
-		int num = 0;
-		num = ((!isDead) ? (num + 10) : (num - 3));
-		if (mostProfitable)
-		{
-			num += 15;
-		}
-		if (allPlayersDead)
-		{
-			num -= 5;
-		}
-		if (num > 0)
-		{
-			Debug.Log($"XP gain before scaling to scrap returned: {num}");
-			Debug.Log((float)RoundManager.Instance.scrapCollectedInLevel / RoundManager.Instance.totalScrapValueInLevel);
-			float num2 = (float)RoundManager.Instance.scrapCollectedInLevel / RoundManager.Instance.totalScrapValueInLevel;
-			Debug.Log(num2);
-			num = (int)((float)num * num2);
-		}
-		if (num == 0)
-		{
-			Debug.Log("Gained no XP");
-			playerLevelMeter.fillAmount = localPlayerXP / playerLevels[localPlayerLevel].XPMax;
-			playerLevelXPCounter.text = localPlayerXP.ToString();
-			playerLevelText.text = playerLevels[localPlayerLevel].levelName;
-		}
-		else
-		{
-			StartCoroutine(SetPlayerLevelSmoothly(num));
-		}
-	}
-
-	private IEnumerator SetPlayerLevelSmoothly(int XPGain)
-	{
-		float changingPlayerXP = localPlayerXP;
-		int changingPlayerLevel = localPlayerLevel;
-		int targetXPLevel = Mathf.Max(localPlayerXP + XPGain, 0);
-		bool conditionMet = false;
-		if (XPGain < 0)
-		{
-			LevellingAudio.clip = decreaseXPSFX;
-		}
-		else
-		{
-			LevellingAudio.clip = increaseXPSFX;
-		}
-		LevellingAudio.Play();
-		float timeAtStart = Time.realtimeSinceStartup;
-		while (!conditionMet && Time.realtimeSinceStartup - timeAtStart < 5f)
-		{
-			Debug.Log($"Level up timer: {Time.realtimeSinceStartup - timeAtStart}");
-			if (XPGain < 0)
-			{
-				changingPlayerXP -= Time.deltaTime * 15f;
-				if (changingPlayerXP < 0f)
-				{
-					changingPlayerXP = 0f;
-				}
-				if (changingPlayerXP <= (float)targetXPLevel)
-				{
-					conditionMet = true;
-				}
-				if (changingPlayerLevel - 1 >= 0 && changingPlayerXP < (float)playerLevels[changingPlayerLevel].XPMin)
-				{
-					changingPlayerLevel--;
-					UIAudio.PlayOneShot(levelDecreaseSFX);
-					playerLevelBoxAnimator.SetTrigger("Shake");
-					yield return new WaitForSeconds(0.4f);
-				}
-			}
-			else
-			{
-				changingPlayerXP += Time.deltaTime * 15f;
-				if (changingPlayerXP >= (float)targetXPLevel)
-				{
-					conditionMet = true;
-				}
-				if (changingPlayerLevel + 1 < playerLevels.Length && changingPlayerXP >= (float)playerLevels[changingPlayerLevel].XPMax)
-				{
-					changingPlayerLevel++;
-					UIAudio.PlayOneShot(levelIncreaseSFX);
-					playerLevelBoxAnimator.SetTrigger("Shake");
-					yield return new WaitForSeconds(0.4f);
-				}
-			}
-			playerLevelMeter.fillAmount = (changingPlayerXP - (float)playerLevels[changingPlayerLevel].XPMin) / (float)playerLevels[changingPlayerLevel].XPMax;
-			playerLevelText.text = playerLevels[changingPlayerLevel].levelName;
-			playerLevelXPCounter.text = $"{Mathf.RoundToInt(changingPlayerXP)} EXP";
-			yield return null;
-		}
-		LevellingAudio.Stop();
-		int num = 0;
-		for (int i = 0; i < playerLevels.Length; i++)
-		{
-			if (targetXPLevel >= playerLevels[i].XPMin && targetXPLevel < playerLevels[i].XPMax)
-			{
-				num = i;
-				break;
-			}
-			if (i == playerLevels.Length - 1)
-			{
-				num = i;
-			}
-		}
-		localPlayerXP = targetXPLevel;
-		localPlayerLevel = num;
-		playerLevelText.text = playerLevels[localPlayerLevel].levelName;
-		playerLevelXPCounter.text = $"{Mathf.RoundToInt(localPlayerXP)} EXP";
-		bool hasBeta = ES3.Load("playedDuringBeta", "LCGeneralSaveData", defaultValue: true);
-		SyncPlayerLevelServerRpc((int)GameNetworkManager.Instance.localPlayerController.playerClientId, localPlayerLevel, hasBeta);
-	}
-
-	public void ApplyPenalty(int playersDead, int bodiesInsured)
-	{
-		float num = 0.2f;
-		Terminal terminal = UnityEngine.Object.FindObjectOfType<Terminal>();
-		int groupCredits = terminal.groupCredits;
-		bodiesInsured = Mathf.Max(bodiesInsured, 0);
-		for (int i = 0; i < playersDead - bodiesInsured; i++)
-		{
-			terminal.groupCredits -= (int)((float)groupCredits * num);
-		}
-		for (int j = 0; j < bodiesInsured; j++)
-		{
-			terminal.groupCredits -= (int)((float)groupCredits * (num / 2.5f));
-		}
-		if (terminal.groupCredits < 0)
-		{
-			terminal.groupCredits = 0;
-		}
-		statsUIElements.penaltyAddition.text = $"{playersDead} casualties: -{num * 100f * (float)(playersDead - bodiesInsured)}%\n({bodiesInsured} bodies recovered)";
-		statsUIElements.penaltyTotal.text = $"DUE: ${groupCredits - terminal.groupCredits}";
-		Debug.Log($"New group credits after penalty: {terminal.groupCredits}");
-	}
-
-	public void SetQuota(int numerator, int denominator = -1)
-	{
-		HUDQuotaNumerator.text = numerator.ToString();
-		if (denominator != -1)
-		{
-			HUDQuotaDenominator.text = denominator.ToString();
-		}
-	}
-
-	public void AddNewScrapFoundToDisplay(GrabbableObject GObject)
-	{
-		if (itemsToBeDisplayed.Count <= 16)
-		{
-			itemsToBeDisplayed.Add(GObject);
-		}
-	}
-
-	public void DisplayNewScrapFound()
-	{
-		if (itemsToBeDisplayed.Count <= 0)
-		{
-			return;
-		}
-		if (itemsToBeDisplayed[0] == null || itemsToBeDisplayed[0].itemProperties.spawnPrefab == null)
-		{
-			itemsToBeDisplayed.Clear();
-			return;
-		}
-		if (itemsToBeDisplayed[0].scrapValue < 80)
-		{
-			UIAudio.PlayOneShot(displayCollectedScrapSFXSmall);
-		}
-		else
-		{
-			UIAudio.PlayOneShot(displayCollectedScrapSFX);
-		}
-		GameObject gameObject = UnityEngine.Object.Instantiate(itemsToBeDisplayed[0].itemProperties.spawnPrefab, ScrapItemBoxes[nextBoxIndex].itemObjectContainer);
-		UnityEngine.Object.Destroy(gameObject.GetComponent<NetworkObject>());
-		UnityEngine.Object.Destroy(gameObject.GetComponent<GrabbableObject>());
-		UnityEngine.Object.Destroy(gameObject.GetComponent<Collider>());
-		gameObject.transform.localPosition = Vector3.zero;
-		gameObject.transform.localScale = gameObject.transform.localScale * 4f;
-		gameObject.transform.rotation = Quaternion.Euler(itemsToBeDisplayed[0].itemProperties.restingRotation);
-		Renderer[] componentsInChildren = gameObject.GetComponentsInChildren<Renderer>();
-		for (int i = 0; i < componentsInChildren.Length; i++)
-		{
-			if (componentsInChildren[i].gameObject.layer != 22)
-			{
-				Material[] sharedMaterials = componentsInChildren[i].sharedMaterials;
-				componentsInChildren[i].rendererPriority = 70;
-				for (int j = 0; j < sharedMaterials.Length; j++)
-				{
-					sharedMaterials[j] = hologramMaterial;
-				}
-				componentsInChildren[i].sharedMaterials = sharedMaterials;
-				componentsInChildren[i].gameObject.layer = 5;
-			}
-		}
-		ScrapItemBoxes[nextBoxIndex].itemDisplayAnimator.SetTrigger("collect");
-		if (itemsToBeDisplayed[0] is RagdollGrabbableObject)
-		{
-			RagdollGrabbableObject ragdollGrabbableObject = itemsToBeDisplayed[0] as RagdollGrabbableObject;
-			if (ragdollGrabbableObject != null && ragdollGrabbableObject.ragdoll != null)
-			{
-				ScrapItemBoxes[nextBoxIndex].headerText.text = ragdollGrabbableObject.ragdoll.playerScript.playerUsername + " collected!";
-			}
-			else
-			{
-				ScrapItemBoxes[nextBoxIndex].headerText.text = "Body collected!";
-			}
-		}
-		else
-		{
-			ScrapItemBoxes[nextBoxIndex].headerText.text = itemsToBeDisplayed[0].itemProperties.itemName + " collected!";
-		}
-		ScrapItemBoxes[nextBoxIndex].valueText.text = $"Value: ${itemsToBeDisplayed[0].scrapValue}";
-		if (boxesDisplaying > 0)
-		{
-			ScrapItemBoxes[nextBoxIndex].UIContainer.anchoredPosition = new Vector2(ScrapItemBoxes[nextBoxIndex].UIContainer.anchoredPosition.x, ScrapItemBoxes[bottomBoxIndex].UIContainer.anchoredPosition.y - 124f);
-		}
-		else
-		{
-			ScrapItemBoxes[nextBoxIndex].UIContainer.anchoredPosition = new Vector2(ScrapItemBoxes[nextBoxIndex].UIContainer.anchoredPosition.x, bottomBoxYPosition);
-		}
-		bottomBoxIndex = nextBoxIndex;
-		StartCoroutine(displayScrapTimer(gameObject));
-		playScrapDisplaySFX();
-		boxesDisplaying++;
-		nextBoxIndex = (nextBoxIndex + 1) % 3;
-		itemsToBeDisplayed.RemoveAt(0);
-	}
-
-	private IEnumerator playScrapDisplaySFX()
-	{
-		yield return new WaitForSeconds(0.05f * (float)boxesDisplaying);
-	}
-
-	private IEnumerator displayScrapTimer(GameObject displayingObject)
-	{
-		yield return new WaitForSeconds(3.5f);
-		boxesDisplaying--;
-		UnityEngine.Object.Destroy(displayingObject);
-	}
-
-	public void ChangeControlTip(int toolTipNumber, string changeTo, bool clearAllOther = false)
-	{
-		if (StartOfRound.Instance.localPlayerUsingController)
-		{
-			StringBuilder stringBuilder = new StringBuilder(changeTo);
-			stringBuilder.Replace("[E]", "[D-pad up]");
-			stringBuilder.Replace("[Q]", "[D-pad down]");
-			stringBuilder.Replace("[LMB]", "[Y]");
-			stringBuilder.Replace("[RMB]", "[R-Trigger]");
-			stringBuilder.Replace("[G]", "[B]");
-			changeTo = stringBuilder.ToString();
-		}
-		else
-		{
-			changeTo = changeTo.Replace("[RMB]", "[LMB]");
-		}
-		controlTipLines[toolTipNumber].text = changeTo;
-		if (clearAllOther)
-		{
-			for (int i = 0; i < controlTipLines.Length; i++)
-			{
-				if (i != toolTipNumber)
-				{
-					controlTipLines[i].text = "";
-				}
-			}
-		}
-		if (forceChangeTextCoroutine != null)
-		{
-			StopCoroutine(forceChangeTextCoroutine);
-		}
-		forceChangeTextCoroutine = StartCoroutine(ForceChangeText(controlTipLines[toolTipNumber], changeTo));
-	}
-
-	private IEnumerator ForceChangeText(TextMeshProUGUI textToChange, string changeTextTo)
-	{
-		for (int i = 0; i < 5; i++)
-		{
-			yield return null;
-			textToChange.text = changeTextTo;
-		}
-	}
-
-	public void ClearControlTips()
-	{
-		for (int i = 0; i < controlTipLines.Length; i++)
-		{
-			controlTipLines[i].text = "";
-		}
-	}
-
-	public void ChangeControlTipMultiple(string[] allLines, bool holdingItem = false, Item itemProperties = null)
-	{
-		if (holdingItem)
-		{
-			controlTipLines[0].text = "Drop " + itemProperties.itemName + " : [G]";
-		}
-		if (allLines == null)
-		{
-			return;
-		}
-		int num = 0;
-		if (holdingItem)
-		{
-			num = 1;
-		}
-		for (int i = 0; i < allLines.Length && i + num < controlTipLines.Length; i++)
-		{
-			string text = allLines[i];
-			if (StartOfRound.Instance.localPlayerUsingController)
-			{
-				StringBuilder stringBuilder = new StringBuilder(text);
-				stringBuilder.Replace("[E]", "[D-pad up]");
-				stringBuilder.Replace("[Q]", "[D-pad down]");
-				stringBuilder.Replace("[LMB]", "[Y]");
-				stringBuilder.Replace("[RMB]", "[R-Trigger]");
-				stringBuilder.Replace("[G]", "[B]");
-				text = stringBuilder.ToString();
-			}
-			else
-			{
-				text = text.Replace("[RMB]", "[LMB]");
-			}
-			controlTipLines[i + num].text = text;
-		}
-	}
-
-	public void SetDebugText(string setText)
-	{
-		debugText.text = setText;
-		if (StartOfRound.Instance.testRoom != null)
-		{
-			debugText.enabled = true;
-		}
-	}
-
-	public void DisplayStatusEffect(string statusEffect)
-	{
-		statusEffectAnimator.SetTrigger("IndicateStatus");
-		statusEffectText.text = statusEffect;
-	}
-
-	public void DisplayTip(string headerText, string bodyText, bool isWarning = false, bool useSave = false, string prefsKey = "LC_Tip1")
-	{
-		if (!CanTipDisplay(isWarning, useSave, prefsKey))
-		{
-			return;
-		}
-		if (useSave)
-		{
-			if (tipsPanelCoroutine != null)
-			{
-				StopCoroutine(tipsPanelCoroutine);
-			}
-			tipsPanelCoroutine = StartCoroutine(TipsPanelTimer(prefsKey));
-		}
-		tipsPanelHeader.text = headerText;
-		tipsPanelBody.text = bodyText;
-		if (isWarning)
-		{
-			tipsPanelAnimator.SetTrigger("TriggerWarning");
-			RoundManager.PlayRandomClip(UIAudio, warningSFX, randomize: false);
-		}
-		else
-		{
-			tipsPanelAnimator.SetTrigger("TriggerHint");
-			RoundManager.PlayRandomClip(UIAudio, tipsSFX, randomize: false);
-		}
-	}
-
-	private void DisplaySpectatorVoteTip()
-	{
-		if (displayedSpectatorAFKTip)
-		{
-			return;
-		}
-		bool flag = false;
-		for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i++)
-		{
-			if (!StartOfRound.Instance.allPlayerScripts[i].isPlayerDead && StartOfRound.Instance.allPlayerScripts[i].timeSincePlayerMoving < 10f)
-			{
-				flag = true;
-			}
-		}
-		if (!flag)
-		{
-			noLivingPlayersAtKeyboardTimer += Time.deltaTime;
-			if (noLivingPlayersAtKeyboardTimer > 12f)
-			{
-				if (StartOfRound.Instance.localPlayerUsingController)
-				{
-					DisplaySpectatorTip("TIP!: Hold [R-Trigger] to vote for the autopilot ship to leave early.");
-				}
-				else
-				{
-					DisplaySpectatorTip("TIP!: Hold [RMB] to vote for the autopilot ship to leave early.");
-				}
-			}
-		}
-		else
-		{
-			noLivingPlayersAtKeyboardTimer = 0f;
-		}
-	}
-
-	private void DisplaySpectatorTip(string tipText)
-	{
-		displayedSpectatorAFKTip = true;
-		spectatorTipText.text = tipText;
-		if (!spectatorTipText.enabled)
-		{
-			StartCoroutine(displayTipTextTimer());
-		}
-	}
-
-	private IEnumerator displayTipTextTimer()
-	{
-		UIAudio.PlayOneShot(tipsSFX[0], 1f);
-		spectatorTipText.enabled = true;
-		yield return new WaitForSeconds(7f);
-		spectatorTipText.enabled = false;
-	}
-
-	private bool CanTipDisplay(bool isWarning, bool useSave, string prefsKey)
-	{
-		if (useSave)
-		{
-			return !ES3.Load(prefsKey, "LCGeneralSaveData", defaultValue: false);
-		}
-		if (tipsPanelCoroutine != null)
-		{
-			if (isWarning && !isDisplayingWarning)
-			{
-				return true;
-			}
-			return false;
-		}
-		return true;
-	}
-
-	private IEnumerator TipsPanelTimer(string prefsKey)
-	{
-		yield return new WaitForSeconds(5f);
-		ES3.Save(prefsKey, value: true, "LCGeneralSaveData");
-	}
-
-	public string SetClock(float timeNormalized, float numberOfHours, bool createNewLine = true)
-	{
-		int num = (int)(timeNormalized * (60f * numberOfHours)) + 360;
-		int num2 = (int)Mathf.Floor(num / 60);
-		if (!createNewLine)
-		{
-			newLine = " ";
-		}
-		else
-		{
-			newLine = "\n";
-		}
-		amPM = newLine + "AM";
-		if (num2 >= 24)
-		{
-			clockNumber.text = "12:00 " + newLine + " AM";
-			return "12:00\nAM";
-		}
-		if (num2 < 12)
-		{
-			amPM = newLine + "AM";
-		}
-		else
-		{
-			amPM = newLine + "PM";
-		}
-		if (num2 > 12)
-		{
-			num2 %= 12;
-		}
-		int num3 = num % 60;
-		string text = $"{num2:00}:{num3:00}".TrimStart('0') + amPM;
-		clockNumber.text = text;
-		return text;
-	}
-
-	public void SetClockIcon(DayMode dayMode)
-	{
-		clockIcon.sprite = clockIcons[(int)dayMode];
-	}
-
-	public void SetClockVisible(bool visible)
-	{
-		if (visible)
-		{
-			Clock.targetAlpha = 1f;
-		}
-		else
-		{
-			Clock.targetAlpha = 0f;
-		}
-	}
-
-	public void TriggerAlarmHornEffect()
-	{
-		if (!(UnityEngine.Object.FindObjectOfType<AlarmButton>() == null))
-		{
-			AlarmHornServerRpc();
-		}
-	}
-
-	[ServerRpc]
-	public void AlarmHornServerRpc()
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1616150480u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 1616150480u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			AlarmButton alarmButton = UnityEngine.Object.FindObjectOfType<AlarmButton>();
-			if (!(alarmButton == null) && !(alarmButton.timeSincePushing < 1f))
-			{
-				alarmButton.timeSincePushing = 0f;
-				AlarmHornClientRpc();
-			}
+		AlarmButton alarmButton = UnityEngine.Object.FindObjectOfType<AlarmButton>();
+		if (!(alarmButton == null) && !(alarmButton.timeSincePushing < 1f))
+		{
+			alarmButton.timeSincePushing = 0f;
+			AlarmHornClientRpc();
 		}
 	}
 
 	[ClientRpc]
 	public void AlarmHornClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		AlarmButton alarmButton = UnityEngine.Object.FindObjectOfType<AlarmButton>();
+		if (!(alarmButton == null))
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(840104050u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 840104050u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			AlarmButton alarmButton = UnityEngine.Object.FindObjectOfType<AlarmButton>();
-			if (!(alarmButton == null))
-			{
-				alarmButton.timeSincePushing = 0f;
-				alarmHornEffect.SetTrigger("triggerAlarm");
-				UIAudio.PlayOneShot(shipAlarmHornSFX, 1f);
-			}
+			alarmButton.timeSincePushing = 0f;
+			alarmHornEffect.SetTrigger("triggerAlarm");
+			UIAudio.PlayOneShot(shipAlarmHornSFX, 1f);
 		}
 	}
 
@@ -2788,22 +1851,8 @@ public class HUDManager : NetworkBehaviour
 	[ClientRpc]
 	public void UpdateInstabilityClientRpc(int percentage)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(551948140u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, percentage);
-				__endSendClientRpc(ref bufferWriter, 551948140u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				instabilityCounterNumber.text = $"{percentage}%";
-				PingHUDElement(InstabilityCounter, 2f, 1f, 0.7f);
-			}
-		}
+		instabilityCounterNumber.text = $"{percentage}%";
+		PingHUDElement(InstabilityCounter, 2f, 1f, 0.7f);
 	}
 
 	public void SetTutorialArrow(int state)
@@ -2835,25 +1884,7 @@ public class HUDManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void SendErrorMessageServerRpc(string errorMessage, int sentByPlayerNum)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1043384750u, serverRpcParams, RpcDelivery.Reliable);
-			bool value = errorMessage != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(errorMessage);
-			}
-			BytePacker.WriteValueBitPacked(bufferWriter, sentByPlayerNum);
-			__endSendServerRpc(ref bufferWriter, 1043384750u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && GameNetworkManager.Instance.SendExceptionsToServer && !(Instance == null))
+		if (GameNetworkManager.Instance.SendExceptionsToServer && !(Instance == null))
 		{
 			AddToErrorLog(errorMessage, sentByPlayerNum);
 		}
@@ -2870,358 +1901,5 @@ public class HUDManager : NetworkBehaviour
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_HUDManager()
-	{
-		NetworkManager.__rpc_func_table.Add(2930587515u, __rpc_handler_2930587515);
-		NetworkManager.__rpc_func_table.Add(168728662u, __rpc_handler_168728662);
-		NetworkManager.__rpc_func_table.Add(2787681914u, __rpc_handler_2787681914);
-		NetworkManager.__rpc_func_table.Add(1568596901u, __rpc_handler_1568596901);
-		NetworkManager.__rpc_func_table.Add(1944155956u, __rpc_handler_1944155956);
-		NetworkManager.__rpc_func_table.Add(3039261141u, __rpc_handler_3039261141);
-		NetworkManager.__rpc_func_table.Add(3153465849u, __rpc_handler_3153465849);
-		NetworkManager.__rpc_func_table.Add(2416035003u, __rpc_handler_2416035003);
-		NetworkManager.__rpc_func_table.Add(2436660286u, __rpc_handler_2436660286);
-		NetworkManager.__rpc_func_table.Add(1255866175u, __rpc_handler_1255866175);
-		NetworkManager.__rpc_func_table.Add(2352591293u, __rpc_handler_2352591293);
-		NetworkManager.__rpc_func_table.Add(1570713893u, __rpc_handler_1570713893);
-		NetworkManager.__rpc_func_table.Add(1389701054u, __rpc_handler_1389701054);
-		NetworkManager.__rpc_func_table.Add(4217433937u, __rpc_handler_4217433937);
-		NetworkManager.__rpc_func_table.Add(2220027482u, __rpc_handler_2220027482);
-		NetworkManager.__rpc_func_table.Add(1676259161u, __rpc_handler_1676259161);
-		NetworkManager.__rpc_func_table.Add(1616150480u, __rpc_handler_1616150480);
-		NetworkManager.__rpc_func_table.Add(840104050u, __rpc_handler_840104050);
-		NetworkManager.__rpc_func_table.Add(551948140u, __rpc_handler_551948140);
-		NetworkManager.__rpc_func_table.Add(1043384750u, __rpc_handler_1043384750);
-	}
-
-	private static void __rpc_handler_2930587515(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			string s = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out s, oneByteChars: false);
-			}
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).AddPlayerChatMessageServerRpc(s, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_168728662(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			string s = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out s, oneByteChars: false);
-			}
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).AddPlayerChatMessageClientRpc(s, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2787681914(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			string s = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out s, oneByteChars: false);
-			}
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).AddTextMessageServerRpc(s);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1568596901(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			string s = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out s, oneByteChars: false);
-			}
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).AddTextMessageClientRpc(s);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1944155956(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).ScanNewCreatureServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3039261141(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).ScanNewCreatureClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3153465849(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).GetNewStoryLogServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2416035003(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).GetNewStoryLogClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2436660286(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			string s = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out s, oneByteChars: false);
-			}
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).UseSignalTranslatorServerRpc(s);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1255866175(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			string s = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out s, oneByteChars: false);
-			}
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).UseSignalTranslatorClientRpc(s, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2352591293(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).SyncAllPlayerLevelsServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1570713893(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			int[] value2 = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out value2, default(FastBufferWriter.ForPrimitives));
-			}
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			bool[] value4 = null;
-			if (value3)
-			{
-				reader.ReadValueSafe(out value4, default(FastBufferWriter.ForPrimitives));
-			}
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).SyncAllPlayerLevelsClientRpc(value2, value4);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1389701054(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).SyncPlayerLevelServerRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4217433937(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).SyncAllPlayerLevelsServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2220027482(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			int[] value2 = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out value2, default(FastBufferWriter.ForPrimitives));
-			}
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).SyncAllPlayerLevelsClientRpc(value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1676259161(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).SyncPlayerLevelClientRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1616150480(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).AlarmHornServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_840104050(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).AlarmHornClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_551948140(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HUDManager)target).UpdateInstabilityClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1043384750(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			string s = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out s, oneByteChars: false);
-			}
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HUDManager)target).SendErrorMessageServerRpc(s, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "HUDManager";
-	}
 }

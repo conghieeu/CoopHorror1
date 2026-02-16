@@ -146,41 +146,18 @@ public class JetpackItem : GrabbableObject
 	[ServerRpc(RequireOwnership = false)]
 	public void ExplodeJetpackServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3663112878u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 3663112878u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ExplodeJetpackClientRpc();
-			}
-		}
+		ExplodeJetpackClientRpc();
 	}
 
 	[ClientRpc]
 	public void ExplodeJetpackClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!jetpackBroken)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2295726646u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2295726646u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !jetpackBroken)
-			{
-				jetpackBroken = true;
-				itemUsedUp = true;
-				Debug.Log("Spawning explosion");
-				Landmine.SpawnExplosion(base.transform.position, spawnExplosionEffect: true, 5f, 7f);
-			}
+			jetpackBroken = true;
+			itemUsedUp = true;
+			Debug.Log("Spawning explosion");
+			Landmine.SpawnExplosion(base.transform.position, spawnExplosionEffect: true, 5f, 7f);
 		}
 	}
 
@@ -285,42 +262,5 @@ public class JetpackItem : GrabbableObject
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_JetpackItem()
-	{
-		NetworkManager.__rpc_func_table.Add(3663112878u, __rpc_handler_3663112878);
-		NetworkManager.__rpc_func_table.Add(2295726646u, __rpc_handler_2295726646);
-	}
-
-	private static void __rpc_handler_3663112878(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((JetpackItem)target).ExplodeJetpackServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2295726646(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((JetpackItem)target).ExplodeJetpackClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "JetpackItem";
-	}
 }

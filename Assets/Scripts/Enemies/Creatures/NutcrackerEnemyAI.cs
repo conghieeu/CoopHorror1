@@ -121,58 +121,20 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ServerRpc]
 	public void InitializeNutcrackerValuesServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1465144951u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 1465144951u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			GameObject gameObject = UnityEngine.Object.Instantiate(gunPrefab, base.transform.position + Vector3.up * 0.5f, Quaternion.identity, RoundManager.Instance.spawnedScrapContainer);
-			gameObject.GetComponent<NetworkObject>().Spawn();
-			setShotgunScrapValue = UnityEngine.Random.Range(30, 90);
-			GrabGun(gameObject);
-			randomSeedNumber = UnityEngine.Random.Range(0, 10000);
-			InitializeNutcrackerValuesClientRpc(randomSeedNumber, gameObject.GetComponent<NetworkObject>(), setShotgunScrapValue);
-		}
+		GameObject gameObject = UnityEngine.Object.Instantiate(gunPrefab, base.transform.position + Vector3.up * 0.5f, Quaternion.identity, RoundManager.Instance.spawnedScrapContainer);
+		gameObject.GetComponent<NetworkObject>().Spawn();
+		setShotgunScrapValue = UnityEngine.Random.Range(30, 90);
+		GrabGun(gameObject);
+		randomSeedNumber = UnityEngine.Random.Range(0, 10000);
+		InitializeNutcrackerValuesClientRpc(randomSeedNumber, gameObject.GetComponent<NetworkObject>(), setShotgunScrapValue);
 	}
 
 	[ClientRpc]
 	public void InitializeNutcrackerValuesClientRpc(int randomSeed, NetworkObjectReference gunObject, int setShotgunValue)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(855827344u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, randomSeed);
-				bufferWriter.WriteValueSafe(in gunObject, default(FastBufferWriter.ForNetworkSerializable));
-				BytePacker.WriteValueBitPacked(bufferWriter, setShotgunValue);
-				__endSendClientRpc(ref bufferWriter, 855827344u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				setShotgunScrapValue = setShotgunValue;
-				randomSeedNumber = randomSeed;
-				gunObjectRef = gunObject;
-			}
-		}
+		setShotgunScrapValue = setShotgunValue;
+		randomSeedNumber = randomSeed;
+		gunObjectRef = gunObject;
 	}
 
 	private void GrabGun(GameObject gunObject)
@@ -224,49 +186,15 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ServerRpc]
 	public void DropGunServerRpc(Vector3 dropPosition)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3846014741u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in dropPosition);
-			__endSendServerRpc(ref bufferWriter, 3846014741u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			DropGunClientRpc(dropPosition);
-		}
+		DropGunClientRpc(dropPosition);
 	}
 
 	[ClientRpc]
 	public void DropGunClientRpc(Vector3 dropPosition)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!(gun == null))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3142489771u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in dropPosition);
-				__endSendClientRpc(ref bufferWriter, 3142489771u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !(gun == null))
-			{
-				DropGun(dropPosition);
-			}
+			DropGun(dropPosition);
 		}
 	}
 
@@ -391,44 +319,18 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void SetLostPlayerInChaseServerRpc(bool lostPlayer)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1948237339u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in lostPlayer, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 1948237339u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SetLostPlayerInChaseClientRpc(lostPlayer);
-			}
-		}
+		SetLostPlayerInChaseClientRpc(lostPlayer);
 	}
 
 	[ClientRpc]
 	public void SetLostPlayerInChaseClientRpc(bool lostPlayer)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1780697749u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in lostPlayer, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 1780697749u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
+		if (!base.IsOwner)
 		{
 			lostPlayerInChase = lostPlayer;
 			if (!lostPlayer)
 			{
-				timeSinceSeeingTarget = 0f;
+			timeSinceSeeingTarget = 0f;
 			}
 		}
 	}
@@ -541,43 +443,16 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void SeeMovingThreatServerRpc(int playerId, bool enterAttackFromPatrolMode = false)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2806509823u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				bufferWriter.WriteValueSafe(in enterAttackFromPatrolMode, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 2806509823u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SeeMovingThreatClientRpc(playerId, enterAttackFromPatrolMode);
-			}
-		}
+		SeeMovingThreatClientRpc(playerId, enterAttackFromPatrolMode);
 	}
 
 	[ClientRpc]
 	public void SeeMovingThreatClientRpc(int playerId, bool enterAttackFromPatrolMode = false)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if ((currentBehaviourStateIndex == 1 || (enterAttackFromPatrolMode && currentBehaviourStateIndex == 0)))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3996049734u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				bufferWriter.WriteValueSafe(in enterAttackFromPatrolMode, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 3996049734u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && (currentBehaviourStateIndex == 1 || (enterAttackFromPatrolMode && currentBehaviourStateIndex == 0)))
-			{
-				SwitchTargetToPlayer(playerId);
-				SwitchToBehaviourStateOnLocalClient(2);
-			}
+			SwitchTargetToPlayer(playerId);
+			SwitchToBehaviourStateOnLocalClient(2);
 		}
 	}
 
@@ -760,57 +635,22 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ServerRpc]
 	public void ReloadGunServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (aimingGun)
 		{
-			return;
+			reloadingGun = false;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3736826466u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 3736826466u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (aimingGun)
-			{
-				reloadingGun = false;
-			}
-			else
-			{
-				ReloadGunClientRpc();
-			}
+			ReloadGunClientRpc();
 		}
 	}
 
 	[ClientRpc]
 	public void ReloadGunClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(894193044u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 894193044u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				StopAimingGun();
-				gun.shellsLoaded = 2;
-				gunCoroutine = StartCoroutine(ReloadGun());
-			}
-		}
+		StopAimingGun();
+		gun.shellsLoaded = 2;
+		gunCoroutine = StartCoroutine(ReloadGun());
 	}
 
 	private IEnumerator ReloadGun()
@@ -841,29 +681,17 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void AimGunServerRpc(Vector3 enemyPos)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1572138691u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in enemyPos);
-			__endSendServerRpc(ref bufferWriter, 1572138691u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && !reloadingGun)
+		if (!reloadingGun)
 		{
 			if (gun.shellsLoaded <= 0)
 			{
-				aimingGun = false;
-				ReloadGunClientRpc();
+			aimingGun = false;
+			ReloadGunClientRpc();
 			}
 			else if (!reloadingGun)
 			{
-				aimingGun = true;
-				AimGunClientRpc(enemyPos);
+			aimingGun = true;
+			AimGunClientRpc(enemyPos);
 			}
 		}
 	}
@@ -871,22 +699,8 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ClientRpc]
 	public void AimGunClientRpc(Vector3 enemyPos)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2018420059u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in enemyPos);
-				__endSendClientRpc(ref bufferWriter, 2018420059u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				StopReloading();
-				gunCoroutine = StartCoroutine(AimGun(enemyPos));
-			}
-		}
+		StopReloading();
+		gunCoroutine = StartCoroutine(AimGun(enemyPos));
 	}
 
 	private IEnumerator AimGun(Vector3 enemyPos)
@@ -940,55 +754,20 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ServerRpc]
 	public void FireGunServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (stunNormalizedTimer <= 0f)
 		{
-			return;
+			FireGunClientRpc();
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3870955307u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 3870955307u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (stunNormalizedTimer <= 0f)
-			{
-				FireGunClientRpc();
-			}
-			else
-			{
-				StartCoroutine(waitToFireGun());
-			}
+			StartCoroutine(waitToFireGun());
 		}
 	}
 
 	[ClientRpc]
 	public void FireGunClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(998664398u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 998664398u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				FireGun(gun.shotgunRayPoint.position, gun.shotgunRayPoint.forward);
-			}
-		}
+		FireGun(gun.shotgunRayPoint.position, gun.shotgunRayPoint.forward);
 	}
 
 	private IEnumerator waitToFireGun()
@@ -1025,41 +804,13 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void SwitchTargetServerRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3532402073u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				__endSendServerRpc(ref bufferWriter, 3532402073u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SwitchTargetClientRpc(playerId);
-			}
-		}
+		SwitchTargetClientRpc(playerId);
 	}
 
 	[ClientRpc]
 	public void SwitchTargetClientRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3858844829u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				__endSendClientRpc(ref bufferWriter, 3858844829u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				SwitchTargetToPlayer(playerId);
-			}
-		}
+		SwitchTargetToPlayer(playerId);
 	}
 
 	private void SwitchTargetToPlayer(int playerId)
@@ -1122,41 +873,13 @@ public class NutcrackerEnemyAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void LegKickPlayerServerRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3881699224u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				__endSendServerRpc(ref bufferWriter, 3881699224u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				LegKickPlayerClientRpc(playerId);
-			}
-		}
+		LegKickPlayerClientRpc(playerId);
 	}
 
 	[ClientRpc]
 	public void LegKickPlayerClientRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3893799727u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				__endSendClientRpc(ref bufferWriter, 3893799727u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				LegKickPlayer(playerId);
-			}
-		}
+		LegKickPlayer(playerId);
 	}
 
 	private void LegKickPlayer(int playerId)
@@ -1226,295 +949,5 @@ public class NutcrackerEnemyAI : EnemyAI
 		SpawnShotgunShells();
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_NutcrackerEnemyAI()
-	{
-		NetworkManager.__rpc_func_table.Add(1465144951u, __rpc_handler_1465144951);
-		NetworkManager.__rpc_func_table.Add(855827344u, __rpc_handler_855827344);
-		NetworkManager.__rpc_func_table.Add(3846014741u, __rpc_handler_3846014741);
-		NetworkManager.__rpc_func_table.Add(3142489771u, __rpc_handler_3142489771);
-		NetworkManager.__rpc_func_table.Add(1948237339u, __rpc_handler_1948237339);
-		NetworkManager.__rpc_func_table.Add(1780697749u, __rpc_handler_1780697749);
-		NetworkManager.__rpc_func_table.Add(2806509823u, __rpc_handler_2806509823);
-		NetworkManager.__rpc_func_table.Add(3996049734u, __rpc_handler_3996049734);
-		NetworkManager.__rpc_func_table.Add(3736826466u, __rpc_handler_3736826466);
-		NetworkManager.__rpc_func_table.Add(894193044u, __rpc_handler_894193044);
-		NetworkManager.__rpc_func_table.Add(1572138691u, __rpc_handler_1572138691);
-		NetworkManager.__rpc_func_table.Add(2018420059u, __rpc_handler_2018420059);
-		NetworkManager.__rpc_func_table.Add(3870955307u, __rpc_handler_3870955307);
-		NetworkManager.__rpc_func_table.Add(998664398u, __rpc_handler_998664398);
-		NetworkManager.__rpc_func_table.Add(3532402073u, __rpc_handler_3532402073);
-		NetworkManager.__rpc_func_table.Add(3858844829u, __rpc_handler_3858844829);
-		NetworkManager.__rpc_func_table.Add(3881699224u, __rpc_handler_3881699224);
-		NetworkManager.__rpc_func_table.Add(3893799727u, __rpc_handler_3893799727);
-	}
-
-	private static void __rpc_handler_1465144951(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((NutcrackerEnemyAI)target).InitializeNutcrackerValuesServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_855827344(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out NetworkObjectReference value2, default(FastBufferWriter.ForNetworkSerializable));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((NutcrackerEnemyAI)target).InitializeNutcrackerValuesClientRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3846014741(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((NutcrackerEnemyAI)target).DropGunServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3142489771(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((NutcrackerEnemyAI)target).DropGunClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1948237339(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((NutcrackerEnemyAI)target).SetLostPlayerInChaseServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1780697749(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((NutcrackerEnemyAI)target).SetLostPlayerInChaseClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2806509823(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((NutcrackerEnemyAI)target).SeeMovingThreatServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3996049734(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((NutcrackerEnemyAI)target).SeeMovingThreatClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3736826466(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((NutcrackerEnemyAI)target).ReloadGunServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_894193044(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((NutcrackerEnemyAI)target).ReloadGunClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1572138691(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((NutcrackerEnemyAI)target).AimGunServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2018420059(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((NutcrackerEnemyAI)target).AimGunClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3870955307(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((NutcrackerEnemyAI)target).FireGunServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_998664398(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((NutcrackerEnemyAI)target).FireGunClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3532402073(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((NutcrackerEnemyAI)target).SwitchTargetServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3858844829(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((NutcrackerEnemyAI)target).SwitchTargetClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3881699224(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((NutcrackerEnemyAI)target).LegKickPlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3893799727(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((NutcrackerEnemyAI)target).LegKickPlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "NutcrackerEnemyAI";
-	}
 }

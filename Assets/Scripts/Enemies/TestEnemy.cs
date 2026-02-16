@@ -56,13 +56,5 @@ public class TestEnemy : EnemyAI
 		base.Update();
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "TestEnemy";
-	}
 }

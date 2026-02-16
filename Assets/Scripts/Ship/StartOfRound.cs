@@ -461,273 +461,44 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void PlayerLoadedServerRpc(ulong clientId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(4249638645u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, clientId);
-				__endSendServerRpc(ref bufferWriter, 4249638645u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				fullyLoadedPlayers.Add(clientId);
-				PlayerLoadedClientRpc(clientId);
-			}
-		}
+		fullyLoadedPlayers.Add(clientId);
+		PlayerLoadedClientRpc(clientId);
 	}
 
 	[ClientRpc]
 	private void PlayerLoadedClientRpc(ulong clientId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsServer)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(462348217u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, clientId);
-				__endSendClientRpc(ref bufferWriter, 462348217u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsServer)
-			{
-				fullyLoadedPlayers.Add(clientId);
-			}
+			fullyLoadedPlayers.Add(clientId);
 		}
 	}
 
 	[ClientRpc]
 	private void ResetPlayersLoadedValueClientRpc(bool landingShip = false)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log($"Purchasing ship unlockable on host: {unlockableID}");
+		if (unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer || newGroupCreditsAmount > UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits)
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(161788012u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in landingShip, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 161788012u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || base.IsServer)
-		{
-			return;
-		}
-		fullyLoadedPlayers.Clear();
-		if (landingShip)
-		{
-			if (currentPlanetAnimator != null)
-			{
-				currentPlanetAnimator.SetTrigger("LandOnPlanet");
-			}
-			UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.interactable = false;
-			UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.disabledHoverTip = "[Wait for ship to land]";
-		}
-	}
-
-	private void SceneManager_OnLoadComplete1(ulong clientId, string sceneName, LoadSceneMode loadSceneMode)
-	{
-		DisableSpatializationOnAllAudio();
-		if (sceneName == currentLevel.sceneName)
-		{
-			if (!shipDoorsEnabled)
-			{
-				HUDManager.Instance.loadingText.enabled = true;
-				HUDManager.Instance.loadingDarkenScreen.enabled = true;
-			}
-			HUDManager.Instance.loadingText.text = "Waiting for crew...";
-		}
-		ClientPlayerList.TryGetValue(clientId, out var value);
-		if (value == 0 || !base.IsServer)
-		{
-			PlayerLoadedServerRpc(clientId);
-		}
-	}
-
-	private void SceneManager_OnUnloadComplete(ulong clientId, string sceneName)
-	{
-		if (sceneName == currentLevel.sceneName)
-		{
-			if (currentPlanetPrefab != null)
-			{
-				currentPlanetPrefab.SetActive(value: true);
-				outerSpaceSunAnimator.gameObject.SetActive(value: true);
-				currentPlanetAnimator.SetTrigger("LeavePlanet");
-			}
-			ClientPlayerList.TryGetValue(clientId, out var value);
-			if (value == 0 || !base.IsServer)
-			{
-				PlayerLoadedServerRpc(clientId);
-			}
-		}
-	}
-
-	private void SceneManager_OnLoad(ulong clientId, string sceneName, LoadSceneMode loadSceneMode, AsyncOperation asyncOperation)
-	{
-		Debug.Log("Loading scene");
-		Debug.Log("Scene that began loading: " + sceneName);
-		if (!(sceneName != "SampleSceneRelay") || !(sceneName != "MainMenu"))
-		{
-			return;
-		}
-		if (currentPlanetPrefab != null)
-		{
-			currentPlanetPrefab.SetActive(value: false);
-		}
-		outerSpaceSunAnimator.gameObject.SetActive(value: false);
-		if (currentLevel.sceneName != sceneName)
-		{
-			for (int i = 0; i < levels.Length; i++)
-			{
-				if (levels[i].sceneName == sceneName)
-				{
-					ChangeLevel(i);
-				}
-			}
-		}
-		HUDManager.Instance.loadingText.enabled = true;
-		HUDManager.Instance.loadingText.text = "LOADING WORLD...";
-	}
-
-	private void OnEnable()
-	{
-		Debug.Log("Enabling connection callbacks in StartOfRound");
-		if (NetworkManager.Singleton != null)
-		{
-			Debug.Log("Began listening to SceneManager_OnLoadComplete1 on this client");
-			try
-			{
-				NetworkManager.Singleton.SceneManager.OnLoadComplete += SceneManager_OnLoadComplete1;
-				NetworkManager.Singleton.SceneManager.OnLoad += SceneManager_OnLoad;
-				NetworkManager.Singleton.SceneManager.OnUnloadComplete += SceneManager_OnUnloadComplete;
-			}
-			catch (Exception arg)
-			{
-				Debug.LogError($"Error returned when subscribing to scenemanager callbacks!: {arg}");
-				GameNetworkManager.Instance.disconnectionReasonMessage = "An error occured when syncing the scene! The host might not have loaded in.";
-				GameNetworkManager.Instance.Disconnect();
-				return;
-			}
-			_ = base.IsServer;
+			Debug.Log("Unlockable was already unlocked! Setting group credits back to server's amount on all clients.");
+			BuyShipUnlockableClientRpc(UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits);
 		}
 		else
 		{
-			GameNetworkManager.Instance.disconnectionReasonMessage = "Your connection timed out before you could load in. Try again?";
-			GameNetworkManager.Instance.Disconnect();
-		}
-	}
-
-	private void OnDisable()
-	{
-		Debug.Log("DISABLING connection callbacks in round manager");
-		if (NetworkManager.Singleton != null)
-		{
-			_ = subscribedToConnectionApproval;
-		}
-	}
-
-	private void Start()
-	{
-		TimeOfDay.Instance.globalTime = 100f;
-		IngamePlayerSettings.Instance.RefreshAndDisplayCurrentMicrophone();
-		HUDManager.Instance.SetNearDepthOfFieldEnabled(enabled: true);
-		StartCoroutine(StartSpatialVoiceChat());
-		NetworkObject[] array = UnityEngine.Object.FindObjectsOfType<NetworkObject>(includeInactive: true);
-		for (int i = 0; i < array.Length; i++)
-		{
-			array[i].DontDestroyWithOwner = true;
-		}
-		if (base.IsServer)
-		{
-			SetTimeAndPlanetToSavedSettings();
-			LoadUnlockables();
-			LoadShipGrabbableItems();
-			SetMapScreenInfoToCurrentLevel();
-			UnityEngine.Object.FindObjectOfType<Terminal>().RotateShipDecorSelection();
-			TimeOfDay timeOfDay = UnityEngine.Object.FindObjectOfType<TimeOfDay>();
-			if (currentLevel.planetHasTime && timeOfDay.GetDayPhase(timeOfDay.CalculatePlanetTime(currentLevel) / timeOfDay.totalTime) == DayMode.Midnight)
-			{
-				UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.disabledHoverTip = "Too late on moon to land!";
-				UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.interactable = false;
-			}
-			else
-			{
-				UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.interactable = true;
-			}
-		}
-		SwitchMapMonitorPurpose(displayInfo: true);
-		DisableSpatializationOnAllAudio();
-		SetDiscordStatusDetails();
-	}
-
-	private void DisableSpatializationOnAllAudio()
-	{
-		AudioSource[] array = UnityEngine.Object.FindObjectsOfType<AudioSource>();
-		for (int i = 0; i < array.Length; i++)
-		{
-			array[i].spatialize = false;
-		}
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void BuyShipUnlockableServerRpc(int unlockableID, int newGroupCreditsAmount)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3953483456u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, unlockableID);
-			BytePacker.WriteValueBitPacked(bufferWriter, newGroupCreditsAmount);
-			__endSendServerRpc(ref bufferWriter, 3953483456u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			Debug.Log($"Purchasing ship unlockable on host: {unlockableID}");
-			if (unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer || newGroupCreditsAmount > UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits)
-			{
-				Debug.Log("Unlockable was already unlocked! Setting group credits back to server's amount on all clients.");
-				BuyShipUnlockableClientRpc(UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits);
-			}
-			else
-			{
-				UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
-				BuyShipUnlockableClientRpc(newGroupCreditsAmount, unlockableID);
-				UnlockShipObject(unlockableID);
-			}
+			UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
+			BuyShipUnlockableClientRpc(newGroupCreditsAmount, unlockableID);
+			UnlockShipObject(unlockableID);
 		}
 	}
 
 	[ClientRpc]
 	public void BuyShipUnlockableClientRpc(int newGroupCreditsAmount, int unlockableID = -1)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(418581783u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, newGroupCreditsAmount);
-			BytePacker.WriteValueBitPacked(bufferWriter, unlockableID);
-			__endSendClientRpc(ref bufferWriter, 418581783u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !(NetworkManager.Singleton == null) && !base.NetworkManager.ShutdownInProgress && !base.IsServer)
+		if (!(NetworkManager.Singleton == null) && !base.NetworkManager.ShutdownInProgress && !base.IsServer)
 		{
 			if (unlockableID != -1)
 			{
-				unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer = true;
+			unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer = true;
 			}
 			UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
 		}
@@ -736,247 +507,13 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void ReturnUnlockableFromStorageServerRpc(int unlockableID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3380566632u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, unlockableID);
-			__endSendServerRpc(ref bufferWriter, 3380566632u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost) || !unlockablesList.unlockables[unlockableID].inStorage)
-		{
-			return;
-		}
-		if (unlockablesList.unlockables[unlockableID].spawnPrefab)
-		{
-			if (SpawnedShipUnlockables.ContainsKey(unlockableID))
-			{
-				return;
-			}
-			PlaceableShipObject[] array = UnityEngine.Object.FindObjectsOfType<PlaceableShipObject>();
-			for (int i = 0; i < array.Length; i++)
-			{
-				if (array[i].unlockableID == unlockableID)
-				{
-					return;
-				}
-			}
-			SpawnUnlockable(unlockableID);
-		}
-		else
-		{
-			PlaceableShipObject[] array2 = UnityEngine.Object.FindObjectsOfType<PlaceableShipObject>();
-			for (int j = 0; j < array2.Length; j++)
-			{
-				if (array2[j].unlockableID == unlockableID)
-				{
-					array2[j].parentObject.disableObject = false;
-					break;
-				}
-			}
-		}
-		unlockablesList.unlockables[unlockableID].inStorage = false;
-		ReturnUnlockableFromStorageClientRpc(unlockableID);
-	}
-
-	[ClientRpc]
-	public void ReturnUnlockableFromStorageClientRpc(int unlockableID)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1076853239u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, unlockableID);
-			__endSendClientRpc(ref bufferWriter, 1076853239u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || NetworkManager.Singleton == null || base.NetworkManager.ShutdownInProgress || base.IsServer)
-		{
-			return;
-		}
-		unlockablesList.unlockables[unlockableID].inStorage = false;
-		PlaceableShipObject[] array = UnityEngine.Object.FindObjectsOfType<PlaceableShipObject>();
-		for (int i = 0; i < array.Length; i++)
-		{
-			if (array[i].unlockableID == unlockableID)
-			{
-				array[i].parentObject.disableObject = false;
-			}
-		}
-	}
-
-	private void UnlockShipObject(int unlockableID)
-	{
-		if (!unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer && !unlockablesList.unlockables[unlockableID].alreadyUnlocked)
-		{
-			Debug.Log($"Set unlockable #{unlockableID}: {unlockablesList.unlockables[unlockableID].unlockableName}, to unlocked!");
-			unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer = true;
-			SpawnUnlockable(unlockableID);
-		}
-	}
-
-	private void LoadUnlockables()
-	{
-		try
-		{
-			if (ES3.KeyExists("UnlockedShipObjects", GameNetworkManager.Instance.currentSaveFileName))
-			{
-				int[] array = ES3.Load<int[]>("UnlockedShipObjects", GameNetworkManager.Instance.currentSaveFileName);
-				for (int i = 0; i < array.Length; i++)
-				{
-					if (!unlockablesList.unlockables[array[i]].alreadyUnlocked || unlockablesList.unlockables[array[i]].IsPlaceable)
-					{
-						if (!unlockablesList.unlockables[array[i]].alreadyUnlocked)
-						{
-							unlockablesList.unlockables[array[i]].hasBeenUnlockedByPlayer = true;
-						}
-						if (ES3.KeyExists("ShipUnlockStored_" + unlockablesList.unlockables[array[i]].unlockableName, GameNetworkManager.Instance.currentSaveFileName) && ES3.Load("ShipUnlockStored_" + unlockablesList.unlockables[array[i]].unlockableName, GameNetworkManager.Instance.currentSaveFileName, defaultValue: false))
-						{
-							unlockablesList.unlockables[array[i]].inStorage = true;
-						}
-						else
-						{
-							SpawnUnlockable(array[i]);
-						}
-					}
-				}
-				PlaceableShipObject[] array2 = UnityEngine.Object.FindObjectsOfType<PlaceableShipObject>();
-				for (int j = 0; j < array2.Length; j++)
-				{
-					if (!unlockablesList.unlockables[array2[j].unlockableID].spawnPrefab && unlockablesList.unlockables[array2[j].unlockableID].inStorage)
-					{
-						array2[j].parentObject.disableObject = true;
-						Debug.Log("DISABLE OBJECT A");
-					}
-				}
-			}
-			for (int k = 0; k < unlockablesList.unlockables.Count; k++)
-			{
-				if ((k != 0 || !isChallengeFile) && (unlockablesList.unlockables[k].alreadyUnlocked || (unlockablesList.unlockables[k].unlockedInChallengeFile && isChallengeFile)) && !unlockablesList.unlockables[k].IsPlaceable)
-				{
-					SpawnUnlockable(k);
-				}
-			}
-		}
-		catch (Exception arg)
-		{
-			Debug.LogError($"Error attempting to load ship unlockables on the host: {arg}");
-		}
-	}
-
-	private void SpawnUnlockable(int unlockableIndex)
-	{
-		GameObject gameObject = null;
-		UnlockableItem unlockableItem = unlockablesList.unlockables[unlockableIndex];
-		switch (unlockableItem.unlockableType)
-		{
-		case 0:
-		{
-			gameObject = UnityEngine.Object.Instantiate(suitPrefab, rightmostSuitPosition.position + rightmostSuitPosition.forward * 0.18f * suitsPlaced, rightmostSuitPosition.rotation, null);
-			gameObject.GetComponent<UnlockableSuit>().syncedSuitID.Value = unlockableIndex;
-			gameObject.GetComponent<NetworkObject>().Spawn();
-			AutoParentToShip component = gameObject.gameObject.GetComponent<AutoParentToShip>();
-			component.overrideOffset = true;
-			component.positionOffset = new Vector3(-2.45f, 2.75f, -8.41f) + rightmostSuitPosition.forward * 0.18f * suitsPlaced;
-			component.rotationOffset = new Vector3(0f, 90f, 0f);
-			SyncSuitsServerRpc();
-			suitsPlaced++;
-			break;
-		}
-		case 1:
-			if (unlockableItem.spawnPrefab)
-			{
-				gameObject = UnityEngine.Object.Instantiate(unlockableItem.prefabObject, elevatorTransform.position, Quaternion.identity, null);
-			}
-			else
-			{
-				Debug.Log("Placing scene object at saved position: " + unlockablesList.unlockables[unlockableIndex].unlockableName);
-				PlaceableShipObject[] array = UnityEngine.Object.FindObjectsOfType<PlaceableShipObject>();
-				for (int i = 0; i < array.Length; i++)
-				{
-					if (array[i].unlockableID == unlockableIndex)
-					{
-						gameObject = array[i].parentObject.gameObject;
-					}
-				}
-				if (gameObject == null)
-				{
-					return;
-				}
-			}
-			if (ES3.KeyExists("ShipUnlockMoved_" + unlockableItem.unlockableName, GameNetworkManager.Instance.currentSaveFileName))
-			{
-				Vector3 vector = ES3.Load("ShipUnlockPos_" + unlockableItem.unlockableName, GameNetworkManager.Instance.currentSaveFileName, Vector3.zero);
-				Vector3 placementRotation = ES3.Load("ShipUnlockRot_" + unlockableItem.unlockableName, GameNetworkManager.Instance.currentSaveFileName, Vector3.zero);
-				Debug.Log($"Loading placed object position as: {vector}");
-				ShipBuildModeManager.Instance.PlaceShipObject(vector, placementRotation, gameObject.GetComponentInChildren<PlaceableShipObject>(), placementSFX: false);
-			}
-			if (!gameObject.GetComponent<NetworkObject>().IsSpawned)
-			{
-				gameObject.GetComponent<NetworkObject>().Spawn();
-			}
-			break;
-		}
-		if (gameObject != null)
-		{
-			SpawnedShipUnlockables.Add(unlockableIndex, gameObject);
-		}
-	}
-
-	[ServerRpc]
-	public void SyncSuitsServerRpc()
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1846610026u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 1846610026u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			SyncSuitsClientRpc();
-		}
+		SyncSuitsClientRpc();
 	}
 
 	[ClientRpc]
 	public void SyncSuitsClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2369901769u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2369901769u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				PositionSuitsOnRack();
-			}
-		}
+		PositionSuitsOnRack();
 	}
 
 	private void LoadShipGrabbableItems()
@@ -1251,21 +788,7 @@ public class StartOfRound : NetworkBehaviour
 	[ClientRpc]
 	public void OnClientDisconnectClientRpc(int playerObjectNumber, ulong clientId, ClientRpcParams clientRpcParams = default(ClientRpcParams))
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				FastBufferWriter bufferWriter = __beginSendClientRpc(475465488u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObjectNumber);
-				BytePacker.WriteValueBitPacked(bufferWriter, clientId);
-				__endSendClientRpc(ref bufferWriter, 475465488u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				OnPlayerDC(playerObjectNumber, clientId);
-			}
-		}
+		OnPlayerDC(playerObjectNumber, clientId);
 	}
 
 	public void OnPlayerDC(int playerObjectNumber, ulong clientId)
@@ -1397,892 +920,13 @@ public class StartOfRound : NetworkBehaviour
 	[ClientRpc]
 	private void OnPlayerConnectedClientRpc(ulong clientId, int connectedPlayers, ulong[] connectedPlayerIdsOrdered, int assignedPlayerObjectId, int serverMoneyAmount, int levelID, int profitQuota, int timeUntilDeadline, int quotaFulfilled, int randomSeed, bool isChallenge)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (fullyLoadedPlayers.Count >= connectedPlayersAmount + 1 && !travellingToNewLevel)
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(886676601u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, clientId);
-			BytePacker.WriteValueBitPacked(bufferWriter, connectedPlayers);
-			bool value = connectedPlayerIdsOrdered != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(connectedPlayerIdsOrdered, default(FastBufferWriter.ForPrimitives));
-			}
-			BytePacker.WriteValueBitPacked(bufferWriter, assignedPlayerObjectId);
-			BytePacker.WriteValueBitPacked(bufferWriter, serverMoneyAmount);
-			BytePacker.WriteValueBitPacked(bufferWriter, levelID);
-			BytePacker.WriteValueBitPacked(bufferWriter, profitQuota);
-			BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
-			BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
-			BytePacker.WriteValueBitPacked(bufferWriter, randomSeed);
-			bufferWriter.WriteValueSafe(in isChallenge, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 886676601u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		try
-		{
-			Debug.Log($"NEW CLIENT JOINED THE SERVER!!; clientId: {clientId}");
-			if (NetworkManager.Singleton == null)
-			{
-				return;
-			}
-			if (clientId == NetworkManager.Singleton.LocalClientId && GameNetworkManager.Instance.localClientWaitingForApproval)
-			{
-				GameNetworkManager.Instance.localClientWaitingForApproval = false;
-			}
-			if (!base.IsServer)
-			{
-				ClientPlayerList.Clear();
-				for (int i = 0; i < connectedPlayerIdsOrdered.Length; i++)
-				{
-					if (connectedPlayerIdsOrdered[i] == 999)
-					{
-						Debug.Log($"Skipping at index {i}");
-						continue;
-					}
-					ClientPlayerList.Add(connectedPlayerIdsOrdered[i], i);
-					Debug.Log($"adding value to ClientPlayerList at value of index {i}: {connectedPlayerIdsOrdered[i]}");
-				}
-				if (!ClientPlayerList.ContainsKey(clientId))
-				{
-					Debug.Log($"Successfully added new client id {clientId} and connected to object {assignedPlayerObjectId}");
-					ClientPlayerList.Add(clientId, assignedPlayerObjectId);
-				}
-				else
-				{
-					Debug.Log("ClientId already in ClientPlayerList!");
-				}
-				Debug.Log($"clientplayerlist count for client: {ClientPlayerList.Count}");
-				Terminal terminal = UnityEngine.Object.FindObjectOfType<Terminal>();
-				terminal.groupCredits = serverMoneyAmount;
-				TimeOfDay timeOfDay = UnityEngine.Object.FindObjectOfType<TimeOfDay>();
-				timeOfDay.globalTime = 100f;
-				ChangeLevel(levelID);
-				ChangePlanet();
-				isChallengeFile = isChallenge;
-				randomMapSeed = randomSeed;
-				terminal.RotateShipDecorSelection();
-				SetPlanetsWeather();
-				UnityEngine.Object.FindObjectOfType<Terminal>().SetItemSales();
-				SetMapScreenInfoToCurrentLevel();
-				TimeOfDay.Instance.profitQuota = profitQuota;
-				TimeOfDay.Instance.timeUntilDeadline = timeUntilDeadline;
-				timeOfDay.SetBuyingRateForDay();
-				TimeOfDay.Instance.quotaFulfilled = quotaFulfilled;
-				TimeOfDay.Instance.UpdateProfitQuotaCurrentTime();
-			}
-			connectedPlayersAmount = connectedPlayers + 1;
-			Debug.Log("New player: " + allPlayerObjects[assignedPlayerObjectId].name);
-			PlayerControllerB playerControllerB = allPlayerScripts[assignedPlayerObjectId];
-			Vector3 vector = (playerControllerB.serverPlayerPosition = GetPlayerSpawnPosition(assignedPlayerObjectId));
-			playerControllerB.actualClientId = clientId;
-			playerControllerB.isInElevator = true;
-			playerControllerB.isInHangarShipRoom = true;
-			playerControllerB.wasInElevatorLastFrame = false;
-			allPlayerScripts[assignedPlayerObjectId].TeleportPlayer(vector);
-			StartCoroutine(setPlayerToSpawnPosition(allPlayerObjects[assignedPlayerObjectId].transform, vector));
-			for (int j = 0; j < connectedPlayersAmount + 1; j++)
-			{
-				if (j == 0 || !allPlayerScripts[j].IsOwnedByServer)
-				{
-					allPlayerScripts[j].isPlayerControlled = true;
-				}
-			}
-			playerControllerB.isPlayerControlled = true;
-			livingPlayers = connectedPlayersAmount + 1;
-			Debug.Log($"Connected players (joined clients) amount after connection: {connectedPlayersAmount}");
-			if (NetworkManager.Singleton.LocalClientId == clientId)
-			{
-				Debug.Log($"Asking server to sync already-held objects. Our client id: {NetworkManager.Singleton.LocalClientId}");
-				mostRecentlyJoinedClient = true;
-				if (isChallengeFile)
-				{
-					UnlockableSuit.SwitchSuitForAllPlayers(24);
-				}
-				HUDManager.Instance.SetSavedValues(assignedPlayerObjectId);
-				SyncAlreadyHeldObjectsServerRpc((int)NetworkManager.Singleton.LocalClientId);
-			}
-			else
-			{
-				Debug.Log($"This client is not the client who just joined. Our client id: {NetworkManager.Singleton.LocalClientId}; joining client id: {clientId}");
-				mostRecentlyJoinedClient = false;
-				if (updateVoiceEffectsCoroutine != null)
-				{
-					StopCoroutine(updateVoiceEffectsCoroutine);
-				}
-				updateVoiceEffectsCoroutine = StartCoroutine(UpdatePlayerVoiceEffectsOnDelay());
-				if (!playerControllerB.gameObject.GetComponentInChildren<NfgoPlayer>().IsTracking)
-				{
-					playerControllerB.gameObject.GetComponentInChildren<NfgoPlayer>().VoiceChatTrackingStart();
-				}
-			}
-			if (GameNetworkManager.Instance.disableSteam)
-			{
-				QuickMenuManager quickMenuManager = UnityEngine.Object.FindObjectOfType<QuickMenuManager>();
-				for (int k = 0; k < allPlayerScripts.Length; k++)
-				{
-					if (allPlayerScripts[k].isPlayerControlled || allPlayerScripts[k].isPlayerDead)
-					{
-						quickMenuManager.AddUserToPlayerList(0uL, allPlayerScripts[k].playerUsername, (int)allPlayerScripts[k].playerClientId);
-					}
-				}
-			}
-			SetDiscordStatusDetails();
-		}
-		catch (Exception arg)
-		{
-			Debug.LogError($"Failed to assign new player with client id #{clientId}: {arg}");
-			GameNetworkManager.Instance.disconnectionReasonMessage = "An error occured while spawning into the game. Please report the glitch!";
-			GameNetworkManager.Instance.Disconnect();
-		}
-	}
-
-	private Vector3 GetPlayerSpawnPosition(int playerNum, bool simpleTeleport = false)
-	{
-		if (simpleTeleport)
-		{
-			return playerSpawnPositions[0].position;
-		}
-		Debug.DrawRay(playerSpawnPositions[playerNum].position, Vector3.up, Color.red, 15f);
-		if (!Physics.CheckSphere(playerSpawnPositions[playerNum].position, 0.2f, 67108864, QueryTriggerInteraction.Ignore))
-		{
-			return playerSpawnPositions[playerNum].position;
-		}
-		if (!Physics.CheckSphere(playerSpawnPositions[playerNum].position + Vector3.up, 0.2f, 67108864, QueryTriggerInteraction.Ignore))
-		{
-			return playerSpawnPositions[playerNum].position + Vector3.up * 0.5f;
-		}
-		for (int i = 0; i < playerSpawnPositions.Length; i++)
-		{
-			if (i != playerNum)
-			{
-				Debug.DrawRay(playerSpawnPositions[i].position, Vector3.up, Color.green, 15f);
-				if (!Physics.CheckSphere(playerSpawnPositions[i].position, 0.12f, -67108865, QueryTriggerInteraction.Ignore))
-				{
-					return playerSpawnPositions[i].position;
-				}
-				if (!Physics.CheckSphere(playerSpawnPositions[i].position + Vector3.up, 0.12f, 67108864, QueryTriggerInteraction.Ignore))
-				{
-					return playerSpawnPositions[i].position + Vector3.up * 0.5f;
-				}
-			}
-		}
-		System.Random random = new System.Random(65);
-		float y = playerSpawnPositions[0].position.y;
-		for (int j = 0; j < 15; j++)
-		{
-			Vector3 vector = new Vector3(random.Next((int)shipInnerRoomBounds.bounds.min.x, (int)shipInnerRoomBounds.bounds.max.x), y, random.Next((int)shipInnerRoomBounds.bounds.min.z, (int)shipInnerRoomBounds.bounds.max.z));
-			vector = shipInnerRoomBounds.transform.InverseTransformPoint(vector);
-			Debug.DrawRay(vector, Vector3.up, Color.yellow, 15f);
-			if (!Physics.CheckSphere(vector, 0.12f, 67108864, QueryTriggerInteraction.Ignore))
-			{
-				return playerSpawnPositions[j].position;
-			}
-		}
-		return playerSpawnPositions[0].position + Vector3.up * 0.5f;
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void SyncAlreadyHeldObjectsServerRpc(int joiningClientId)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(682230258u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, joiningClientId);
-			__endSendServerRpc(ref bufferWriter, 682230258u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost))
-		{
-			return;
-		}
-		Debug.Log("Syncing already-held objects on server");
-		try
-		{
-			GrabbableObject[] array = UnityEngine.Object.FindObjectsByType<GrabbableObject>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-			List<NetworkObjectReference> list = new List<NetworkObjectReference>();
-			List<int> list2 = new List<int>();
-			List<int> list3 = new List<int>();
-			List<int> list4 = new List<int>();
-			for (int i = 0; i < array.Length; i++)
-			{
-				if (!array[i].isHeld)
-				{
-					continue;
-				}
-				list2.Add((int)array[i].playerHeldBy.playerClientId);
-				list.Add(array[i].NetworkObject);
-				Debug.Log($"Object #{i} is held");
-				for (int j = 0; j < array[i].playerHeldBy.ItemSlots.Length; j++)
-				{
-					if (array[i].playerHeldBy.ItemSlots[j] == array[i])
-					{
-						list3.Add(j);
-						Debug.Log($"Item slot index for item #{i}: {j}");
-					}
-				}
-				if (array[i].isPocketed)
-				{
-					list4.Add(list.Count - 1);
-					Debug.Log($"Object #{i} is pocketed");
-				}
-			}
-			Debug.Log($"pocketed objects count: {list4.Count}");
-			Debug.Log($"held objects count: {list.Count}");
-			List<int> list5 = new List<int>();
-			for (int k = 0; k < array.Length; k++)
-			{
-				if (array[k].itemProperties.isScrap)
-				{
-					list5.Add(array[k].scrapValue);
-				}
-			}
-			if (list.Count > 0)
-			{
-				SyncAlreadyHeldObjectsClientRpc(list.ToArray(), list2.ToArray(), list3.ToArray(), list4.ToArray(), joiningClientId);
-			}
-			else
-			{
-				SyncShipUnlockablesServerRpc();
-			}
-		}
-		catch (Exception arg)
-		{
-			Debug.LogError($"Error while syncing players' already held objects in server! Skipping. Error: {arg}");
-			SyncShipUnlockablesServerRpc();
-		}
-	}
-
-	[ClientRpc]
-	public void SyncAlreadyHeldObjectsClientRpc(NetworkObjectReference[] gObjects, int[] playersHeldBy, int[] itemSlotNumbers, int[] isObjectPocketed, int syncWithClient)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1613265729u, clientRpcParams, RpcDelivery.Reliable);
-			bool value = gObjects != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(gObjects, default(FastBufferWriter.ForNetworkSerializable));
-			}
-			bool value2 = playersHeldBy != null;
-			bufferWriter.WriteValueSafe(in value2, default(FastBufferWriter.ForPrimitives));
-			if (value2)
-			{
-				bufferWriter.WriteValueSafe(playersHeldBy, default(FastBufferWriter.ForPrimitives));
-			}
-			bool value3 = itemSlotNumbers != null;
-			bufferWriter.WriteValueSafe(in value3, default(FastBufferWriter.ForPrimitives));
-			if (value3)
-			{
-				bufferWriter.WriteValueSafe(itemSlotNumbers, default(FastBufferWriter.ForPrimitives));
-			}
-			bool value4 = isObjectPocketed != null;
-			bufferWriter.WriteValueSafe(in value4, default(FastBufferWriter.ForPrimitives));
-			if (value4)
-			{
-				bufferWriter.WriteValueSafe(isObjectPocketed, default(FastBufferWriter.ForPrimitives));
-			}
-			BytePacker.WriteValueBitPacked(bufferWriter, syncWithClient);
-			__endSendClientRpc(ref bufferWriter, 1613265729u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || syncWithClient != (int)NetworkManager.Singleton.LocalClientId)
-		{
-			return;
-		}
-		Debug.Log("Syncing already-held objects on client");
-		Debug.Log($"held objects count: {gObjects.Length}");
-		Debug.Log($"pocketed objects count: {isObjectPocketed.Length}");
-		try
-		{
-			for (int i = 0; i < gObjects.Length; i++)
-			{
-				if (gObjects[i].TryGet(out var networkObject))
-				{
-					GrabbableObject component = networkObject.gameObject.GetComponent<GrabbableObject>();
-					component.isHeld = true;
-					allPlayerScripts[playersHeldBy[i]].ItemSlots[itemSlotNumbers[i]] = component;
-					component.parentObject = allPlayerScripts[playersHeldBy[i]].serverItemHolder;
-					bool flag = false;
-					Debug.Log($"isObjectPocketed length: {isObjectPocketed.Length}");
-					Debug.Log($"iii {i}");
-					for (int j = 0; j < isObjectPocketed.Length; j++)
-					{
-						Debug.Log($"bbb {j} ; {isObjectPocketed[j]}");
-						if (isObjectPocketed[j] == i)
-						{
-							Debug.Log("Pocketing object for player: " + allPlayerScripts[playersHeldBy[i]].gameObject.name);
-							component.isPocketed = true;
-							component.EnableItemMeshes(enable: false);
-							component.EnablePhysics(enable: false);
-							flag = true;
-							break;
-						}
-					}
-					if (!flag)
-					{
-						allPlayerScripts[playersHeldBy[i]].currentlyHeldObjectServer = component;
-						allPlayerScripts[playersHeldBy[i]].isHoldingObject = true;
-						allPlayerScripts[playersHeldBy[i]].twoHanded = component.itemProperties.twoHanded;
-						allPlayerScripts[playersHeldBy[i]].twoHandedAnimation = component.itemProperties.twoHandedAnimation;
-						allPlayerScripts[playersHeldBy[i]].currentItemSlot = itemSlotNumbers[i];
-					}
-				}
-				else
-				{
-					Debug.LogError($"Syncing already held objects: Unable to get network object from reference for GObject; net object id: {gObjects[i].NetworkObjectId}");
-				}
-			}
-		}
-		catch (Exception arg)
-		{
-			Debug.LogError($"Error while syncing players' already held objects to client from server: {arg}");
-		}
-		SyncShipUnlockablesServerRpc();
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void SyncShipUnlockablesServerRpc()
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(744998938u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 744998938u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost))
-		{
-			return;
-		}
-		try
-		{
-			int[] array = new int[4];
-			for (int i = 0; i < 4; i++)
-			{
-				array[i] = allPlayerScripts[i].currentSuitID;
-			}
-			List<int> list = new List<int>();
-			List<Vector3> list2 = new List<Vector3>();
-			List<Vector3> list3 = new List<Vector3>();
-			List<int> list4 = new List<int>();
-			PlaceableShipObject[] array2 = (from x in UnityEngine.Object.FindObjectsOfType<PlaceableShipObject>()
-				orderby x.unlockableID
-				select x).ToArray();
-			Debug.Log($"Server: objects in ship: {array2.Length}");
-			for (int num = 0; num < array2.Length; num++)
-			{
-				if (num > 175)
-				{
-					Debug.Log("Attempted to sync more than 175 unlockables which is not allowed");
-					break;
-				}
-				Debug.Log($"Server: placeableObject #{num}: {array2[num].parentObject.transform.name}");
-				Debug.Log($"Server: position #{num}: {unlockablesList.unlockables[array2[num].unlockableID].placedPosition}");
-				list.Add(array2[num].unlockableID);
-				list2.Add(unlockablesList.unlockables[array2[num].unlockableID].placedPosition);
-				list3.Add(unlockablesList.unlockables[array2[num].unlockableID].placedRotation);
-				if (unlockablesList.unlockables[array2[num].unlockableID].inStorage)
-				{
-					list4.Add(array2[num].unlockableID);
-				}
-			}
-			GrabbableObject[] array3 = (from x in UnityEngine.Object.FindObjectsByType<GrabbableObject>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
-				orderby Vector3.Distance(x.transform.position, Vector3.zero)
-				select x).ToArray();
-			List<int> list5 = new List<int>();
-			List<int> list6 = new List<int>();
-			for (int num2 = 0; num2 < array3.Length; num2++)
-			{
-				if (num2 > 250)
-				{
-					Debug.Log("Attempted to sync more than 250 scrap values which is not allowed");
-					break;
-				}
-				if (array3[num2].itemProperties.saveItemVariable)
-				{
-					list6.Add(array3[num2].GetItemDataToSave());
-				}
-				if (array3[num2].itemProperties.isScrap)
-				{
-					list5.Add(array3[num2].scrapValue);
-				}
-			}
-			SyncShipUnlockablesClientRpc(array, shipRoomLights.areLightsOn, list2.ToArray(), list3.ToArray(), list.ToArray(), list4.ToArray(), list5.ToArray(), list6.ToArray());
-		}
-		catch (Exception arg)
-		{
-			Debug.LogError($"Error while syncing unlockables in server. Quitting server: {arg}");
-			GameNetworkManager.Instance.disconnectionReasonMessage = "An error occured while syncing ship objects! The file may be corrupted. Please report the glitch!";
-			GameNetworkManager.Instance.Disconnect();
-		}
-	}
-
-	private void PositionSuitsOnRack()
-	{
-		UnlockableSuit[] array = UnityEngine.Object.FindObjectsOfType<UnlockableSuit>();
-		Debug.Log($"Suits: {array.Length}");
-		for (int i = 0; i < array.Length; i++)
-		{
-			Debug.Log($"Suit #{i}: {array[i].suitID}");
-			AutoParentToShip component = array[i].gameObject.GetComponent<AutoParentToShip>();
-			component.overrideOffset = true;
-			component.positionOffset = new Vector3(-2.45f, 2.75f, -8.41f) + rightmostSuitPosition.forward * 0.18f * i;
-			component.rotationOffset = new Vector3(0f, 90f, 0f);
-			Debug.Log($"pos: {component.positionOffset}; rot: {component.rotationOffset}");
-		}
-		UnityEngine.Object.FindObjectsOfType<UnlockableSuit>(includeInactive: true);
-	}
-
-	[ClientRpc]
-	public void SyncShipUnlockablesClientRpc(int[] playerSuitIDs, bool shipLightsOn, Vector3[] placeableObjectPositions, Vector3[] placeableObjectRotations, int[] placeableObjects, int[] storedItems, int[] scrapValues, int[] itemSaveData)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(4156335180u, clientRpcParams, RpcDelivery.Reliable);
-			bool value = playerSuitIDs != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(playerSuitIDs, default(FastBufferWriter.ForPrimitives));
-			}
-			bufferWriter.WriteValueSafe(in shipLightsOn, default(FastBufferWriter.ForPrimitives));
-			bool value2 = placeableObjectPositions != null;
-			bufferWriter.WriteValueSafe(in value2, default(FastBufferWriter.ForPrimitives));
-			if (value2)
-			{
-				bufferWriter.WriteValueSafe(placeableObjectPositions);
-			}
-			bool value3 = placeableObjectRotations != null;
-			bufferWriter.WriteValueSafe(in value3, default(FastBufferWriter.ForPrimitives));
-			if (value3)
-			{
-				bufferWriter.WriteValueSafe(placeableObjectRotations);
-			}
-			bool value4 = placeableObjects != null;
-			bufferWriter.WriteValueSafe(in value4, default(FastBufferWriter.ForPrimitives));
-			if (value4)
-			{
-				bufferWriter.WriteValueSafe(placeableObjects, default(FastBufferWriter.ForPrimitives));
-			}
-			bool value5 = storedItems != null;
-			bufferWriter.WriteValueSafe(in value5, default(FastBufferWriter.ForPrimitives));
-			if (value5)
-			{
-				bufferWriter.WriteValueSafe(storedItems, default(FastBufferWriter.ForPrimitives));
-			}
-			bool value6 = scrapValues != null;
-			bufferWriter.WriteValueSafe(in value6, default(FastBufferWriter.ForPrimitives));
-			if (value6)
-			{
-				bufferWriter.WriteValueSafe(scrapValues, default(FastBufferWriter.ForPrimitives));
-			}
-			bool value7 = itemSaveData != null;
-			bufferWriter.WriteValueSafe(in value7, default(FastBufferWriter.ForPrimitives));
-			if (value7)
-			{
-				bufferWriter.WriteValueSafe(itemSaveData, default(FastBufferWriter.ForPrimitives));
-			}
-			__endSendClientRpc(ref bufferWriter, 4156335180u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		if (!base.IsServer)
-		{
-			GrabbableObject[] array = (from x in UnityEngine.Object.FindObjectsByType<GrabbableObject>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
-				orderby Vector3.Distance(x.transform.position, Vector3.zero)
-				select x).ToArray();
-			try
-			{
-				int num = 0;
-				for (int num2 = 0; num2 < array.Length; num2++)
-				{
-					if (array[num2].itemProperties.saveItemVariable)
-					{
-						array[num2].LoadItemSaveData(itemSaveData[num]);
-						num++;
-					}
-				}
-			}
-			catch (Exception arg)
-			{
-				Debug.Log($"Error while attempting to sync item save data from host: {arg}");
-			}
-			try
-			{
-				int num3 = 0;
-				for (int num4 = 0; num4 < array.Length; num4++)
-				{
-					if (array[num4].itemProperties.isScrap)
-					{
-						if (num3 >= scrapValues.Length)
-						{
-							break;
-						}
-						array[num4].SetScrapValue(scrapValues[num3]);
-						num3++;
-					}
-				}
-				for (int num5 = 0; num5 < array.Length; num5++)
-				{
-					if (array[num5].transform.parent == null)
-					{
-						Vector3 position = array[num5].transform.position;
-						array[num5].transform.parent = elevatorTransform;
-						array[num5].targetFloorPosition = elevatorTransform.InverseTransformPoint(position);
-					}
-				}
-			}
-			catch (Exception arg2)
-			{
-				Debug.LogError($"Error while syncing scrap objects to this client from server: {arg2}");
-			}
-			try
-			{
-				for (int num6 = 0; num6 < allPlayerScripts.Length; num6++)
-				{
-					UnlockableSuit.SwitchSuitForPlayer(allPlayerScripts[num6], playerSuitIDs[num6], playAudio: false);
-				}
-				PositionSuitsOnRack();
-				bool flag = false;
-				PlaceableShipObject[] array2 = (from x in UnityEngine.Object.FindObjectsOfType<PlaceableShipObject>()
-					orderby x.unlockableID
-					select x).ToArray();
-				for (int num7 = 0; num7 < array2.Length; num7++)
-				{
-					if (!placeableObjects.Contains(array2[num7].unlockableID))
-					{
-						continue;
-					}
-					Debug.Log($"Client: placeableObject #{num7}: {array2[num7].parentObject.transform.name}");
-					Debug.Log($"Client: position #{num7}: {placeableObjectPositions[num7]}");
-					if (!unlockablesList.unlockables[array2[num7].unlockableID].alreadyUnlocked)
-					{
-						unlockablesList.unlockables[array2[num7].unlockableID].hasBeenUnlockedByPlayer = true;
-					}
-					if (storedItems.Contains(array2[num7].unlockableID))
-					{
-						unlockablesList.unlockables[array2[num7].unlockableID].inStorage = true;
-						if (!unlockablesList.unlockables[array2[num7].unlockableID].spawnPrefab)
-						{
-							array2[num7].parentObject.disableObject = true;
-							Debug.Log("DISABLE OBJECT B");
-						}
-					}
-					else if (!(placeableObjectPositions[num7] == Vector3.zero))
-					{
-						flag = true;
-						ShipBuildModeManager.Instance.PlaceShipObject(placeableObjectPositions[num7], placeableObjectRotations[num7], array2[num7], placementSFX: false);
-					}
-				}
-				if (mostRecentlyJoinedClient && flag && GameNetworkManager.Instance.localPlayerController != null)
-				{
-					GameNetworkManager.Instance.localPlayerController.TeleportPlayer(GetPlayerSpawnPosition((int)GameNetworkManager.Instance.localPlayerController.playerClientId));
-				}
-			}
-			catch (Exception arg3)
-			{
-				Debug.LogError($"Error while syncing unlockables in ship to this client from server: {arg3}");
-			}
-		}
-		try
-		{
-			for (int num8 = 0; num8 < 4; num8++)
-			{
-				if (!allPlayerScripts[num8].isPlayerControlled && !allPlayerScripts[num8].isPlayerDead)
-				{
-					return;
-				}
-				allPlayerScripts[num8].currentSuitID = playerSuitIDs[num8];
-				Material suitMaterial = unlockablesList.unlockables[playerSuitIDs[num8]].suitMaterial;
-				allPlayerScripts[num8].thisPlayerModel.sharedMaterial = suitMaterial;
-				allPlayerScripts[num8].thisPlayerModelLOD1.sharedMaterial = suitMaterial;
-				allPlayerScripts[num8].thisPlayerModelLOD2.sharedMaterial = suitMaterial;
-				allPlayerScripts[num8].thisPlayerModelArms.sharedMaterial = suitMaterial;
-			}
-		}
-		catch (Exception arg4)
-		{
-			Debug.LogError($"Error while syncing player suit materials from server to client: {arg4}");
-		}
-		HUDManager.Instance.SyncAllPlayerLevelsServerRpc();
-		shipRoomLights.SetShipLightsOnLocalClientOnly(shipLightsOn);
-		if (UnityEngine.Object.FindObjectOfType<TVScript>() != null)
-		{
-			UnityEngine.Object.FindObjectOfType<TVScript>().SyncTVServerRpc();
-		}
-	}
-
-	public void StartTrackingAllPlayerVoices()
-	{
-		for (int i = 0; i < allPlayerScripts.Length; i++)
-		{
-			if ((allPlayerScripts[i].isPlayerControlled || Instance.allPlayerScripts[i].isPlayerDead) && !allPlayerScripts[i].gameObject.GetComponentInChildren<NfgoPlayer>().IsTracking)
-			{
-				Debug.Log("Starting voice tracking for player: " + allPlayerScripts[i].playerUsername);
-				allPlayerScripts[i].gameObject.GetComponentInChildren<NfgoPlayer>().VoiceChatTrackingStart();
-			}
-		}
-	}
-
-	private IEnumerator setPlayerToSpawnPosition(Transform playerBody, Vector3 spawnPos)
-	{
-		for (int i = 0; i < 50; i++)
-		{
-			yield return null;
-			yield return null;
-			playerBody.position = spawnPos;
-			if (Vector3.Distance(playerBody.position, spawnPos) < 6f)
-			{
-				break;
-			}
-		}
-	}
-
-	private void Update()
-	{
-		if (GameNetworkManager.Instance == null)
-		{
-			return;
-		}
-		if (GameNetworkManager.Instance.localPlayerController != null)
-		{
-			PlayerControllerB spectatedPlayerScript = GameNetworkManager.Instance.localPlayerController;
-			if (spectatedPlayerScript.isPlayerDead && spectatedPlayerScript.spectatedPlayerScript != null)
-			{
-				spectatedPlayerScript = spectatedPlayerScript.spectatedPlayerScript;
-			}
-			if (spectatedPlayerScript.isInsideFactory)
-			{
-				blackSkyVolume.weight = 1f;
-			}
-			else
-			{
-				blackSkyVolume.weight = 0f;
-			}
-			if (suckingPlayersOutOfShip)
-			{
-				upperMonitorsCanvas.SetActive(value: false);
-				SuckLocalPlayerOutOfShipDoor();
-			}
-			else if (!inShipPhase)
-			{
-				timeSinceRoundStarted += Time.deltaTime;
-				upperMonitorsCanvas.SetActive(GameNetworkManager.Instance.localPlayerController.isInHangarShipRoom);
-			}
-			else
-			{
-				upperMonitorsCanvas.SetActive(value: true);
-			}
-			if (IngamePlayerSettings.Instance.settings.pushToTalk)
-			{
-				voiceChatModule.IsMuted = !IngamePlayerSettings.Instance.playerInput.actions.FindAction("VoiceButton").IsPressed() && !GameNetworkManager.Instance.localPlayerController.speakingToWalkieTalkie;
-				HUDManager.Instance.PTTIcon.enabled = IngamePlayerSettings.Instance.settings.micEnabled && !voiceChatModule.IsMuted;
-			}
-			else
-			{
-				voiceChatModule.IsMuted = !IngamePlayerSettings.Instance.settings.micEnabled;
-				HUDManager.Instance.PTTIcon.enabled = false;
-			}
-			DetectVoiceChatAmplitude();
-		}
-		if (base.IsServer && !hasHostSpawned)
-		{
-			hasHostSpawned = true;
-			ClientPlayerList.Add(NetworkManager.Singleton.LocalClientId, connectedPlayersAmount);
-			allPlayerObjects[0].GetComponent<NetworkObject>().ChangeOwnership(NetworkManager.Singleton.LocalClientId);
-			allPlayerObjects[0].GetComponent<PlayerControllerB>().isPlayerControlled = true;
-			livingPlayers = connectedPlayersAmount + 1;
-			allPlayerObjects[0].GetComponent<PlayerControllerB>().TeleportPlayer(GetPlayerSpawnPosition(0));
-			GameNetworkManager.Instance.SetLobbyJoinable(joinable: true);
-		}
-	}
-
-	private string NoPunctuation(string input)
-	{
-		return new string(input.Where((char c) => char.IsLetter(c)).ToArray());
-	}
-
-	private void SuckLocalPlayerOutOfShipDoor()
-	{
-		suckingPower += Time.deltaTime * 2f;
-		GameNetworkManager.Instance.localPlayerController.fallValue = 0f;
-		GameNetworkManager.Instance.localPlayerController.fallValueUncapped = 0f;
-		if (Vector3.Distance(GameNetworkManager.Instance.localPlayerController.transform.position, middleOfShipNode.position) < 25f)
-		{
-			if (Physics.Linecast(GameNetworkManager.Instance.localPlayerController.transform.position, shipDoorNode.position, collidersAndRoomMask))
-			{
-				GameNetworkManager.Instance.localPlayerController.externalForces = Vector3.Normalize(middleOfShipNode.position - GameNetworkManager.Instance.localPlayerController.transform.position) * 350f;
-			}
-			else
-			{
-				GameNetworkManager.Instance.localPlayerController.externalForces = Vector3.Normalize(middleOfSpaceNode.position - GameNetworkManager.Instance.localPlayerController.transform.position) * (350f / Vector3.Distance(moveAwayFromShipNode.position, GameNetworkManager.Instance.localPlayerController.transform.position)) * (suckingPower / 2.25f);
-			}
-			return;
-		}
-		if (!choseRandomFlyDirForPlayer)
-		{
-			choseRandomFlyDirForPlayer = true;
-			randomFlyDir = new Vector3(-1f, 0f, UnityEngine.Random.Range(-0.7f, 0.7f));
-		}
-		GameNetworkManager.Instance.localPlayerController.externalForces = Vector3.Scale(Vector3.one, randomFlyDir) * 70f;
-	}
-
-	private void DetectVoiceChatAmplitude()
-	{
-		if (GameNetworkManager.Instance == null || GameNetworkManager.Instance.localPlayerController == null || GameNetworkManager.Instance.localPlayerController.isPlayerDead || voiceChatModule.IsMuted || !voiceChatModule.enabled || voiceChatModule == null)
-		{
-			return;
-		}
-		VoicePlayerState voicePlayerState = voiceChatModule.FindPlayer(voiceChatModule.LocalPlayerName);
-		averageCount++;
-		if (averageCount > movingAverageLength)
-		{
-			averageVoiceAmplitude += (voicePlayerState.Amplitude - averageVoiceAmplitude) / (float)(movingAverageLength + 1);
+			StartGame();
 		}
 		else
 		{
-			averageVoiceAmplitude += voicePlayerState.Amplitude;
-			if (averageCount == movingAverageLength)
-			{
-				averageVoiceAmplitude /= averageCount;
-			}
-		}
-		float num = voicePlayerState.Amplitude / Mathf.Clamp(averageVoiceAmplitude, 0.008f, 0.5f);
-		if (voicePlayerState.IsSpeaking && voiceChatNoiseCooldown <= 0f && num > 3f)
-		{
-			RoundManager.Instance.PlayAudibleNoise(GameNetworkManager.Instance.localPlayerController.transform.position, Mathf.Clamp(3f * num, 3f, 36f), Mathf.Clamp(num / 7f, 0.6f, 0.9f), 0, hangarDoorsClosed && GameNetworkManager.Instance.localPlayerController.isInHangarShipRoom, 75);
-			voiceChatNoiseCooldown = 0.2f;
-		}
-		voiceChatNoiseCooldown -= Time.deltaTime;
-	}
-
-	public void ShipLeaveAutomatically(bool leavingOnMidnight = false)
-	{
-		if (!shipLeftAutomatically && !shipIsLeaving)
-		{
-			shipLeftAutomatically = true;
-			StartCoroutine(gameOverAnimation(leavingOnMidnight));
-		}
-	}
-
-	public void SetSpectateCameraToGameOverMode(bool enableGameOver, PlayerControllerB localPlayer = null)
-	{
-		overrideSpectateCamera = enableGameOver;
-		if (enableGameOver)
-		{
-			spectateCamera.transform.SetParent(gameOverCameraHandle, worldPositionStays: false);
-		}
-		else
-		{
-			spectateCamera.transform.SetParent(localPlayer.spectateCameraPivot, worldPositionStays: false);
-		}
-		spectateCamera.transform.localEulerAngles = Vector3.zero;
-		spectateCamera.transform.localPosition = Vector3.zero;
-	}
-
-	public void SwitchCamera(Camera newCamera)
-	{
-		if (newCamera != spectateCamera)
-		{
-			spectateCamera.enabled = false;
-		}
-		newCamera.enabled = true;
-		activeCamera = newCamera;
-		UnityEngine.Object.FindObjectOfType<StormyWeather>(includeInactive: true).SwitchCamera(newCamera);
-		CameraSwitchEvent.Invoke();
-	}
-
-	private IEnumerator gameOverAnimation(bool leavingOnMidnight)
-	{
-		yield return new WaitUntil(() => shipHasLanded);
-		if (leavingOnMidnight)
-		{
-			HUDManager.Instance.ReadDialogue(shipLeavingOnMidnightDialogue);
-		}
-		HUDManager.Instance.shipLeavingEarlyIcon.enabled = false;
-		StartMatchLever startMatchLever = UnityEngine.Object.FindObjectOfType<StartMatchLever>();
-		startMatchLever.triggerScript.animationString = "SA_PushLeverBack";
-		startMatchLever.leverHasBeenPulled = false;
-		startMatchLever.triggerScript.interactable = false;
-		startMatchLever.leverAnimatorObject.SetBool("pullLever", value: false);
-		ShipLeave();
-		yield return new WaitForSeconds(1.5f);
-		SetSpectateCameraToGameOverMode(enableGameOver: true);
-		if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
-		{
-			GameNetworkManager.Instance.localPlayerController.SetSpectatedPlayerEffects(allPlayersDead: true);
-		}
-		yield return new WaitForSeconds(1f);
-		if (!leavingOnMidnight)
-		{
-			HUDManager.Instance.ReadDialogue(gameOverDialogue);
-		}
-		Debug.Log($"Is in elevator D?: {GameNetworkManager.Instance.localPlayerController.isInElevator}");
-		yield return new WaitForSeconds(9.5f);
-		if (!leavingOnMidnight)
-		{
-			HUDManager.Instance.UIAudio.PlayOneShot(allPlayersDeadAudio);
-			HUDManager.Instance.gameOverAnimator.SetTrigger("allPlayersDead");
-		}
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void StartGameServerRpc()
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1089447320u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 1089447320u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (fullyLoadedPlayers.Count >= connectedPlayersAmount + 1 && !travellingToNewLevel)
-			{
-				StartGame();
-			}
-			else
-			{
-				UnityEngine.Object.FindObjectOfType<StartMatchLever>().CancelStartGameClientRpc();
-			}
+			UnityEngine.Object.FindObjectOfType<StartMatchLever>().CancelStartGameClientRpc();
 		}
 	}
 
@@ -2469,44 +1113,19 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void EndGameServerRpc(int playerClientId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (shipHasLanded && !shipLeftAutomatically && (!shipIsLeaving || playerClientId == 0))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2028434619u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerClientId);
-				__endSendServerRpc(ref bufferWriter, 2028434619u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && shipHasLanded && !shipLeftAutomatically && (!shipIsLeaving || playerClientId == 0))
-			{
-				UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.interactable = false;
-				shipHasLanded = false;
-				EndGameClientRpc(playerClientId);
-			}
+			UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.interactable = false;
+			shipHasLanded = false;
+			EndGameClientRpc(playerClientId);
 		}
 	}
 
 	[ClientRpc]
 	public void EndGameClientRpc(int playerClientId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(794862467u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerClientId);
-				__endSendClientRpc(ref bufferWriter, 794862467u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				HUDManager.Instance.AddTextToChatOnServer($"[playerNum{playerClientId}] started the ship.");
-				ShipLeave();
-			}
-		}
+		HUDManager.Instance.AddTextToChatOnServer($"[playerNum{playerClientId}] started the ship.");
+		ShipLeave();
 	}
 
 	private void ShipLeave()
@@ -2565,35 +1184,17 @@ public class StartOfRound : NetworkBehaviour
 	[ClientRpc]
 	public void EndOfGameClientRpc(int bodiesInsured, int daysPlayersSurvived, int connectedPlayersOnServer, int scrapCollectedOnServer)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		SoundManager.Instance.playingOutsideMusic = false;
+		scrapCollectedLastRound = scrapCollectedOnServer;
+		UnityEngine.Object.FindObjectOfType<AudioListener>().enabled = true;
+		if (currentLevel.planetHasTime)
 		{
-			return;
+			WritePlayerNotes();
+			HUDManager.Instance.FillEndGameStats(gameStats, scrapCollectedOnServer);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2659636069u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, bodiesInsured);
-			BytePacker.WriteValueBitPacked(bufferWriter, daysPlayersSurvived);
-			BytePacker.WriteValueBitPacked(bufferWriter, connectedPlayersOnServer);
-			BytePacker.WriteValueBitPacked(bufferWriter, scrapCollectedOnServer);
-			__endSendClientRpc(ref bufferWriter, 2659636069u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			SoundManager.Instance.playingOutsideMusic = false;
-			scrapCollectedLastRound = scrapCollectedOnServer;
-			UnityEngine.Object.FindObjectOfType<AudioListener>().enabled = true;
-			if (currentLevel.planetHasTime)
-			{
-				WritePlayerNotes();
-				HUDManager.Instance.FillEndGameStats(gameStats, scrapCollectedOnServer);
-			}
-			UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.animationString = "SA_PullLever";
-			daysPlayersSurvivedInARow = daysPlayersSurvived;
-			StartCoroutine(EndOfGame(bodiesInsured, connectedPlayersOnServer, scrapCollectedOnServer));
-		}
+		UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.animationString = "SA_PullLever";
+		daysPlayersSurvivedInARow = daysPlayersSurvived;
+		StartCoroutine(EndOfGame(bodiesInsured, connectedPlayersOnServer, scrapCollectedOnServer));
 	}
 
 	private IEnumerator fadeVolume(float finalVolume)
@@ -2834,20 +1435,7 @@ public class StartOfRound : NetworkBehaviour
 	[ClientRpc]
 	public void AllPlayersHaveRevivedClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1043433721u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1043433721u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				SetShipReadyToLand();
-			}
-		}
+		SetShipReadyToLand();
 	}
 
 	private void AutoSaveShipData()
@@ -2859,26 +1447,7 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc]
 	public void ManuallyEjectPlayersServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1482204640u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 1482204640u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && inShipPhase && !isChallengeFile && !firingPlayersCutsceneRunning && fullyLoadedPlayers.Count >= GameNetworkManager.Instance.connectedPlayers)
+		if (inShipPhase && !isChallengeFile && !firingPlayersCutsceneRunning && fullyLoadedPlayers.Count >= GameNetworkManager.Instance.connectedPlayers)
 		{
 			GameNetworkManager.Instance.gameHasStarted = true;
 			firingPlayersCutsceneRunning = true;
@@ -2889,43 +1458,22 @@ public class StartOfRound : NetworkBehaviour
 	[ClientRpc]
 	public void FirePlayersAfterDeadlineClientRpc(int[] endGameStats, bool abridgedVersion = false)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		firingPlayersCutsceneRunning = true;
+		if (UnityEngine.Object.FindObjectOfType<Terminal>().terminalInUse)
 		{
-			return;
+			UnityEngine.Object.FindObjectOfType<Terminal>().QuitTerminal();
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		if (GameNetworkManager.Instance.localPlayerController.inSpecialInteractAnimation && GameNetworkManager.Instance.localPlayerController.currentTriggerInAnimationWith != null)
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2721053021u, clientRpcParams, RpcDelivery.Reliable);
-			bool value = endGameStats != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(endGameStats, default(FastBufferWriter.ForPrimitives));
-			}
-			bufferWriter.WriteValueSafe(in abridgedVersion, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 2721053021u, clientRpcParams, RpcDelivery.Reliable);
+			GameNetworkManager.Instance.localPlayerController.currentTriggerInAnimationWith.StopSpecialAnimation();
 		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			firingPlayersCutsceneRunning = true;
-			if (UnityEngine.Object.FindObjectOfType<Terminal>().terminalInUse)
-			{
-				UnityEngine.Object.FindObjectOfType<Terminal>().QuitTerminal();
-			}
-			if (GameNetworkManager.Instance.localPlayerController.inSpecialInteractAnimation && GameNetworkManager.Instance.localPlayerController.currentTriggerInAnimationWith != null)
-			{
-				GameNetworkManager.Instance.localPlayerController.currentTriggerInAnimationWith.StopSpecialAnimation();
-			}
-			HUDManager.Instance.EndOfRunStatsText.text = $"Days on the job: {endGameStats[0]}\n" + $"Scrap value collected: {endGameStats[1]}\n" + $"Deaths: {endGameStats[2]}\n" + $"Steps taken: {endGameStats[3]}";
-			gameStats.daysSpent = 0;
-			gameStats.scrapValueCollected = 0;
-			gameStats.deaths = 0;
-			gameStats.allStepsTaken = 0;
-			SetDiscordStatusDetails();
-			StartCoroutine(playersFiredGameOver(abridgedVersion));
-		}
+		HUDManager.Instance.EndOfRunStatsText.text = $"Days on the job: {endGameStats[0]}\n" + $"Scrap value collected: {endGameStats[1]}\n" + $"Deaths: {endGameStats[2]}\n" + $"Steps taken: {endGameStats[3]}";
+		gameStats.daysSpent = 0;
+		gameStats.scrapValueCollected = 0;
+		gameStats.deaths = 0;
+		gameStats.allStepsTaken = 0;
+		SetDiscordStatusDetails();
+		StartCoroutine(playersFiredGameOver(abridgedVersion));
 	}
 
 	private IEnumerator playersFiredGameOver(bool abridgedVersion)
@@ -3093,31 +1641,17 @@ public class StartOfRound : NetworkBehaviour
 	[ClientRpc]
 	public void EndPlayersFiredSequenceClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		firingPlayersCutsceneRunning = false;
+		timeAtStartOfRun = Time.realtimeSinceStartup;
+		ReviveDeadPlayers();
+		SoundManager.Instance.SetDiageticMixerSnapshot(0, 0.25f);
+		HUDManager.Instance.ShowPlayersFiredScreen(show: false);
+		GameNetworkManager.Instance.localPlayerController.inSpecialInteractAnimation = false;
+		SetShipReadyToLand();
+		SetDiscordStatusDetails();
+		if (!isChallengeFile)
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1068504982u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 1068504982u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			firingPlayersCutsceneRunning = false;
-			timeAtStartOfRun = Time.realtimeSinceStartup;
-			ReviveDeadPlayers();
-			SoundManager.Instance.SetDiageticMixerSnapshot(0, 0.25f);
-			HUDManager.Instance.ShowPlayersFiredScreen(show: false);
-			GameNetworkManager.Instance.localPlayerController.inSpecialInteractAnimation = false;
-			SetShipReadyToLand();
-			SetDiscordStatusDetails();
-			if (!isChallengeFile)
-			{
-				PlayFirstDayShipAnimation();
-			}
+			PlayFirstDayShipAnimation();
 		}
 	}
 
@@ -3147,41 +1681,13 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void StopShipSpeakerServerRpc(int playerWhoTriggered)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2441193238u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoTriggered);
-				__endSendServerRpc(ref bufferWriter, 2441193238u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				StopShipSpeakerClientRpc(playerWhoTriggered);
-			}
-		}
+		StopShipSpeakerClientRpc(playerWhoTriggered);
 	}
 
 	[ClientRpc]
 	public void StopShipSpeakerClientRpc(int playerWhoTriggered)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(907290724u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoTriggered);
-				__endSendClientRpc(ref bufferWriter, 907290724u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				DisableShipSpeakerLocalClient();
-			}
-		}
+		DisableShipSpeakerLocalClient();
 	}
 
 	private void DisableShipSpeakerLocalClient()
@@ -3270,20 +1776,7 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void PlayerHasRevivedServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3083945322u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 3083945322u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				playersRevived++;
-			}
-		}
+		playersRevived++;
 	}
 
 	private IEnumerator waitingForOtherPlayersToRevive()
@@ -3573,50 +2066,18 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc]
 	public void SetShipDoorsOverheatServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2578118202u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 2578118202u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			SetShipDoorsOverheatClientRpc();
-		}
+		SetShipDoorsOverheatClientRpc();
 	}
 
 	[ClientRpc]
 	public void SetShipDoorsOverheatClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsServer)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1864501499u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1864501499u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsServer)
-			{
-				HangarShipDoor hangarShipDoor = UnityEngine.Object.FindObjectOfType<HangarShipDoor>();
-				hangarShipDoor.PlayDoorAnimation(closed: false);
-				hangarShipDoor.overheated = true;
-				hangarShipDoor.triggerScript.interactable = false;
-			}
+			HangarShipDoor hangarShipDoor = UnityEngine.Object.FindObjectOfType<HangarShipDoor>();
+			hangarShipDoor.PlayDoorAnimation(closed: false);
+			hangarShipDoor.overheated = true;
+			hangarShipDoor.triggerScript.interactable = false;
 		}
 	}
 
@@ -3629,41 +2090,13 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void SetDoorsClosedServerRpc(bool closed)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(430165634u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in closed, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 430165634u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SetDoorsClosedClientRpc(closed);
-			}
-		}
+		SetDoorsClosedClientRpc(closed);
 	}
 
 	[ClientRpc]
 	public void SetDoorsClosedClientRpc(bool closed)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2810194347u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in closed, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 2810194347u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				SetShipDoorsClosed(closed);
-			}
-		}
+		SetShipDoorsClosed(closed);
 	}
 
 	public void SetPlayerSafeInShip()
@@ -3706,86 +2139,40 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void ChangeLevelServerRpc(int levelID, int newGroupCreditsAmount)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log($"Changing level server rpc {levelID}");
+		if (!travellingToNewLevel && inShipPhase && newGroupCreditsAmount <= UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits && !isChallengeFile)
 		{
-			return;
+			UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
+			travellingToNewLevel = true;
+			ChangeLevelClientRpc(levelID, newGroupCreditsAmount);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1134466287u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, levelID);
-			BytePacker.WriteValueBitPacked(bufferWriter, newGroupCreditsAmount);
-			__endSendServerRpc(ref bufferWriter, 1134466287u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			Debug.Log($"Changing level server rpc {levelID}");
-			if (!travellingToNewLevel && inShipPhase && newGroupCreditsAmount <= UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits && !isChallengeFile)
-			{
-				UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
-				travellingToNewLevel = true;
-				ChangeLevelClientRpc(levelID, newGroupCreditsAmount);
-			}
-			else
-			{
-				CancelChangeLevelClientRpc(UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits);
-			}
+			CancelChangeLevelClientRpc(UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits);
 		}
 	}
 
 	[ClientRpc]
 	public void CancelChangeLevelClientRpc(int groupCreditsAmount)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3896714546u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, groupCreditsAmount);
-				__endSendClientRpc(ref bufferWriter, 3896714546u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = groupCreditsAmount;
-				UnityEngine.Object.FindObjectOfType<Terminal>().useCreditsCooldown = false;
-			}
-		}
+		UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = groupCreditsAmount;
+		UnityEngine.Object.FindObjectOfType<Terminal>().useCreditsCooldown = false;
 	}
 
 	[ClientRpc]
 	public void ChangeLevelClientRpc(int levelID, int newGroupCreditsAmount)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		UnityEngine.Object.FindObjectOfType<Terminal>().useCreditsCooldown = false;
+		ChangeLevel(levelID);
+		travellingToNewLevel = true;
+		if (shipTravelCoroutine != null)
 		{
-			return;
+			StopCoroutine(shipTravelCoroutine);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		shipTravelCoroutine = StartCoroutine(TravelToLevelEffects());
+		if (!base.IsServer)
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(167566585u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, levelID);
-			BytePacker.WriteValueBitPacked(bufferWriter, newGroupCreditsAmount);
-			__endSendClientRpc(ref bufferWriter, 167566585u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			UnityEngine.Object.FindObjectOfType<Terminal>().useCreditsCooldown = false;
-			ChangeLevel(levelID);
-			travellingToNewLevel = true;
-			if (shipTravelCoroutine != null)
-			{
-				StopCoroutine(shipTravelCoroutine);
-			}
-			shipTravelCoroutine = StartCoroutine(TravelToLevelEffects());
-			if (!base.IsServer)
-			{
-				UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
-			}
+			UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
 		}
 	}
 
@@ -3933,40 +2320,13 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void SyncCompanyBuyingRateServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2249588995u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 2249588995u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SyncCompanyBuyingRateClientRpc(companyBuyingRate);
-			}
-		}
+		SyncCompanyBuyingRateClientRpc(companyBuyingRate);
 	}
 
 	[ClientRpc]
 	public void SyncCompanyBuyingRateClientRpc(float buyingRate)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3519313816u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in buyingRate, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 3519313816u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				companyBuyingRate = buyingRate;
-			}
-		}
+		companyBuyingRate = buyingRate;
 	}
 
 	private void TeleportPlayerInShipIfOutOfRoomBounds()
@@ -4048,102 +2408,21 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc]
 	public void Debug_EnableTestRoomServerRpc(bool enable)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3050994254u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in enable, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 3050994254u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost) || !Application.isEditor)
-		{
-			return;
-		}
-		if (enable)
-		{
-			testRoom = UnityEngine.Object.Instantiate(testRoomPrefab, testRoomSpawnPosition.position, testRoomSpawnPosition.rotation, testRoomSpawnPosition);
-			testRoom.GetComponent<NetworkObject>().Spawn();
-		}
-		else if (Instance.testRoom != null)
-		{
-			if (!testRoom.GetComponent<NetworkObject>().IsSpawned)
-			{
-				UnityEngine.Object.Destroy(testRoom);
-			}
-			else
-			{
-				testRoom.GetComponent<NetworkObject>().Despawn();
-			}
-		}
-		if (enable)
-		{
-			Debug_EnableTestRoomClientRpc(enable, testRoom.GetComponent<NetworkObject>());
-		}
-		else
-		{
-			Debug_EnableTestRoomClientRpc(enable);
-		}
-	}
-
-	public bool IsClientFriendsWithHost()
-	{
-		if (!GameNetworkManager.Instance.disableSteam && !NetworkManager.Singleton.IsServer)
-		{
-			SteamFriends.GetFriends().ToList();
-			Friend friend = new Friend(allPlayerScripts[0].playerSteamId);
-			Debug.Log($"Host steam friend id: {allPlayerScripts[0].playerSteamId}, user: {friend.Name}; is friend?: {friend.IsFriend}");
-			if (!friend.IsFriend)
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
-	[ClientRpc]
-	public void Debug_EnableTestRoomClientRpc(bool enable, NetworkObjectReference objectRef = default(NetworkObjectReference))
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(375322246u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in enable, default(FastBufferWriter.ForPrimitives));
-			bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendClientRpc(ref bufferWriter, 375322246u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !(GameNetworkManager.Instance.localPlayerController == null) && IsClientFriendsWithHost())
+		if (!(GameNetworkManager.Instance.localPlayerController == null) && IsClientFriendsWithHost())
 		{
 			QuickMenuManager quickMenuManager = UnityEngine.Object.FindObjectOfType<QuickMenuManager>();
 			for (int i = 0; i < quickMenuManager.doorGameObjects.Length; i++)
 			{
-				quickMenuManager.doorGameObjects[i].SetActive(!enable);
+			quickMenuManager.doorGameObjects[i].SetActive(!enable);
 			}
 			quickMenuManager.outOfBoundsCollider.enabled = !enable;
 			if (enable)
 			{
-				StartCoroutine(SetTestRoomDebug(objectRef));
+			StartCoroutine(SetTestRoomDebug(objectRef));
 			}
 			else if (testRoom != null)
 			{
-				UnityEngine.Object.Destroy(testRoom);
+			UnityEngine.Object.Destroy(testRoom);
 			}
 		}
 	}
@@ -4161,26 +2440,7 @@ public class StartOfRound : NetworkBehaviour
 	[ServerRpc]
 	public void Debug_ToggleAllowDeathServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3186641109u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 3186641109u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && Application.isEditor)
+		if (Application.isEditor)
 		{
 			allowLocalPlayerDeath = !allowLocalPlayerDeath;
 			Debug_ToggleAllowDeathClientRpc(allowLocalPlayerDeath);
@@ -4190,20 +2450,9 @@ public class StartOfRound : NetworkBehaviour
 	[ClientRpc]
 	public void Debug_ToggleAllowDeathClientRpc(bool allowDeath)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (IsClientFriendsWithHost() && !base.IsServer)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(348115853u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in allowDeath, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 348115853u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && IsClientFriendsWithHost() && !base.IsServer)
-			{
-				allowLocalPlayerDeath = allowDeath;
-			}
+			allowLocalPlayerDeath = allowDeath;
 		}
 	}
 
@@ -4296,665 +2545,5 @@ public class StartOfRound : NetworkBehaviour
 		return num;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_StartOfRound()
-	{
-		NetworkManager.__rpc_func_table.Add(4249638645u, __rpc_handler_4249638645);
-		NetworkManager.__rpc_func_table.Add(462348217u, __rpc_handler_462348217);
-		NetworkManager.__rpc_func_table.Add(161788012u, __rpc_handler_161788012);
-		NetworkManager.__rpc_func_table.Add(3953483456u, __rpc_handler_3953483456);
-		NetworkManager.__rpc_func_table.Add(418581783u, __rpc_handler_418581783);
-		NetworkManager.__rpc_func_table.Add(3380566632u, __rpc_handler_3380566632);
-		NetworkManager.__rpc_func_table.Add(1076853239u, __rpc_handler_1076853239);
-		NetworkManager.__rpc_func_table.Add(1846610026u, __rpc_handler_1846610026);
-		NetworkManager.__rpc_func_table.Add(2369901769u, __rpc_handler_2369901769);
-		NetworkManager.__rpc_func_table.Add(475465488u, __rpc_handler_475465488);
-		NetworkManager.__rpc_func_table.Add(886676601u, __rpc_handler_886676601);
-		NetworkManager.__rpc_func_table.Add(682230258u, __rpc_handler_682230258);
-		NetworkManager.__rpc_func_table.Add(1613265729u, __rpc_handler_1613265729);
-		NetworkManager.__rpc_func_table.Add(744998938u, __rpc_handler_744998938);
-		NetworkManager.__rpc_func_table.Add(4156335180u, __rpc_handler_4156335180);
-		NetworkManager.__rpc_func_table.Add(1089447320u, __rpc_handler_1089447320);
-		NetworkManager.__rpc_func_table.Add(2028434619u, __rpc_handler_2028434619);
-		NetworkManager.__rpc_func_table.Add(794862467u, __rpc_handler_794862467);
-		NetworkManager.__rpc_func_table.Add(2659636069u, __rpc_handler_2659636069);
-		NetworkManager.__rpc_func_table.Add(1043433721u, __rpc_handler_1043433721);
-		NetworkManager.__rpc_func_table.Add(1482204640u, __rpc_handler_1482204640);
-		NetworkManager.__rpc_func_table.Add(2721053021u, __rpc_handler_2721053021);
-		NetworkManager.__rpc_func_table.Add(1068504982u, __rpc_handler_1068504982);
-		NetworkManager.__rpc_func_table.Add(2441193238u, __rpc_handler_2441193238);
-		NetworkManager.__rpc_func_table.Add(907290724u, __rpc_handler_907290724);
-		NetworkManager.__rpc_func_table.Add(3083945322u, __rpc_handler_3083945322);
-		NetworkManager.__rpc_func_table.Add(2578118202u, __rpc_handler_2578118202);
-		NetworkManager.__rpc_func_table.Add(1864501499u, __rpc_handler_1864501499);
-		NetworkManager.__rpc_func_table.Add(430165634u, __rpc_handler_430165634);
-		NetworkManager.__rpc_func_table.Add(2810194347u, __rpc_handler_2810194347);
-		NetworkManager.__rpc_func_table.Add(1134466287u, __rpc_handler_1134466287);
-		NetworkManager.__rpc_func_table.Add(3896714546u, __rpc_handler_3896714546);
-		NetworkManager.__rpc_func_table.Add(167566585u, __rpc_handler_167566585);
-		NetworkManager.__rpc_func_table.Add(2249588995u, __rpc_handler_2249588995);
-		NetworkManager.__rpc_func_table.Add(3519313816u, __rpc_handler_3519313816);
-		NetworkManager.__rpc_func_table.Add(3050994254u, __rpc_handler_3050994254);
-		NetworkManager.__rpc_func_table.Add(375322246u, __rpc_handler_375322246);
-		NetworkManager.__rpc_func_table.Add(3186641109u, __rpc_handler_3186641109);
-		NetworkManager.__rpc_func_table.Add(348115853u, __rpc_handler_348115853);
-	}
-
-	private static void __rpc_handler_4249638645(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).PlayerLoadedServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_462348217(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).PlayerLoadedClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_161788012(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).ResetPlayersLoadedValueClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3953483456(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).BuyShipUnlockableServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_418581783(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).BuyShipUnlockableClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3380566632(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).ReturnUnlockableFromStorageServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1076853239(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).ReturnUnlockableFromStorageClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1846610026(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).SyncSuitsServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2369901769(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).SyncSuitsClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_475465488(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value2);
-			ClientRpcParams client = rpcParams.Client;
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).OnClientDisconnectClientRpc(value, value2, client);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_886676601(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			ulong[] value4 = null;
-			if (value3)
-			{
-				reader.ReadValueSafe(out value4, default(FastBufferWriter.ForPrimitives));
-			}
-			ByteUnpacker.ReadValueBitPacked(reader, out int value5);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value6);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value7);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value8);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value9);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value10);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value11);
-			reader.ReadValueSafe(out bool value12, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).OnPlayerConnectedClientRpc(value, value2, value4, value5, value6, value7, value8, value9, value10, value11, value12);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_682230258(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).SyncAlreadyHeldObjectsServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1613265729(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			NetworkObjectReference[] value2 = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out value2, default(FastBufferWriter.ForNetworkSerializable));
-			}
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			int[] value4 = null;
-			if (value3)
-			{
-				reader.ReadValueSafe(out value4, default(FastBufferWriter.ForPrimitives));
-			}
-			reader.ReadValueSafe(out bool value5, default(FastBufferWriter.ForPrimitives));
-			int[] value6 = null;
-			if (value5)
-			{
-				reader.ReadValueSafe(out value6, default(FastBufferWriter.ForPrimitives));
-			}
-			reader.ReadValueSafe(out bool value7, default(FastBufferWriter.ForPrimitives));
-			int[] value8 = null;
-			if (value7)
-			{
-				reader.ReadValueSafe(out value8, default(FastBufferWriter.ForPrimitives));
-			}
-			ByteUnpacker.ReadValueBitPacked(reader, out int value9);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).SyncAlreadyHeldObjectsClientRpc(value2, value4, value6, value8, value9);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_744998938(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).SyncShipUnlockablesServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4156335180(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			int[] value2 = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out value2, default(FastBufferWriter.ForPrimitives));
-			}
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			reader.ReadValueSafe(out bool value4, default(FastBufferWriter.ForPrimitives));
-			Vector3[] value5 = null;
-			if (value4)
-			{
-				reader.ReadValueSafe(out value5);
-			}
-			reader.ReadValueSafe(out bool value6, default(FastBufferWriter.ForPrimitives));
-			Vector3[] value7 = null;
-			if (value6)
-			{
-				reader.ReadValueSafe(out value7);
-			}
-			reader.ReadValueSafe(out bool value8, default(FastBufferWriter.ForPrimitives));
-			int[] value9 = null;
-			if (value8)
-			{
-				reader.ReadValueSafe(out value9, default(FastBufferWriter.ForPrimitives));
-			}
-			reader.ReadValueSafe(out bool value10, default(FastBufferWriter.ForPrimitives));
-			int[] value11 = null;
-			if (value10)
-			{
-				reader.ReadValueSafe(out value11, default(FastBufferWriter.ForPrimitives));
-			}
-			reader.ReadValueSafe(out bool value12, default(FastBufferWriter.ForPrimitives));
-			int[] value13 = null;
-			if (value12)
-			{
-				reader.ReadValueSafe(out value13, default(FastBufferWriter.ForPrimitives));
-			}
-			reader.ReadValueSafe(out bool value14, default(FastBufferWriter.ForPrimitives));
-			int[] value15 = null;
-			if (value14)
-			{
-				reader.ReadValueSafe(out value15, default(FastBufferWriter.ForPrimitives));
-			}
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).SyncShipUnlockablesClientRpc(value2, value3, value5, value7, value9, value11, value13, value15);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1089447320(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).StartGameServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2028434619(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).EndGameServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_794862467(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).EndGameClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2659636069(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value4);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).EndOfGameClientRpc(value, value2, value3, value4);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1043433721(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).AllPlayersHaveRevivedClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1482204640(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).ManuallyEjectPlayersServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2721053021(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			int[] value2 = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out value2, default(FastBufferWriter.ForPrimitives));
-			}
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).FirePlayersAfterDeadlineClientRpc(value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1068504982(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).EndPlayersFiredSequenceClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2441193238(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).StopShipSpeakerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_907290724(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).StopShipSpeakerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3083945322(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).PlayerHasRevivedServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2578118202(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).SetShipDoorsOverheatServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1864501499(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).SetShipDoorsOverheatClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_430165634(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).SetDoorsClosedServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2810194347(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).SetDoorsClosedClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1134466287(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).ChangeLevelServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3896714546(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).CancelChangeLevelClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_167566585(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).ChangeLevelClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2249588995(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).SyncCompanyBuyingRateServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3519313816(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out float value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).SyncCompanyBuyingRateClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3050994254(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).Debug_EnableTestRoomServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_375322246(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			reader.ReadValueSafe(out NetworkObjectReference value2, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).Debug_EnableTestRoomClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3186641109(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= Unity.Netcode.LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartOfRound)target).Debug_ToggleAllowDeathServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_348115853(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartOfRound)target).Debug_ToggleAllowDeathClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "StartOfRound";
-	}
 }

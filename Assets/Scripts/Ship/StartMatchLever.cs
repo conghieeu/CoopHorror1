@@ -49,49 +49,20 @@ public class StartMatchLever : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void PlayLeverPullEffectsServerRpc(bool leverPulled)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2406447821u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in leverPulled, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 2406447821u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				PlayLeverPullEffectsClientRpc(leverPulled);
-			}
-		}
+		PlayLeverPullEffectsClientRpc(leverPulled);
 	}
 
 	[ClientRpc]
 	private void PlayLeverPullEffectsClientRpc(bool leverPulled)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (clientSentRPC)
 		{
-			return;
+			clientSentRPC = false;
+			Debug.Log("Sent lever animation RPC on this client");
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		else
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2951629574u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in leverPulled, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 2951629574u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (clientSentRPC)
-			{
-				clientSentRPC = false;
-				Debug.Log("Sent lever animation RPC on this client");
-			}
-			else
-			{
-				PullLeverAnim(leverPulled);
-			}
+			PullLeverAnim(leverPulled);
 		}
 	}
 
@@ -137,20 +108,7 @@ public class StartMatchLever : NetworkBehaviour
 	[ClientRpc]
 	public void CancelStartGameClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2142553593u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2142553593u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				CancelStartGame();
-			}
-		}
+		CancelStartGame();
 	}
 
 	private void CancelStartGame()
@@ -229,56 +187,5 @@ public class StartMatchLever : NetworkBehaviour
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_StartMatchLever()
-	{
-		NetworkManager.__rpc_func_table.Add(2406447821u, __rpc_handler_2406447821);
-		NetworkManager.__rpc_func_table.Add(2951629574u, __rpc_handler_2951629574);
-		NetworkManager.__rpc_func_table.Add(2142553593u, __rpc_handler_2142553593);
-	}
-
-	private static void __rpc_handler_2406447821(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((StartMatchLever)target).PlayLeverPullEffectsServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2951629574(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartMatchLever)target).PlayLeverPullEffectsClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2142553593(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((StartMatchLever)target).CancelStartGameClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "StartMatchLever";
-	}
 }

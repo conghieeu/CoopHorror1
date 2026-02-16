@@ -51,51 +51,22 @@ public class EnemyVent : NetworkBehaviour
 	[ClientRpc]
 	public void OpenVentClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (!ventIsOpen)
 		{
-			return;
+			ventIsOpen = true;
+			ventAnimator.SetTrigger("openVent");
+			lowPassFilter.lowpassResonanceQ = 0f;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2182253155u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 2182253155u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (!ventIsOpen)
-			{
-				ventIsOpen = true;
-				ventAnimator.SetTrigger("openVent");
-				lowPassFilter.lowpassResonanceQ = 0f;
-			}
-			occupied = false;
-		}
+		occupied = false;
 	}
 
 	[ClientRpc]
 	public void SyncVentSpawnTimeClientRpc(int time, int enemyIndex)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3841281693u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, time);
-				BytePacker.WriteValueBitPacked(bufferWriter, enemyIndex);
-				__endSendClientRpc(ref bufferWriter, 3841281693u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				enemyTypeIndex = enemyIndex;
-				enemyType = roundManager.currentLevel.Enemies[enemyIndex].enemyType;
-				spawnTime = time;
-				occupied = true;
-			}
-		}
+		enemyTypeIndex = enemyIndex;
+		enemyType = roundManager.currentLevel.Enemies[enemyIndex].enemyType;
+		spawnTime = time;
+		occupied = true;
 	}
 
 	private void Update()
@@ -123,44 +94,5 @@ public class EnemyVent : NetworkBehaviour
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_EnemyVent()
-	{
-		NetworkManager.__rpc_func_table.Add(2182253155u, __rpc_handler_2182253155);
-		NetworkManager.__rpc_func_table.Add(3841281693u, __rpc_handler_3841281693);
-	}
-
-	private static void __rpc_handler_2182253155(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((EnemyVent)target).OpenVentClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3841281693(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((EnemyVent)target).SyncVentSpawnTimeClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "EnemyVent";
-	}
 }

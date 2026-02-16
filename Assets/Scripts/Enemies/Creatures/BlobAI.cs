@@ -280,46 +280,17 @@ public class BlobAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void SlimeKillPlayerEffectServerRpc(int playerKilled)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3848306567u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerKilled);
-				__endSendServerRpc(ref bufferWriter, 3848306567u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SlimeKillPlayerEffectClientRpc(playerKilled);
-			}
-		}
+		SlimeKillPlayerEffectClientRpc(playerKilled);
 	}
 
 	[ClientRpc]
 	public void SlimeKillPlayerEffectClientRpc(int playerKilled)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		creatureSFX.PlayOneShot(killPlayerSFX);
+		angeredTimer = 0f;
+		if (eatPlayerBodyCoroutine == null)
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1531516867u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerKilled);
-			__endSendClientRpc(ref bufferWriter, 1531516867u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			creatureSFX.PlayOneShot(killPlayerSFX);
-			angeredTimer = 0f;
-			if (eatPlayerBodyCoroutine == null)
-			{
-				eatPlayerBodyCoroutine = StartCoroutine(eatPlayerBody(playerKilled));
-			}
+			eatPlayerBodyCoroutine = StartCoroutine(eatPlayerBody(playerKilled));
 		}
 	}
 
@@ -359,44 +330,5 @@ public class BlobAI : EnemyAI
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_BlobAI()
-	{
-		NetworkManager.__rpc_func_table.Add(3848306567u, __rpc_handler_3848306567);
-		NetworkManager.__rpc_func_table.Add(1531516867u, __rpc_handler_1531516867);
-	}
-
-	private static void __rpc_handler_3848306567(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BlobAI)target).SlimeKillPlayerEffectServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1531516867(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BlobAI)target).SlimeKillPlayerEffectClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "BlobAI";
-	}
 }

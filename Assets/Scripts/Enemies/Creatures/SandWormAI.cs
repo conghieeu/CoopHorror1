@@ -227,63 +227,25 @@ public class SandWormAI : EnemyAI
 	[ServerRpc]
 	public void EmergeServerRpc(int yRot)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1498805140u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, yRot);
-			__endSendServerRpc(ref bufferWriter, 1498805140u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			EmergeClientRpc(yRot);
-		}
+		EmergeClientRpc(yRot);
 	}
 
 	[ClientRpc]
 	public void EmergeClientRpc(int yRot)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		inSpecialAnimation = true;
+		inEmergingState = true;
+		hitGroundInAnimation = false;
+		agent.enabled = false;
+		base.transform.position = serverPosition;
+		base.transform.eulerAngles = new Vector3(0f, yRot, 0f);
+		timesEmerging++;
+		creatureSFX.Stop();
+		if (emergingFromGroundCoroutine != null)
 		{
-			return;
+			StopCoroutine(emergingFromGroundCoroutine);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1497638036u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, yRot);
-			__endSendClientRpc(ref bufferWriter, 1497638036u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			inSpecialAnimation = true;
-			inEmergingState = true;
-			hitGroundInAnimation = false;
-			agent.enabled = false;
-			base.transform.position = serverPosition;
-			base.transform.eulerAngles = new Vector3(0f, yRot, 0f);
-			timesEmerging++;
-			creatureSFX.Stop();
-			if (emergingFromGroundCoroutine != null)
-			{
-				StopCoroutine(emergingFromGroundCoroutine);
-			}
-			emergingFromGroundCoroutine = StartCoroutine(EmergeFromGround(yRot));
-		}
+		emergingFromGroundCoroutine = StartCoroutine(EmergeFromGround(yRot));
 	}
 
 	private IEnumerator EmergeFromGround(int rot)
@@ -389,55 +351,5 @@ public class SandWormAI : EnemyAI
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_SandWormAI()
-	{
-		NetworkManager.__rpc_func_table.Add(1498805140u, __rpc_handler_1498805140);
-		NetworkManager.__rpc_func_table.Add(1497638036u, __rpc_handler_1497638036);
-	}
-
-	private static void __rpc_handler_1498805140(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((SandWormAI)target).EmergeServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1497638036(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((SandWormAI)target).EmergeClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "SandWormAI";
-	}
 }

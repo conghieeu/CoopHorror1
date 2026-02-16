@@ -40,40 +40,15 @@ public class UnlockableSuit : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void SwitchSuitServerRpc(int playerID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3672046368u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerID);
-				__endSendServerRpc(ref bufferWriter, 3672046368u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SwitchSuitClientRpc(playerID);
-			}
-		}
+		SwitchSuitClientRpc(playerID);
 	}
 
 	[ClientRpc]
 	public void SwitchSuitClientRpc(int playerID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if ((int)GameNetworkManager.Instance.localPlayerController.playerClientId != playerID)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2137061089u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerID);
-				__endSendClientRpc(ref bufferWriter, 2137061089u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && (int)GameNetworkManager.Instance.localPlayerController.playerClientId != playerID)
-			{
-				SwitchSuitForPlayer(StartOfRound.Instance.allPlayerScripts[playerID], suitID);
-			}
+			SwitchSuitForPlayer(StartOfRound.Instance.allPlayerScripts[playerID], suitID);
 		}
 	}
 
@@ -109,51 +84,4 @@ public class UnlockableSuit : NetworkBehaviour
 		player.currentSuitID = suitID;
 	}
 
-	protected override void __initializeVariables()
-	{
-		if (syncedSuitID == null)
-		{
-			throw new Exception("UnlockableSuit.syncedSuitID cannot be null. All NetworkVariableBase instances must be initialized.");
-		}
-		syncedSuitID.Initialize(this);
-		__nameNetworkVariable(syncedSuitID, "syncedSuitID");
-		NetworkVariableFields.Add(syncedSuitID);
-		base.__initializeVariables();
-	}
-
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_UnlockableSuit()
-	{
-		NetworkManager.__rpc_func_table.Add(3672046368u, __rpc_handler_3672046368);
-		NetworkManager.__rpc_func_table.Add(2137061089u, __rpc_handler_2137061089);
-	}
-
-	private static void __rpc_handler_3672046368(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((UnlockableSuit)target).SwitchSuitServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2137061089(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((UnlockableSuit)target).SwitchSuitClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "UnlockableSuit";
-	}
 }

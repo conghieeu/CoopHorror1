@@ -306,74 +306,34 @@ public class JesterAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void KillPlayerServerRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (!inKillAnimation || StartOfRound.Instance.allPlayerScripts[playerId].IsOwnedByServer)
 		{
-			return;
+			inKillAnimation = true;
+			KillPlayerClientRpc(playerId);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3446243450u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendServerRpc(ref bufferWriter, 3446243450u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (!inKillAnimation || StartOfRound.Instance.allPlayerScripts[playerId].IsOwnedByServer)
-			{
-				inKillAnimation = true;
-				KillPlayerClientRpc(playerId);
-			}
-			else
-			{
-				CancelKillPlayerClientRpc();
-			}
+			CancelKillPlayerClientRpc();
 		}
 	}
 
 	[ClientRpc]
 	public void CancelKillPlayerClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (killPlayerAnimCoroutine == null)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1851545498u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1851545498u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && killPlayerAnimCoroutine == null)
-			{
-				inKillAnimation = false;
-			}
+			inKillAnimation = false;
 		}
 	}
 
 	[ClientRpc]
 	public void KillPlayerClientRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (killPlayerAnimCoroutine != null)
 		{
-			return;
+			StopCoroutine(killPlayerAnimCoroutine);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(569892066u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendClientRpc(ref bufferWriter, 569892066u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (killPlayerAnimCoroutine != null)
-			{
-				StopCoroutine(killPlayerAnimCoroutine);
-			}
-			killPlayerAnimCoroutine = StartCoroutine(killPlayerAnimation(playerId));
-		}
+		killPlayerAnimCoroutine = StartCoroutine(killPlayerAnimation(playerId));
 	}
 
 	private IEnumerator killPlayerAnimation(int playerId)
@@ -403,56 +363,5 @@ public class JesterAI : EnemyAI
 		inKillAnimation = false;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_JesterAI()
-	{
-		NetworkManager.__rpc_func_table.Add(3446243450u, __rpc_handler_3446243450);
-		NetworkManager.__rpc_func_table.Add(1851545498u, __rpc_handler_1851545498);
-		NetworkManager.__rpc_func_table.Add(569892066u, __rpc_handler_569892066);
-	}
-
-	private static void __rpc_handler_3446243450(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((JesterAI)target).KillPlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1851545498(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((JesterAI)target).CancelKillPlayerClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_569892066(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((JesterAI)target).KillPlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "JesterAI";
-	}
 }

@@ -463,46 +463,19 @@ public class MouthDogAI : EnemyAI, INoiseListener, IVisibleThreat
 	[ServerRpc(RequireOwnership = false)]
 	public void EndLungeServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(43708451u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 43708451u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				EndLungeClientRpc();
-			}
-		}
+		EndLungeClientRpc();
 	}
 
 	[ClientRpc]
 	public void EndLungeClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		SwitchToBehaviourStateOnLocalClient(2);
+		if (!isEnemyDead)
 		{
-			return;
+			creatureAnimator.SetTrigger("EndLungeNoKill");
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(4130373844u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 4130373844u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			SwitchToBehaviourStateOnLocalClient(2);
-			if (!isEnemyDead)
-			{
-				creatureAnimator.SetTrigger("EndLungeNoKill");
-			}
-			inLunge = false;
-			Debug.Log("Ending lunge");
-		}
+		inLunge = false;
+		Debug.Log("Ending lunge");
 	}
 
 	private void ChaseLocalPlayer()
@@ -589,76 +562,32 @@ public class MouthDogAI : EnemyAI, INoiseListener, IVisibleThreat
 	[ServerRpc(RequireOwnership = false)]
 	public void KillPlayerServerRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (!inKillAnimation)
 		{
-			return;
+			inKillAnimation = true;
+			KillPlayerClientRpc(playerId);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(998670557u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendServerRpc(ref bufferWriter, 998670557u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (!inKillAnimation)
-			{
-				inKillAnimation = true;
-				KillPlayerClientRpc(playerId);
-			}
-			else
-			{
-				CancelKillAnimationWithPlayerClientRpc(playerId);
-			}
+			CancelKillAnimationWithPlayerClientRpc(playerId);
 		}
 	}
 
 	[ClientRpc]
 	public void CancelKillAnimationWithPlayerClientRpc(int playerObjectId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2798326268u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObjectId);
-				__endSendClientRpc(ref bufferWriter, 2798326268u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				StartOfRound.Instance.allPlayerScripts[playerObjectId].inAnimationWithEnemy = null;
-			}
-		}
+		StartOfRound.Instance.allPlayerScripts[playerObjectId].inAnimationWithEnemy = null;
 	}
 
 	[ClientRpc]
 	public void KillPlayerClientRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log("Kill player rpc");
+		if (killPlayerCoroutine != null)
 		{
-			return;
+			StopCoroutine(killPlayerCoroutine);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2252497379u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendClientRpc(ref bufferWriter, 2252497379u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			Debug.Log("Kill player rpc");
-			if (killPlayerCoroutine != null)
-			{
-				StopCoroutine(killPlayerCoroutine);
-			}
-			killPlayerCoroutine = StartCoroutine(KillPlayer(playerId));
-		}
+		killPlayerCoroutine = StartCoroutine(KillPlayer(playerId));
 	}
 
 	private IEnumerator KillPlayer(int playerId)
@@ -727,39 +656,13 @@ public class MouthDogAI : EnemyAI, INoiseListener, IVisibleThreat
 	[ServerRpc(RequireOwnership = false)]
 	public void StopKillAnimationServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(19183128u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 19183128u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				StopKillAnimationClientRpc();
-			}
-		}
+		StopKillAnimationClientRpc();
 	}
 
 	[ClientRpc]
 	public void StopKillAnimationClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(4189041149u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 4189041149u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				StopKillAnimation();
-			}
-		}
+		StopKillAnimation();
 	}
 
 	private void TakeBodyInMouth(DeadBodyInfo body)
@@ -811,105 +714,5 @@ public class MouthDogAI : EnemyAI, INoiseListener, IVisibleThreat
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_MouthDogAI()
-	{
-		NetworkManager.__rpc_func_table.Add(43708451u, __rpc_handler_43708451);
-		NetworkManager.__rpc_func_table.Add(4130373844u, __rpc_handler_4130373844);
-		NetworkManager.__rpc_func_table.Add(998670557u, __rpc_handler_998670557);
-		NetworkManager.__rpc_func_table.Add(2798326268u, __rpc_handler_2798326268);
-		NetworkManager.__rpc_func_table.Add(2252497379u, __rpc_handler_2252497379);
-		NetworkManager.__rpc_func_table.Add(19183128u, __rpc_handler_19183128);
-		NetworkManager.__rpc_func_table.Add(4189041149u, __rpc_handler_4189041149);
-	}
-
-	private static void __rpc_handler_43708451(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((MouthDogAI)target).EndLungeServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4130373844(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((MouthDogAI)target).EndLungeClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_998670557(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((MouthDogAI)target).KillPlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2798326268(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((MouthDogAI)target).CancelKillAnimationWithPlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2252497379(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((MouthDogAI)target).KillPlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_19183128(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((MouthDogAI)target).StopKillAnimationServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4189041149(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((MouthDogAI)target).StopKillAnimationClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "MouthDogAI";
-	}
 }

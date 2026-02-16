@@ -370,42 +370,14 @@ public class CentipedeAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void StopClingingServerRpc(bool playerDead)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(4105250505u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in playerDead, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 4105250505u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				StopClingingClientRpc(playerDead);
-			}
-		}
+		StopClingingClientRpc(playerDead);
 	}
 
 	[ClientRpc]
 	public void StopClingingClientRpc(bool playerDead)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1106241822u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in playerDead, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 1106241822u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				inDroppingOffPlayerAnim = true;
-				StopClingingToPlayer(playerDead);
-			}
-		}
+		inDroppingOffPlayerAnim = true;
+		StopClingingToPlayer(playerDead);
 	}
 
 	private void OnEnable()
@@ -521,41 +493,13 @@ public class CentipedeAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void ClingToPlayerServerRpc(ulong playerObjectId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2791977891u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObjectId);
-				__endSendServerRpc(ref bufferWriter, 2791977891u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClingToPlayerClientRpc(playerObjectId);
-			}
-		}
+		ClingToPlayerClientRpc(playerObjectId);
 	}
 
 	[ClientRpc]
 	public void ClingToPlayerClientRpc(ulong playerObjectId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2474017466u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerObjectId);
-				__endSendClientRpc(ref bufferWriter, 2474017466u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ClingToPlayer(StartOfRound.Instance.allPlayerScripts[playerObjectId]);
-			}
-		}
+		ClingToPlayer(StartOfRound.Instance.allPlayerScripts[playerObjectId]);
 	}
 
 	private void ClingToPlayer(PlayerControllerB playerScript)
@@ -655,22 +599,8 @@ public class CentipedeAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void TriggerCentipedeFallServerRpc(ulong clientId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1047857261u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, clientId);
-				__endSendServerRpc(ref bufferWriter, 1047857261u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				thisNetworkObject.ChangeOwnership(clientId);
-				SwitchToBehaviourClientRpc(2);
-			}
-		}
+		thisNetworkObject.ChangeOwnership(clientId);
+		SwitchToBehaviourClientRpc(2);
 	}
 
 	private IEnumerator clingToCeiling()
@@ -713,54 +643,17 @@ public class CentipedeAI : EnemyAI
 	[ServerRpc]
 	public void SwitchToHidingOnCeilingServerRpc(Vector3 ceilingPoint)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2005305321u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in ceilingPoint);
-			__endSendServerRpc(ref bufferWriter, 2005305321u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			SwitchToHidingOnCeilingClientRpc(ceilingPoint);
-		}
+		SwitchToHidingOnCeilingClientRpc(ceilingPoint);
 	}
 
 	[ClientRpc]
 	public void SwitchToHidingOnCeilingClientRpc(Vector3 ceilingPoint)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2626887057u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in ceilingPoint);
-				__endSendClientRpc(ref bufferWriter, 2626887057u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				SwitchToBehaviourStateOnLocalClient(1);
-				syncedPositionInPrepForCeilingAnimation = false;
-				inSpecialAnimation = true;
-				agent.enabled = false;
-				ceilingHidingPoint = ceilingPoint;
-			}
-		}
+		SwitchToBehaviourStateOnLocalClient(1);
+		syncedPositionInPrepForCeilingAnimation = false;
+		inSpecialAnimation = true;
+		agent.enabled = false;
+		ceilingHidingPoint = ceilingPoint;
 	}
 
 	public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false)
@@ -809,40 +702,14 @@ public class CentipedeAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void GetHitAndRunAwayServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3824648183u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 3824648183u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				GetHitAndRunAwayClientRpc();
-			}
-		}
+		GetHitAndRunAwayClientRpc();
 	}
 
 	[ClientRpc]
 	public void GetHitAndRunAwayClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2602771441u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2602771441u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				SwitchToBehaviourStateOnLocalClient(0);
-				targetNode = null;
-			}
-		}
+		SwitchToBehaviourStateOnLocalClient(0);
+		targetNode = null;
 	}
 
 	public override void KillEnemy(bool destroy = false)
@@ -868,144 +735,5 @@ public class CentipedeAI : EnemyAI
 		RoundManager.PlayRandomClip(creatureVoice, shriekClips, randomize: false);
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_CentipedeAI()
-	{
-		NetworkManager.__rpc_func_table.Add(4105250505u, __rpc_handler_4105250505);
-		NetworkManager.__rpc_func_table.Add(1106241822u, __rpc_handler_1106241822);
-		NetworkManager.__rpc_func_table.Add(2791977891u, __rpc_handler_2791977891);
-		NetworkManager.__rpc_func_table.Add(2474017466u, __rpc_handler_2474017466);
-		NetworkManager.__rpc_func_table.Add(1047857261u, __rpc_handler_1047857261);
-		NetworkManager.__rpc_func_table.Add(2005305321u, __rpc_handler_2005305321);
-		NetworkManager.__rpc_func_table.Add(2626887057u, __rpc_handler_2626887057);
-		NetworkManager.__rpc_func_table.Add(3824648183u, __rpc_handler_3824648183);
-		NetworkManager.__rpc_func_table.Add(2602771441u, __rpc_handler_2602771441);
-	}
-
-	private static void __rpc_handler_4105250505(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((CentipedeAI)target).StopClingingServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1106241822(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((CentipedeAI)target).StopClingingClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2791977891(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((CentipedeAI)target).ClingToPlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2474017466(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((CentipedeAI)target).ClingToPlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1047857261(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((CentipedeAI)target).TriggerCentipedeFallServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2005305321(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((CentipedeAI)target).SwitchToHidingOnCeilingServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2626887057(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((CentipedeAI)target).SwitchToHidingOnCeilingClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3824648183(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((CentipedeAI)target).GetHitAndRunAwayServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2602771441(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((CentipedeAI)target).GetHitAndRunAwayClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "CentipedeAI";
-	}
 }

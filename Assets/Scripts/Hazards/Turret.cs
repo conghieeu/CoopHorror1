@@ -474,20 +474,9 @@ public class Turret : NetworkBehaviour, IHittable
 	[ClientRpc]
 	public void SwitchRotationClientRpc(bool setRotateRight)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsServer)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2426770061u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in setRotateRight, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 2426770061u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsServer)
-			{
-				SwitchRotationOnInterval(setRotateRight);
-			}
+			SwitchRotationOnInterval(setRotateRight);
 		}
 	}
 
@@ -508,25 +497,12 @@ public class Turret : NetworkBehaviour, IHittable
 	[ClientRpc]
 	public void SwitchTargetedPlayerClientRpc(int playerId, bool setModeToCharging = false)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(866050294u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			bufferWriter.WriteValueSafe(in setModeToCharging, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 866050294u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsServer)
+		if (!base.IsServer)
 		{
 			targetPlayerWithRotation = StartOfRound.Instance.allPlayerScripts[playerId];
 			if (setModeToCharging)
 			{
-				SwitchTurretMode(1);
+			SwitchTurretMode(1);
 			}
 		}
 	}
@@ -534,39 +510,15 @@ public class Turret : NetworkBehaviour, IHittable
 	[ClientRpc]
 	public void RemoveTargetedPlayerClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2800017671u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2800017671u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				targetPlayerWithRotation = null;
-			}
-		}
+		targetPlayerWithRotation = null;
 	}
 
 	[ClientRpc]
 	public void SetToModeClientRpc(int mode)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsServer)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3335553538u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, mode);
-				__endSendClientRpc(ref bufferWriter, 3335553538u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsServer)
-			{
-				SwitchTurretMode(mode);
-			}
+			SwitchTurretMode(mode);
 		}
 	}
 
@@ -588,46 +540,17 @@ public class Turret : NetworkBehaviour, IHittable
 	[ServerRpc(RequireOwnership = false)]
 	public void ToggleTurretServerRpc(bool enabled)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2339273208u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in enabled, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 2339273208u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				Debug.Log($"Toggling turret to {enabled}! serverrpc");
-				ToggleTurretClientRpc(enabled);
-			}
-		}
+		Debug.Log($"Toggling turret to {enabled}! serverrpc");
+		ToggleTurretClientRpc(enabled);
 	}
 
 	[ClientRpc]
 	public void ToggleTurretClientRpc(bool enabled)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log($"Toggling turret to {enabled}! clientrpc");
+		if (turretActive != enabled)
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1135819343u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in enabled, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 1135819343u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			Debug.Log($"Toggling turret to {enabled}! clientrpc");
-			if (turretActive != enabled)
-			{
-				ToggleTurretEnabledLocalClient(enabled);
-			}
+			ToggleTurretEnabledLocalClient(enabled);
 		}
 	}
 
@@ -662,159 +585,17 @@ public class Turret : NetworkBehaviour, IHittable
 	[ServerRpc(RequireOwnership = false)]
 	public void EnterBerserkModeServerRpc(int playerWhoTriggered)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(4195711963u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoTriggered);
-				__endSendServerRpc(ref bufferWriter, 4195711963u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				EnterBerserkModeClientRpc(playerWhoTriggered);
-			}
-		}
+		EnterBerserkModeClientRpc(playerWhoTriggered);
 	}
 
 	[ClientRpc]
 	public void EnterBerserkModeClientRpc(int playerWhoTriggered)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (playerWhoTriggered != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1436540455u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoTriggered);
-				__endSendClientRpc(ref bufferWriter, 1436540455u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && playerWhoTriggered != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
-			{
-				SwitchTurretMode(3);
-			}
+			SwitchTurretMode(3);
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_Turret()
-	{
-		NetworkManager.__rpc_func_table.Add(2426770061u, __rpc_handler_2426770061);
-		NetworkManager.__rpc_func_table.Add(866050294u, __rpc_handler_866050294);
-		NetworkManager.__rpc_func_table.Add(2800017671u, __rpc_handler_2800017671);
-		NetworkManager.__rpc_func_table.Add(3335553538u, __rpc_handler_3335553538);
-		NetworkManager.__rpc_func_table.Add(2339273208u, __rpc_handler_2339273208);
-		NetworkManager.__rpc_func_table.Add(1135819343u, __rpc_handler_1135819343);
-		NetworkManager.__rpc_func_table.Add(4195711963u, __rpc_handler_4195711963);
-		NetworkManager.__rpc_func_table.Add(1436540455u, __rpc_handler_1436540455);
-	}
-
-	private static void __rpc_handler_2426770061(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Turret)target).SwitchRotationClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_866050294(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Turret)target).SwitchTargetedPlayerClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2800017671(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Turret)target).RemoveTargetedPlayerClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3335553538(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Turret)target).SetToModeClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2339273208(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Turret)target).ToggleTurretServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1135819343(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Turret)target).ToggleTurretClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4195711963(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Turret)target).EnterBerserkModeServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1436540455(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Turret)target).EnterBerserkModeClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "Turret";
-	}
 }

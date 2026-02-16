@@ -102,243 +102,14 @@ public class RedLocustBees : EnemyAI
 	[ClientRpc]
 	public void SpawnHiveClientRpc(NetworkObjectReference hiveObject, int hiveScrapValue, Vector3 hivePosition)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(3189835108u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in hiveObject, default(FastBufferWriter.ForNetworkSerializable));
-			BytePacker.WriteValueBitPacked(bufferWriter, hiveScrapValue);
-			bufferWriter.WriteValueSafe(in hivePosition);
-			__endSendClientRpc(ref bufferWriter, 3189835108u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		if (hiveObject.TryGet(out var networkObject))
-		{
-			hive = networkObject.gameObject.GetComponent<GrabbableObject>();
-			hive.scrapValue = hiveScrapValue;
-			ScanNodeProperties componentInChildren = hive.GetComponentInChildren<ScanNodeProperties>();
-			if (componentInChildren != null)
-			{
-				componentInChildren.scrapValue = hiveScrapValue;
-				componentInChildren.headerText = "Bee hive";
-				componentInChildren.subText = $"VALUE: ${hiveScrapValue}";
-			}
-			hive.targetFloorPosition = hivePosition;
-			Debug.Log($"Set targetfloorposition of hive: {hivePosition}");
-			if (Physics.Raycast(RoundManager.Instance.GetNavMeshPosition(hive.transform.position), hive.transform.position + Vector3.up - eye.position, out var hitInfo, 20f, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore))
-			{
-				lastKnownHivePosition = hitInfo.point;
-			}
-			else
-			{
-				lastKnownHivePosition = hive.transform.position;
-			}
-			RoundManager.Instance.totalScrapValueInLevel += hive.scrapValue;
-			hasSpawnedHive = true;
-		}
-		else
-		{
-			Debug.LogError("Bees: Error! Hive could not be accessed from network object reference");
-		}
-	}
-
-	public override void DoAIInterval()
-	{
-		base.DoAIInterval();
-		if (StartOfRound.Instance.allPlayersDead || !hasSpawnedHive || daytimeEnemyLeaving)
-		{
-			return;
-		}
-		switch (currentBehaviourStateIndex)
-		{
-		case 0:
-		{
-			if (wasInChase)
-			{
-				wasInChase = false;
-			}
-			if (Vector3.Distance(base.transform.position, lastKnownHivePosition) > 2f)
-			{
-				SetDestinationToPosition(lastKnownHivePosition);
-			}
-			if (IsHiveMissing())
-			{
-				SwitchToBehaviourState(2);
-				break;
-			}
-			PlayerControllerB playerControllerB3 = CheckLineOfSightForPlayer(360f, 16, 1);
-			if (playerControllerB3 != null && Vector3.Distance(playerControllerB3.transform.position, hive.transform.position) < (float)defenseDistance)
-			{
-				SetMovingTowardsTargetPlayer(playerControllerB3);
-				SwitchToBehaviourState(1);
-				SwitchOwnershipOfBeesToClient(playerControllerB3);
-			}
-			break;
-		}
-		case 1:
-			if (targetPlayer == null || !PlayerIsTargetable(targetPlayer) || Vector3.Distance(targetPlayer.transform.position, hive.transform.position) > (float)defenseDistance + 5f)
-			{
-				targetPlayer = null;
-				wasInChase = false;
-				if (IsHiveMissing())
-				{
-					SwitchToBehaviourState(2);
-				}
-				else
-				{
-					SwitchToBehaviourState(0);
-				}
-			}
-			else if (targetPlayer.currentlyHeldObjectServer == hive)
-			{
-				SwitchToBehaviourState(2);
-			}
-			break;
-		case 2:
-		{
-			if (IsHivePlacedAndInLOS())
-			{
-				if (wasInChase)
-				{
-					wasInChase = false;
-				}
-				lastKnownHivePosition = hive.transform.position + Vector3.up * 0.5f;
-				Collider[] array = Physics.OverlapSphere(hive.transform.position, defenseDistance, StartOfRound.Instance.playersMask, QueryTriggerInteraction.Collide);
-				PlayerControllerB playerControllerB = null;
-				if (array != null && array.Length != 0)
-				{
-					for (int i = 0; i < array.Length; i++)
-					{
-						playerControllerB = array[0].gameObject.GetComponent<PlayerControllerB>();
-						if (playerControllerB != null)
-						{
-							break;
-						}
-					}
-				}
-				if (playerControllerB != null && Vector3.Distance(playerControllerB.transform.position, hive.transform.position) < (float)defenseDistance)
-				{
-					SetMovingTowardsTargetPlayer(playerControllerB);
-					SwitchToBehaviourState(1);
-					SwitchOwnershipOfBeesToClient(playerControllerB);
-				}
-				else
-				{
-					SwitchToBehaviourState(0);
-				}
-				break;
-			}
-			bool flag = false;
-			PlayerControllerB playerControllerB2 = ChaseWithPriorities();
-			if (playerControllerB2 != null && targetPlayer != playerControllerB2)
-			{
-				flag = true;
-				wasInChase = false;
-				SetMovingTowardsTargetPlayer(playerControllerB2);
-				StopSearch(searchForHive);
-				if (SwitchOwnershipOfBeesToClient(playerControllerB2))
-				{
-					Debug.Log("Bee10 switching owner to " + playerControllerB2.playerUsername);
-					break;
-				}
-			}
-			if (targetPlayer != null)
-			{
-				agent.acceleration = 16f;
-				if ((!flag && !CheckLineOfSightForPlayer(360f, 16, 2)) || !PlayerIsTargetable(targetPlayer))
-				{
-					lostLOSTimer += AIIntervalTime;
-					if (lostLOSTimer >= 4.5f)
-					{
-						targetPlayer = null;
-						lostLOSTimer = 0f;
-					}
-				}
-				else
-				{
-					wasInChase = true;
-					lastSeenPlayerPos = targetPlayer.transform.position;
-					lostLOSTimer = 0f;
-				}
-				break;
-			}
-			agent.acceleration = 13f;
-			if (!searchForHive.inProgress)
-			{
-				if (wasInChase)
-				{
-					StartSearch(lastSeenPlayerPos, searchForHive);
-				}
-				else
-				{
-					StartSearch(base.transform.position, searchForHive);
-				}
-			}
-			break;
-		}
-		}
-	}
-
-	private bool SwitchOwnershipOfBeesToClient(PlayerControllerB player)
-	{
-		if (player != GameNetworkManager.Instance.localPlayerController)
-		{
-			syncedLastKnownHivePosition = false;
-			lostLOSTimer = 0f;
-			SyncLastKnownHivePositionServerRpc(lastKnownHivePosition);
-			ChangeOwnershipOfEnemy(player.actualClientId);
-			return true;
-		}
-		return false;
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void SyncLastKnownHivePositionServerRpc(Vector3 hivePosition)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(4130171556u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in hivePosition);
-				__endSendServerRpc(ref bufferWriter, 4130171556u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SyncLastKnownHivePositionClientRpc(hivePosition);
-			}
-		}
+		SyncLastKnownHivePositionClientRpc(hivePosition);
 	}
 
 	[ClientRpc]
 	public void SyncLastKnownHivePositionClientRpc(Vector3 hivePosition)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1563228958u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in hivePosition);
-				__endSendClientRpc(ref bufferWriter, 1563228958u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				lastKnownHivePosition = hivePosition;
-				syncedLastKnownHivePosition = true;
-			}
-		}
+		lastKnownHivePosition = hivePosition;
+		syncedLastKnownHivePosition = true;
 	}
 
 	private PlayerControllerB ChaseWithPriorities()
@@ -636,82 +407,32 @@ public class RedLocustBees : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void EnterAttackZapModeServerRpc(int clientWhoSent)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (beesZappingMode != 3)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1099257450u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, clientWhoSent);
-				__endSendServerRpc(ref bufferWriter, 1099257450u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && beesZappingMode != 3)
-			{
-				EnterAttackZapModeClientRpc(clientWhoSent);
-			}
+			EnterAttackZapModeClientRpc(clientWhoSent);
 		}
 	}
 
 	[ClientRpc]
 	public void EnterAttackZapModeClientRpc(int clientWhoSent)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if ((int)GameNetworkManager.Instance.localPlayerController.playerClientId != clientWhoSent)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(753177805u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, clientWhoSent);
-				__endSendClientRpc(ref bufferWriter, 753177805u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && (int)GameNetworkManager.Instance.localPlayerController.playerClientId != clientWhoSent)
-			{
-				beesZappingMode = 3;
-				Debug.Log("Entered zap mode 3");
-			}
+			beesZappingMode = 3;
+			Debug.Log("Entered zap mode 3");
 		}
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	public void BeeKillPlayerServerRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3246315153u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				__endSendServerRpc(ref bufferWriter, 3246315153u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				BeeKillPlayerClientRpc(playerId);
-			}
-		}
+		BeeKillPlayerClientRpc(playerId);
 	}
 
 	[ClientRpc]
 	public void BeeKillPlayerClientRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3131319918u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				__endSendClientRpc(ref bufferWriter, 3131319918u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				BeeKillPlayerOnLocalClient(playerId);
-			}
-		}
+		BeeKillPlayerOnLocalClient(playerId);
 	}
 
 	private void BeeKillPlayerOnLocalClient(int playerId)
@@ -840,111 +561,5 @@ public class RedLocustBees : EnemyAI
 		KillEnemyOnOwnerClient(overrideDestroy: true);
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_RedLocustBees()
-	{
-		NetworkManager.__rpc_func_table.Add(3189835108u, __rpc_handler_3189835108);
-		NetworkManager.__rpc_func_table.Add(4130171556u, __rpc_handler_4130171556);
-		NetworkManager.__rpc_func_table.Add(1563228958u, __rpc_handler_1563228958);
-		NetworkManager.__rpc_func_table.Add(1099257450u, __rpc_handler_1099257450);
-		NetworkManager.__rpc_func_table.Add(753177805u, __rpc_handler_753177805);
-		NetworkManager.__rpc_func_table.Add(3246315153u, __rpc_handler_3246315153);
-		NetworkManager.__rpc_func_table.Add(3131319918u, __rpc_handler_3131319918);
-	}
-
-	private static void __rpc_handler_3189835108(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			reader.ReadValueSafe(out Vector3 value3);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RedLocustBees)target).SpawnHiveClientRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4130171556(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RedLocustBees)target).SyncLastKnownHivePositionServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1563228958(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RedLocustBees)target).SyncLastKnownHivePositionClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1099257450(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RedLocustBees)target).EnterAttackZapModeServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_753177805(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RedLocustBees)target).EnterAttackZapModeClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3246315153(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RedLocustBees)target).BeeKillPlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3131319918(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RedLocustBees)target).BeeKillPlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "RedLocustBees";
-	}
 }

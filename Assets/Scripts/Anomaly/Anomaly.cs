@@ -55,19 +55,9 @@ public abstract class Anomaly : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void DespawnAnomalyServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (base.gameObject.GetComponent<NetworkObject>().IsSpawned)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3450772816u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 3450772816u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && base.gameObject.GetComponent<NetworkObject>().IsSpawned)
-			{
-				AnomalyDespawn();
-			}
+			AnomalyDespawn();
 		}
 	}
 
@@ -99,30 +89,5 @@ public abstract class Anomaly : NetworkBehaviour
 		normalizedHealth = Mathf.Abs(anomalyType.anomalyMaxHealth / health - 1f);
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_Anomaly()
-	{
-		NetworkManager.__rpc_func_table.Add(3450772816u, __rpc_handler_3450772816);
-	}
-
-	private static void __rpc_handler_3450772816(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Anomaly)target).DespawnAnomalyServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "Anomaly";
-	}
 }

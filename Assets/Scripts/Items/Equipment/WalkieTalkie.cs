@@ -110,106 +110,32 @@ public class WalkieTalkie : GrabbableObject
 	[ServerRpc]
 	public void SetPlayerSpeakingOnWalkieTalkieServerRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(64994802u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendServerRpc(ref bufferWriter, 64994802u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			SetPlayerSpeakingOnWalkieTalkieClientRpc(playerId);
-		}
+		SetPlayerSpeakingOnWalkieTalkieClientRpc(playerId);
 	}
 
 	[ClientRpc]
 	public void SetPlayerSpeakingOnWalkieTalkieClientRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2961867446u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				__endSendClientRpc(ref bufferWriter, 2961867446u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				StartOfRound.Instance.allPlayerScripts[playerId].speakingToWalkieTalkie = true;
-				clientIsHoldingAndSpeakingIntoThis = true;
-				SendWalkieTalkieStartTransmissionSFX(playerId);
-				StartOfRound.Instance.UpdatePlayerVoiceEffects();
-			}
-		}
+		StartOfRound.Instance.allPlayerScripts[playerId].speakingToWalkieTalkie = true;
+		clientIsHoldingAndSpeakingIntoThis = true;
+		SendWalkieTalkieStartTransmissionSFX(playerId);
+		StartOfRound.Instance.UpdatePlayerVoiceEffects();
 	}
 
 	[ServerRpc]
 	public void UnsetPlayerSpeakingOnWalkieTalkieServerRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2502573704u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-			__endSendServerRpc(ref bufferWriter, 2502573704u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			UnsetPlayerSpeakingOnWalkieTalkieClientRpc(playerId);
-		}
+		UnsetPlayerSpeakingOnWalkieTalkieClientRpc(playerId);
 	}
 
 	[ClientRpc]
 	public void UnsetPlayerSpeakingOnWalkieTalkieClientRpc(int playerId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3968582452u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerId);
-				__endSendClientRpc(ref bufferWriter, 3968582452u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				StartOfRound.Instance.allPlayerScripts[playerId].speakingToWalkieTalkie = false;
-				clientIsHoldingAndSpeakingIntoThis = false;
-				SendWalkieTalkieEndTransmissionSFX(playerId);
-				updateInterval = 0.2f;
-				StartOfRound.Instance.UpdatePlayerVoiceEffects();
-			}
-		}
+		StartOfRound.Instance.allPlayerScripts[playerId].speakingToWalkieTalkie = false;
+		clientIsHoldingAndSpeakingIntoThis = false;
+		SendWalkieTalkieEndTransmissionSFX(playerId);
+		updateInterval = 0.2f;
+		StartOfRound.Instance.UpdatePlayerVoiceEffects();
 	}
 
 	private void SendWalkieTalkieEndTransmissionSFX(int playerId)
@@ -595,92 +521,5 @@ public class WalkieTalkie : GrabbableObject
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_WalkieTalkie()
-	{
-		NetworkManager.__rpc_func_table.Add(64994802u, __rpc_handler_64994802);
-		NetworkManager.__rpc_func_table.Add(2961867446u, __rpc_handler_2961867446);
-		NetworkManager.__rpc_func_table.Add(2502573704u, __rpc_handler_2502573704);
-		NetworkManager.__rpc_func_table.Add(3968582452u, __rpc_handler_3968582452);
-	}
-
-	private static void __rpc_handler_64994802(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((WalkieTalkie)target).SetPlayerSpeakingOnWalkieTalkieServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2961867446(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((WalkieTalkie)target).SetPlayerSpeakingOnWalkieTalkieClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2502573704(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((WalkieTalkie)target).UnsetPlayerSpeakingOnWalkieTalkieServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3968582452(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((WalkieTalkie)target).UnsetPlayerSpeakingOnWalkieTalkieClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "WalkieTalkie";
-	}
 }

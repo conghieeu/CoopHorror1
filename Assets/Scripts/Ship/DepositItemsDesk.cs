@@ -151,67 +151,13 @@ public class DepositItemsDesk : NetworkBehaviour, INoiseListener
 	[ServerRpc(RequireOwnership = false)]
 	public void AddObjectToDeskServerRpc(NetworkObjectReference grabbableObjectNetObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(4150038830u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in grabbableObjectNetObject, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendServerRpc(ref bufferWriter, 4150038830u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost))
-		{
-			return;
-		}
 		if (grabbableObjectNetObject.TryGet(out lastObjectAddedToDesk))
 		{
-			if (!itemsOnCounter.Contains(lastObjectAddedToDesk.GetComponentInChildren<GrabbableObject>()))
-			{
-				itemsOnCounterNetworkObjects.Add(lastObjectAddedToDesk);
-				itemsOnCounter.Add(lastObjectAddedToDesk.GetComponentInChildren<GrabbableObject>());
-				AddObjectToDeskClientRpc(grabbableObjectNetObject);
-				grabObjectsTimer = Mathf.Clamp(grabObjectsTimer + 6f, 0f, 10f);
-				if (!doorOpen && (!currentMood.mustBeWokenUp || timesHearingNoise >= 5f))
-				{
-					OpenShutDoorClientRpc();
-				}
-			}
+			lastObjectAddedToDesk.gameObject.GetComponentInChildren<GrabbableObject>().EnablePhysics(enable: false);
 		}
 		else
 		{
-			Debug.LogError("ServerRpc: Could not find networkobject in the object that was placed on desk.");
-		}
-	}
-
-	[ClientRpc]
-	public void AddObjectToDeskClientRpc(NetworkObjectReference grabbableObjectNetObject)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(3889142070u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in grabbableObjectNetObject, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendClientRpc(ref bufferWriter, 3889142070u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (grabbableObjectNetObject.TryGet(out lastObjectAddedToDesk))
-			{
-				lastObjectAddedToDesk.gameObject.GetComponentInChildren<GrabbableObject>().EnablePhysics(enable: false);
-			}
-			else
-			{
-				Debug.LogError("ClientRpc: Could not find networkobject in the object that was placed on desk.");
-			}
+			Debug.LogError("ClientRpc: Could not find networkobject in the object that was placed on desk.");
 		}
 	}
 
@@ -316,22 +262,9 @@ public class DepositItemsDesk : NetworkBehaviour, INoiseListener
 	[ClientRpc]
 	public void TakeObjectsClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3132539150u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 3132539150u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				inGrabbingObjectsAnimation = true;
-				depositDeskAnimator.SetBool("GrabbingItems", value: true);
-				deskAudio.PlayOneShot(currentMood.grabItemsSFX[UnityEngine.Random.Range(0, currentMood.grabItemsSFX.Length)]);
-			}
-		}
+		inGrabbingObjectsAnimation = true;
+		depositDeskAnimator.SetBool("GrabbingItems", value: true);
+		deskAudio.PlayOneShot(currentMood.grabItemsSFX[UnityEngine.Random.Range(0, currentMood.grabItemsSFX.Length)]);
 	}
 
 	public void SellItemsOnServer()
@@ -365,25 +298,11 @@ public class DepositItemsDesk : NetworkBehaviour, INoiseListener
 	[ClientRpc]
 	public void SellItemsClientRpc(int itemProfit, int newGroupCredits, int itemsSold, float buyingRate)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsServer)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3628265478u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, itemProfit);
-				BytePacker.WriteValueBitPacked(bufferWriter, newGroupCredits);
-				BytePacker.WriteValueBitPacked(bufferWriter, itemsSold);
-				bufferWriter.WriteValueSafe(in buyingRate, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 3628265478u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsServer)
-			{
-				itemsOnCounterAmount = itemsSold;
-				StartOfRound.Instance.companyBuyingRate = buyingRate;
-				SellAndDisplayItemProfits(itemProfit, newGroupCredits);
-			}
+			itemsOnCounterAmount = itemsSold;
+			StartOfRound.Instance.companyBuyingRate = buyingRate;
+			SellAndDisplayItemProfits(itemProfit, newGroupCredits);
 		}
 	}
 
@@ -404,57 +323,8 @@ public class DepositItemsDesk : NetworkBehaviour, INoiseListener
 	[ServerRpc(RequireOwnership = false)]
 	public void CheckAllPlayersSoldItemsServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1114072420u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 1114072420u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost))
-		{
-			return;
-		}
-		clientsRecievedSellItemsRPC++;
-		if (clientsRecievedSellItemsRPC < GameNetworkManager.Instance.connectedPlayers)
-		{
-			return;
-		}
-		clientsRecievedSellItemsRPC = 0;
-		for (int i = 0; i < itemsOnCounterNetworkObjects.Count; i++)
-		{
-			if (itemsOnCounterNetworkObjects[i].IsSpawned)
-			{
-				itemsOnCounterNetworkObjects[i].Despawn();
-			}
-		}
-		itemsOnCounterNetworkObjects.Clear();
-		itemsOnCounter.Clear();
-		FinishSellingItemsClientRpc();
-	}
-
-	[ClientRpc]
-	public void FinishSellingItemsClientRpc()
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2469293577u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2469293577u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				depositDeskAnimator.SetBool("GrabbingItems", value: false);
-				inGrabbingObjectsAnimation = false;
-			}
-		}
+		depositDeskAnimator.SetBool("GrabbingItems", value: false);
+		inGrabbingObjectsAnimation = false;
 	}
 
 	private IEnumerator delayedAcceptanceOfItems(int profit, GrabbableObject[] objectsOnDesk, int newGroupCredits)
@@ -510,40 +380,17 @@ public class DepositItemsDesk : NetworkBehaviour, INoiseListener
 	[ServerRpc(RequireOwnership = false)]
 	public void AttackPlayersServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!attacking && !inGrabbingObjectsAnimation)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3230280218u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 3230280218u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && !attacking && !inGrabbingObjectsAnimation)
-			{
-				attacking = true;
-				AttackPlayersClientRpc();
-			}
+			attacking = true;
+			AttackPlayersClientRpc();
 		}
 	}
 
 	[ClientRpc]
 	public void AttackPlayersClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3277367259u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 3277367259u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				Attack();
-			}
-		}
+		Attack();
 	}
 
 	public void Attack()
@@ -617,45 +464,18 @@ public class DepositItemsDesk : NetworkBehaviour, INoiseListener
 	[ServerRpc(RequireOwnership = false)]
 	public void CheckAnimationGrabPlayerServerRpc(int monsterAnimationID, int playerID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!monsterAnimations[monsterAnimationID].animatorCollidedOnClient)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1392297385u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, monsterAnimationID);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerID);
-				__endSendServerRpc(ref bufferWriter, 1392297385u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && !monsterAnimations[monsterAnimationID].animatorCollidedOnClient)
-			{
-				monsterAnimations[monsterAnimationID].animatorCollidedOnClient = true;
-				ConfirmAnimationGrabPlayerClientRpc(monsterAnimationID, playerID);
-			}
+			monsterAnimations[monsterAnimationID].animatorCollidedOnClient = true;
+			ConfirmAnimationGrabPlayerClientRpc(monsterAnimationID, playerID);
 		}
 	}
 
 	[ClientRpc]
 	public void ConfirmAnimationGrabPlayerClientRpc(int monsterAnimationID, int playerID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3034180067u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, monsterAnimationID);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerID);
-				__endSendClientRpc(ref bufferWriter, 3034180067u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				monsterAnimations[monsterAnimationID].animatorCollidedOnClient = true;
-				StartCoroutine(AnimationGrabPlayer(monsterAnimationID, playerID));
-			}
-		}
+		monsterAnimations[monsterAnimationID].animatorCollidedOnClient = true;
+		StartCoroutine(AnimationGrabPlayer(monsterAnimationID, playerID));
 	}
 
 	private IEnumerator AnimationGrabPlayer(int monsterAnimationID, int playerID)
@@ -745,114 +565,28 @@ public class DepositItemsDesk : NetworkBehaviour, INoiseListener
 	[ServerRpc(RequireOwnership = false)]
 	public void SetPatienceServerRpc(float valueChange)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(892728304u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in valueChange, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 892728304u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost) || inSellingItemsAnimation)
-		{
-			return;
-		}
-		patienceLevel += valueChange;
-		if (patienceLevel <= 0f)
-		{
-			if (attacking || inGrabbingObjectsAnimation)
-			{
-				return;
-			}
-			if (UnityEngine.Random.Range(0, 100) < 50)
-			{
-				attacking = true;
-				AttackPlayersClientRpc();
-				return;
-			}
-			patienceLevel += 3f;
-			if (itemsOnCounter.Count <= 0 && timeSinceLoweringPatience > 2f)
-			{
-				OpenShutDoorClientRpc(open: false);
-			}
-		}
-		else if (valueChange < 0f && patienceLevel < 1f && timeSinceMakingWarningNoise > 1f)
-		{
-			MakeWarningNoiseClientRpc();
-		}
-	}
-
-	[ClientRpc]
-	public void MakeWarningNoiseClientRpc()
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(103348088u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 103348088u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				timeSinceMakingWarningNoise = 0f;
-				MakeLoudNoise(1);
-			}
-		}
+		timeSinceMakingWarningNoise = 0f;
+		MakeLoudNoise(1);
 	}
 
 	[ServerRpc(RequireOwnership = false)]
 	public void SetTimesHeardNoiseServerRpc(float valueChange)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log("NOISE D");
+		timesHearingNoise += valueChange;
+		if (timesHearingNoise >= 5f && !doorOpen)
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(745684781u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in valueChange, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 745684781u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			Debug.Log("NOISE D");
-			timesHearingNoise += valueChange;
-			if (timesHearingNoise >= 5f && !doorOpen)
-			{
-				timesHearingNoise = 0f;
-				doorOpen = true;
-				OpenShutDoorClientRpc();
-				timeSinceLoweringPatience = 2.6f;
-			}
+			timesHearingNoise = 0f;
+			doorOpen = true;
+			OpenShutDoorClientRpc();
+			timeSinceLoweringPatience = 2.6f;
 		}
 	}
 
 	[ClientRpc]
 	public void OpenShutDoorClientRpc(bool open = true)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1191125720u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in open, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 1191125720u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				OpenShutDoor(open);
-			}
-		}
+		OpenShutDoor(open);
 	}
 
 	public void OpenShutDoor(bool open)
@@ -905,199 +639,5 @@ public class DepositItemsDesk : NetworkBehaviour, INoiseListener
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_DepositItemsDesk()
-	{
-		NetworkManager.__rpc_func_table.Add(4150038830u, __rpc_handler_4150038830);
-		NetworkManager.__rpc_func_table.Add(3889142070u, __rpc_handler_3889142070);
-		NetworkManager.__rpc_func_table.Add(3132539150u, __rpc_handler_3132539150);
-		NetworkManager.__rpc_func_table.Add(3628265478u, __rpc_handler_3628265478);
-		NetworkManager.__rpc_func_table.Add(1114072420u, __rpc_handler_1114072420);
-		NetworkManager.__rpc_func_table.Add(2469293577u, __rpc_handler_2469293577);
-		NetworkManager.__rpc_func_table.Add(3230280218u, __rpc_handler_3230280218);
-		NetworkManager.__rpc_func_table.Add(3277367259u, __rpc_handler_3277367259);
-		NetworkManager.__rpc_func_table.Add(1392297385u, __rpc_handler_1392297385);
-		NetworkManager.__rpc_func_table.Add(3034180067u, __rpc_handler_3034180067);
-		NetworkManager.__rpc_func_table.Add(892728304u, __rpc_handler_892728304);
-		NetworkManager.__rpc_func_table.Add(103348088u, __rpc_handler_103348088);
-		NetworkManager.__rpc_func_table.Add(745684781u, __rpc_handler_745684781);
-		NetworkManager.__rpc_func_table.Add(1191125720u, __rpc_handler_1191125720);
-	}
-
-	private static void __rpc_handler_4150038830(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((DepositItemsDesk)target).AddObjectToDeskServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3889142070(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DepositItemsDesk)target).AddObjectToDeskClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3132539150(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DepositItemsDesk)target).TakeObjectsClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3628265478(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			reader.ReadValueSafe(out float value4, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DepositItemsDesk)target).SellItemsClientRpc(value, value2, value3, value4);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1114072420(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((DepositItemsDesk)target).CheckAllPlayersSoldItemsServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2469293577(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DepositItemsDesk)target).FinishSellingItemsClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3230280218(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((DepositItemsDesk)target).AttackPlayersServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3277367259(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DepositItemsDesk)target).AttackPlayersClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1392297385(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((DepositItemsDesk)target).CheckAnimationGrabPlayerServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3034180067(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DepositItemsDesk)target).ConfirmAnimationGrabPlayerClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_892728304(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out float value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((DepositItemsDesk)target).SetPatienceServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_103348088(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DepositItemsDesk)target).MakeWarningNoiseClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_745684781(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out float value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((DepositItemsDesk)target).SetTimesHeardNoiseServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1191125720(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((DepositItemsDesk)target).OpenShutDoorClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "DepositItemsDesk";
-	}
 }

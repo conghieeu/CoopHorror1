@@ -101,20 +101,7 @@ public class ItemDropship : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void OpenShipServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(638792059u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 638792059u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				OpenShipDoorsOnServer();
-			}
-		}
+		OpenShipDoorsOnServer();
 	}
 
 	private void OpenShipDoorsOnServer()
@@ -137,22 +124,9 @@ public class ItemDropship : NetworkBehaviour
 	[ClientRpc]
 	public void OpenShipClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3113622207u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 3113622207u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				shipAnimator.SetBool("doorsOpened", value: true);
-				shipDoorsOpened = true;
-				triggerScript.interactable = false;
-			}
-		}
+		shipAnimator.SetBool("doorsOpened", value: true);
+		shipDoorsOpened = true;
+		triggerScript.interactable = false;
 	}
 
 	public void ShipLandedAnimationEvent()
@@ -174,41 +148,15 @@ public class ItemDropship : NetworkBehaviour
 	[ClientRpc]
 	public void LandShipClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1496861823u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1496861823u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				Object.FindObjectOfType<Terminal>().numberOfItemsInDropship = 0;
-				shipAnimator.SetBool("landing", value: true);
-				triggerScript.interactable = true;
-			}
-		}
+		Object.FindObjectOfType<Terminal>().numberOfItemsInDropship = 0;
+		shipAnimator.SetBool("landing", value: true);
+		triggerScript.interactable = true;
 	}
 
 	[ClientRpc]
 	public void ShipLeaveClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(343429303u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 343429303u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ShipLeave();
-			}
-		}
+		ShipLeave();
 	}
 
 	public void ShipLeave()
@@ -231,66 +179,5 @@ public class ItemDropship : NetworkBehaviour
 		shipLanded = true;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_ItemDropship()
-	{
-		NetworkManager.__rpc_func_table.Add(638792059u, __rpc_handler_638792059);
-		NetworkManager.__rpc_func_table.Add(3113622207u, __rpc_handler_3113622207);
-		NetworkManager.__rpc_func_table.Add(1496861823u, __rpc_handler_1496861823);
-		NetworkManager.__rpc_func_table.Add(343429303u, __rpc_handler_343429303);
-	}
-
-	private static void __rpc_handler_638792059(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ItemDropship)target).OpenShipServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3113622207(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ItemDropship)target).OpenShipClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1496861823(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ItemDropship)target).LandShipClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_343429303(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ItemDropship)target).ShipLeaveClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "ItemDropship";
-	}
 }

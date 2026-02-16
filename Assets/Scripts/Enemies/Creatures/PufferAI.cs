@@ -411,105 +411,33 @@ public class PufferAI : EnemyAI
 	[ServerRpc]
 	public void StompServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2829667697u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 2829667697u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			StompClientRpc();
-		}
+		StompClientRpc();
 	}
 
 	[ClientRpc]
 	public void StompClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (shakeTailCoroutine != null)
 		{
-			return;
+			StopCoroutine(shakeTailCoroutine);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(3055061612u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 3055061612u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (shakeTailCoroutine != null)
-			{
-				StopCoroutine(shakeTailCoroutine);
-			}
-			shakeTailCoroutine = StartCoroutine(stompAnimation());
-		}
+		shakeTailCoroutine = StartCoroutine(stompAnimation());
 	}
 
 	[ServerRpc]
 	public void ShakeTailServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3391967647u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 3391967647u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ShakeTailClientRpc();
-		}
+		ShakeTailClientRpc();
 	}
 
 	[ClientRpc]
 	public void ShakeTailClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (shakeTailCoroutine != null)
 		{
-			return;
+			StopCoroutine(shakeTailCoroutine);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1543216111u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 1543216111u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (shakeTailCoroutine != null)
-			{
-				StopCoroutine(shakeTailCoroutine);
-			}
-			shakeTailCoroutine = StartCoroutine(shakeTailAnimation());
-		}
+		shakeTailCoroutine = StartCoroutine(shakeTailAnimation());
 	}
 
 	private IEnumerator stompAnimation()
@@ -566,53 +494,24 @@ public class PufferAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void BitePlayerServerRpc(int playerBit)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3361827964u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerBit);
-				__endSendServerRpc(ref bufferWriter, 3361827964u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				BitePlayerClientRpc(playerBit);
-			}
-		}
+		BitePlayerClientRpc(playerBit);
 	}
 
 	[ClientRpc]
 	public void BitePlayerClientRpc(int playerBit)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (unclampedSpeed > 0.25f)
 		{
-			return;
+			unclampedSpeed = 0.25f;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		timeSinceHittingPlayer = 0f;
+		creatureVoice.PlayOneShot(bitePlayerSFX);
+		WalkieTalkie.TransmitOneShotAudio(creatureVoice, bitePlayerSFX);
+		creatureAnimator.SetTrigger("Bite");
+		LookAtPosition(StartOfRound.Instance.allPlayerScripts[playerBit].transform.position, lookInstantly: true);
+		if (base.IsOwner && currentBehaviourStateIndex == 0)
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2332892213u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerBit);
-			__endSendClientRpc(ref bufferWriter, 2332892213u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (unclampedSpeed > 0.25f)
-			{
-				unclampedSpeed = 0.25f;
-			}
-			timeSinceHittingPlayer = 0f;
-			creatureVoice.PlayOneShot(bitePlayerSFX);
-			WalkieTalkie.TransmitOneShotAudio(creatureVoice, bitePlayerSFX);
-			creatureAnimator.SetTrigger("Bite");
-			LookAtPosition(StartOfRound.Instance.allPlayerScripts[playerBit].transform.position, lookInstantly: true);
-			if (base.IsOwner && currentBehaviourStateIndex == 0)
-			{
-				SwitchToBehaviourState(1);
-			}
+			SwitchToBehaviourState(1);
 		}
 	}
 
@@ -621,114 +520,5 @@ public class PufferAI : EnemyAI
 		base.KillEnemy(destroy);
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_PufferAI()
-	{
-		NetworkManager.__rpc_func_table.Add(2829667697u, __rpc_handler_2829667697);
-		NetworkManager.__rpc_func_table.Add(3055061612u, __rpc_handler_3055061612);
-		NetworkManager.__rpc_func_table.Add(3391967647u, __rpc_handler_3391967647);
-		NetworkManager.__rpc_func_table.Add(1543216111u, __rpc_handler_1543216111);
-		NetworkManager.__rpc_func_table.Add(3361827964u, __rpc_handler_3361827964);
-		NetworkManager.__rpc_func_table.Add(2332892213u, __rpc_handler_2332892213);
-	}
-
-	private static void __rpc_handler_2829667697(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((PufferAI)target).StompServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3055061612(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((PufferAI)target).StompClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3391967647(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((PufferAI)target).ShakeTailServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1543216111(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((PufferAI)target).ShakeTailClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3361827964(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((PufferAI)target).BitePlayerServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2332892213(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((PufferAI)target).BitePlayerClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "PufferAI";
-	}
 }

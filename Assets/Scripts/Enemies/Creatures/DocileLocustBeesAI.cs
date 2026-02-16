@@ -101,13 +101,5 @@ public class DocileLocustBeesAI : EnemyAI
 		KillEnemyOnOwnerClient(overrideDestroy: true);
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "DocileLocustBeesAI";
-	}
 }

@@ -631,120 +631,24 @@ public class PatcherTool : GrabbableObject
 	[ServerRpc(RequireOwnership = false)]
 	public void ShockPatcherToolServerRpc(NetworkObjectReference netObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2303694898u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in netObject, default(FastBufferWriter.ForNetworkSerializable));
-				__endSendServerRpc(ref bufferWriter, 2303694898u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ShockPatcherToolClientRpc(netObject);
-				Debug.Log("Patcher tool server rpc received");
-			}
-		}
+		ShockPatcherToolClientRpc(netObject);
+		Debug.Log("Patcher tool server rpc received");
 	}
 
 	[ClientRpc]
 	public void ShockPatcherToolClientRpc(NetworkObjectReference netObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(4275427213u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in netObject, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendClientRpc(ref bufferWriter, 4275427213u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		Debug.Log("Shock patcher tool client rpc received");
-		if (base.IsOwner || previousPlayerHeldBy == GameNetworkManager.Instance.localPlayerController)
-		{
-			return;
-		}
-		Debug.Log("Running shock patcher tool function");
-		timesUsed++;
-		gunRandom = new System.Random(playerHeldBy.playersManager.randomMapSeed + timesUsed);
-		if (scanGunCoroutine != null)
-		{
-			StopCoroutine(scanGunCoroutine);
-		}
-		if (netObject.TryGet(out var networkObject))
-		{
-			isShocking = true;
-			isScanning = false;
-			shockedTargetScript = networkObject.gameObject.GetComponentInChildren<IShockableWithGun>();
-			if (shockedTargetScript != null)
-			{
-				shockedTargetScript.ShockWithGun(playerHeldBy);
-				StartShockAudios();
-				lightningObject.SetActive(value: true);
-				SwitchFlashlight(on: false);
-				gunAnimator.SetTrigger("UseGun");
-				effectAnimator.SetTrigger("Shock");
-				lightningVisible = true;
-				playerHeldBy.inShockingMinigame = true;
-				playerHeldBy.inSpecialInteractAnimation = true;
-			}
-			else
-			{
-				Debug.LogError("Zap gun: Unable to get IShockableWithGun interface from networkobject on client rpc!");
-			}
-		}
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void StopShockingServerRpc()
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3351579778u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 3351579778u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				StopShockingClientRpc();
-			}
-		}
+		StopShockingClientRpc();
 	}
 
 	[ClientRpc]
 	public void StopShockingClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		Debug.Log("Running client rpc stopping shock");
+		if (!(GameNetworkManager.Instance.localPlayerController == null) && !(NetworkManager.Singleton == null) && !base.IsOwner && !(previousPlayerHeldBy == GameNetworkManager.Instance.localPlayerController))
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(75402723u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 75402723u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			Debug.Log("Running client rpc stopping shock");
-			if (!(GameNetworkManager.Instance.localPlayerController == null) && !(NetworkManager.Singleton == null) && !base.IsOwner && !(previousPlayerHeldBy == GameNetworkManager.Instance.localPlayerController))
-			{
-				Debug.Log($"{base.IsOwner} ; {previousPlayerHeldBy}");
-				StopShockingAnomalyOnClient();
-			}
+			Debug.Log($"{base.IsOwner} ; {previousPlayerHeldBy}");
+			StopShockingAnomalyOnClient();
 		}
 	}
 
@@ -816,68 +720,5 @@ public class PatcherTool : GrabbableObject
 		return (float)(rand.NextDouble() * (double)(max - min) + (double)min);
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_PatcherTool()
-	{
-		NetworkManager.__rpc_func_table.Add(2303694898u, __rpc_handler_2303694898);
-		NetworkManager.__rpc_func_table.Add(4275427213u, __rpc_handler_4275427213);
-		NetworkManager.__rpc_func_table.Add(3351579778u, __rpc_handler_3351579778);
-		NetworkManager.__rpc_func_table.Add(75402723u, __rpc_handler_75402723);
-	}
-
-	private static void __rpc_handler_2303694898(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((PatcherTool)target).ShockPatcherToolServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4275427213(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((PatcherTool)target).ShockPatcherToolClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3351579778(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((PatcherTool)target).StopShockingServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_75402723(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((PatcherTool)target).StopShockingClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "PatcherTool";
-	}
 }

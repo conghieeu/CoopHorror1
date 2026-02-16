@@ -244,13 +244,5 @@ public class StunGrenadeItem : GrabbableObject
 		return grenadeThrowRay.GetPoint(30f);
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "StunGrenadeItem";
-	}
 }

@@ -164,133 +164,18 @@ public class AnimatedObjectTrigger : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void UpdateAnimServerRpc(bool setBool, bool playSecondaryAudios = false, int playerWhoTriggered = -1)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1461767556u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in setBool, default(FastBufferWriter.ForPrimitives));
-				bufferWriter.WriteValueSafe(in playSecondaryAudios, default(FastBufferWriter.ForPrimitives));
-				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoTriggered);
-				__endSendServerRpc(ref bufferWriter, 1461767556u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				UpdateAnimClientRpc(setBool, playSecondaryAudios, playerWhoTriggered);
-			}
-		}
+		UpdateAnimClientRpc(setBool, playSecondaryAudios, playerWhoTriggered);
 	}
 
 	[ClientRpc]
 	private void UpdateAnimClientRpc(bool setBool, bool playSecondaryAudios = false, int playerWhoTriggered = -1)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(848048148u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in setBool, default(FastBufferWriter.ForPrimitives));
-			bufferWriter.WriteValueSafe(in playSecondaryAudios, default(FastBufferWriter.ForPrimitives));
-			BytePacker.WriteValueBitPacked(bufferWriter, playerWhoTriggered);
-			__endSendClientRpc(ref bufferWriter, 848048148u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || GameNetworkManager.Instance.localPlayerController == null || (playerWhoTriggered != -1 && (int)GameNetworkManager.Instance.localPlayerController.playerClientId == playerWhoTriggered))
-		{
-			return;
-		}
-		if (isBool)
-		{
-			if (triggerAnimatorB != null)
-			{
-				triggerAnimatorB.SetBool("on", setBool);
-			}
-			boolValue = setBool;
-			if (triggerAnimator != null)
-			{
-				triggerAnimator.SetBool(animationString, setBool);
-			}
-			onTriggerBool.Invoke(boolValue);
-		}
-		else
-		{
-			triggerAnimator.SetTrigger(animationString);
-		}
-		SetParticleBasedOnBoolean();
-		PlayAudio(setBool, playSecondaryAudios);
-	}
-
-	public void SetBoolOnClientOnly(bool setTo)
-	{
-		if (isBool)
-		{
-			boolValue = setTo;
-			if (triggerAnimator != null)
-			{
-				triggerAnimator.SetBool(animationString, boolValue);
-			}
-			SetParticleBasedOnBoolean();
-		}
-		PlayAudio(boolValue);
-	}
-
-	public void SetBoolOnClientOnlyInverted(bool setTo)
-	{
-		if (isBool)
-		{
-			boolValue = !setTo;
-			if (triggerAnimator != null)
-			{
-				triggerAnimator.SetBool(animationString, boolValue);
-			}
-			SetParticleBasedOnBoolean();
-		}
-		PlayAudio(boolValue);
-	}
-
-	private void SetParticleBasedOnBoolean()
-	{
-		if (!(playParticle == null))
-		{
-			if (boolValue)
-			{
-				playParticle.Play(withChildren: true);
-			}
-			else
-			{
-				playParticle.Stop(withChildren: true, ParticleSystemStopBehavior.StopEmitting);
-			}
-		}
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	private void UpdateAnimTriggerServerRpc()
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(2219526317u, serverRpcParams, RpcDelivery.Reliable);
-				__endSendServerRpc(ref bufferWriter, 2219526317u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				UpdateAnimTriggerClientRpc();
-			}
-		}
+		UpdateAnimTriggerClientRpc();
 	}
 
 	[ClientRpc]
 	private void UpdateAnimTriggerClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
 		if ((object)networkManager == null || !networkManager.IsListening)
 		{
 			return;
@@ -377,72 +262,5 @@ public class AnimatedObjectTrigger : NetworkBehaviour
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_AnimatedObjectTrigger()
-	{
-		NetworkManager.__rpc_func_table.Add(1461767556u, __rpc_handler_1461767556);
-		NetworkManager.__rpc_func_table.Add(848048148u, __rpc_handler_848048148);
-		NetworkManager.__rpc_func_table.Add(2219526317u, __rpc_handler_2219526317);
-		NetworkManager.__rpc_func_table.Add(1023577379u, __rpc_handler_1023577379);
-	}
-
-	private static void __rpc_handler_1461767556(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((AnimatedObjectTrigger)target).UpdateAnimServerRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_848048148(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((AnimatedObjectTrigger)target).UpdateAnimClientRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2219526317(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((AnimatedObjectTrigger)target).UpdateAnimTriggerServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1023577379(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((AnimatedObjectTrigger)target).UpdateAnimTriggerClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "AnimatedObjectTrigger";
-	}
 }

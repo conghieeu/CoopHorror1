@@ -178,54 +178,15 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc]
 	public void SyncInitialValuesServerRpc(int syncLeadershipLevel, Vector3 campPosition)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3452382367u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, syncLeadershipLevel);
-			bufferWriter.WriteValueSafe(in campPosition);
-			__endSendServerRpc(ref bufferWriter, 3452382367u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			SyncInitialValuesClientRpc(syncLeadershipLevel, campPosition);
-		}
+		SyncInitialValuesClientRpc(syncLeadershipLevel, campPosition);
 	}
 
 	[ClientRpc]
 	public void SyncInitialValuesClientRpc(int syncLeadershipLevel, Vector3 campPosition)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3856685904u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, syncLeadershipLevel);
-				bufferWriter.WriteValueSafe(in campPosition);
-				__endSendClientRpc(ref bufferWriter, 3856685904u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				leadershipLevel = syncLeadershipLevel;
-				baboonCampPosition = campPosition;
-				base.transform.localScale = base.transform.localScale * Mathf.Max((float)leadershipLevel / 200f * 0.6f, 0.9f);
-			}
-		}
+		leadershipLevel = syncLeadershipLevel;
+		baboonCampPosition = campPosition;
+		base.transform.localScale = base.transform.localScale * Mathf.Max((float)leadershipLevel / 200f * 0.6f, 0.9f);
 	}
 
 	public void LateUpdate()
@@ -350,23 +311,11 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc(RequireOwnership = false)]
 	public void StabPlayerDeathAnimServerRpc(int playerObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2476579270u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerObject);
-			__endSendServerRpc(ref bufferWriter, 2476579270u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && !doingKillAnimation)
+		if (!doingKillAnimation)
 		{
 			if (base.IsOwner && heldScrap != null)
 			{
-				DropHeldItemAndSync();
+			DropHeldItemAndSync();
 			}
 			doingKillAnimation = true;
 			StabPlayerDeathAnimClientRpc(playerObject);
@@ -376,30 +325,15 @@ public class BaboonBirdAI : EnemyAI
 	[ClientRpc]
 	public void StabPlayerDeathAnimClientRpc(int playerObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		doingKillAnimation = true;
+		inSpecialAnimation = true;
+		agent.acceleration = 70f;
+		agent.speed = 0f;
+		if (killAnimCoroutine != null)
 		{
-			return;
+			StopCoroutine(killAnimCoroutine);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(3749667856u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerObject);
-			__endSendClientRpc(ref bufferWriter, 3749667856u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			doingKillAnimation = true;
-			inSpecialAnimation = true;
-			agent.acceleration = 70f;
-			agent.speed = 0f;
-			if (killAnimCoroutine != null)
-			{
-				StopCoroutine(killAnimCoroutine);
-			}
-			killAnimCoroutine = StartCoroutine(killPlayerAnimation(playerObject));
-		}
+		killAnimCoroutine = StartCoroutine(killPlayerAnimation(playerObject));
 	}
 
 	private IEnumerator killPlayerAnimation(int playerObject)
@@ -495,60 +429,21 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc]
 	public void DropScrapServerRpc(NetworkObjectReference item, Vector3 targetFloorPosition, int clientWhoSentRPC)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1418775270u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in item, default(FastBufferWriter.ForNetworkSerializable));
-			bufferWriter.WriteValueSafe(in targetFloorPosition);
-			BytePacker.WriteValueBitPacked(bufferWriter, clientWhoSentRPC);
-			__endSendServerRpc(ref bufferWriter, 1418775270u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			DropScrapClientRpc(item, targetFloorPosition, clientWhoSentRPC);
-		}
+		DropScrapClientRpc(item, targetFloorPosition, clientWhoSentRPC);
 	}
 
 	[ClientRpc]
 	public void DropScrapClientRpc(NetworkObjectReference item, Vector3 targetFloorPosition, int clientWhoSentRPC)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1865475504u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in item, default(FastBufferWriter.ForNetworkSerializable));
-			bufferWriter.WriteValueSafe(in targetFloorPosition);
-			BytePacker.WriteValueBitPacked(bufferWriter, clientWhoSentRPC);
-			__endSendClientRpc(ref bufferWriter, 1865475504u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && clientWhoSentRPC != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
+		if (clientWhoSentRPC != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
 		{
 			if (item.TryGet(out var networkObject))
 			{
-				DropScrap(networkObject, targetFloorPosition);
+			DropScrap(networkObject, targetFloorPosition);
 			}
 			else
 			{
-				Debug.LogError($"Baboon #{thisEnemyIndex}; Error, was not able to get network object from dropped item client rpc");
+			Debug.LogError($"Baboon #{thisEnemyIndex}; Error, was not able to get network object from dropped item client rpc");
 			}
 		}
 	}
@@ -594,65 +489,28 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc]
 	public void GrabScrapServerRpc(NetworkObjectReference item, int clientWhoSentRPC)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (!item.TryGet(out var networkObject))
 		{
-			return;
+			Debug.LogError($"Baboon #{thisEnemyIndex} error: Could not get grabbed network object from reference on server");
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else if ((bool)networkObject.GetComponent<GrabbableObject>() && !networkObject.GetComponent<GrabbableObject>().heldByPlayerOnServer)
 		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(869682226u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in item, default(FastBufferWriter.ForNetworkSerializable));
-			BytePacker.WriteValueBitPacked(bufferWriter, clientWhoSentRPC);
-			__endSendServerRpc(ref bufferWriter, 869682226u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (!item.TryGet(out var networkObject))
-			{
-				Debug.LogError($"Baboon #{thisEnemyIndex} error: Could not get grabbed network object from reference on server");
-			}
-			else if ((bool)networkObject.GetComponent<GrabbableObject>() && !networkObject.GetComponent<GrabbableObject>().heldByPlayerOnServer)
-			{
-				GrabScrapClientRpc(item, clientWhoSentRPC);
-			}
+			GrabScrapClientRpc(item, clientWhoSentRPC);
 		}
 	}
 
 	[ClientRpc]
 	public void GrabScrapClientRpc(NetworkObjectReference item, int clientWhoSentRPC)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1564051222u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in item, default(FastBufferWriter.ForNetworkSerializable));
-			BytePacker.WriteValueBitPacked(bufferWriter, clientWhoSentRPC);
-			__endSendClientRpc(ref bufferWriter, 1564051222u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && clientWhoSentRPC != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
+		if (clientWhoSentRPC != (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
 		{
 			if (item.TryGet(out var networkObject))
 			{
-				GrabScrap(networkObject);
+			GrabScrap(networkObject);
 			}
 			else
 			{
-				Debug.LogError($"Baboon #{thisEnemyIndex}; Error, was not able to get id from grabbed item client rpc");
+			Debug.LogError($"Baboon #{thisEnemyIndex}; Error, was not able to get id from grabbed item client rpc");
 			}
 		}
 	}
@@ -1072,59 +930,24 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc]
 	public void StopFocusingThreatServerRpc(bool enterScoutingMode)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1546030380u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in enterScoutingMode, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 1546030380u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			StopFocusingThreatClientRpc(enterScoutingMode);
-		}
+		StopFocusingThreatClientRpc(enterScoutingMode);
 	}
 
 	[ClientRpc]
 	public void StopFocusingThreatClientRpc(bool enterScoutingMode)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(3360048400u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in enterScoutingMode, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 3360048400u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
+		if (!base.IsOwner)
 		{
 			aggressiveMode = 0;
 			focusedThreatTransform = null;
 			focusedThreat = null;
 			if (enterScoutingMode)
 			{
-				SwitchToBehaviourStateOnLocalClient(0);
+			SwitchToBehaviourStateOnLocalClient(0);
 			}
 			else
 			{
-				SwitchToBehaviourStateOnLocalClient(1);
+			SwitchToBehaviourStateOnLocalClient(1);
 			}
 		}
 	}
@@ -1141,49 +964,15 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc]
 	public void SetAggressiveModeServerRpc(int mode)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(443869275u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, mode);
-			__endSendServerRpc(ref bufferWriter, 443869275u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			SetAggressiveModeClientRpc(mode);
-		}
+		SetAggressiveModeClientRpc(mode);
 	}
 
 	[ClientRpc]
 	public void SetAggressiveModeClientRpc(int mode)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1782649174u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, mode);
-				__endSendClientRpc(ref bufferWriter, 1782649174u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				aggressiveMode = mode;
-			}
+			aggressiveMode = mode;
 		}
 	}
 
@@ -1199,160 +988,54 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc]
 	public void SetThreatInViewServerRpc(bool inView)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3428942850u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in inView, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 3428942850u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			SetThreatInViewClientRpc(inView);
-		}
+		SetThreatInViewClientRpc(inView);
 	}
 
 	[ClientRpc]
 	public void SetThreatInViewClientRpc(bool inView)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2073937320u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in inView, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 2073937320u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				focusedThreatIsInView = inView;
-			}
+			focusedThreatIsInView = inView;
 		}
 	}
 
 	[ServerRpc]
 	public void EnemyEnterRestModeServerRpc(bool sleep, bool atCamp)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1806580287u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in sleep, default(FastBufferWriter.ForPrimitives));
-			bufferWriter.WriteValueSafe(in atCamp, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 1806580287u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			EnemyEnterRestModeClientRpc(sleep, atCamp);
-		}
+		EnemyEnterRestModeClientRpc(sleep, atCamp);
 	}
 
 	[ClientRpc]
 	public void EnemyEnterRestModeClientRpc(bool sleep, bool atCamp)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		restingAtCamp = atCamp;
+		if (sleep)
 		{
-			return;
+			eyesClosed = true;
+			creatureAnimator.SetBool("sleep", value: true);
+			creatureAnimator.SetBool("sit", value: false);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		else
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1567928363u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in sleep, default(FastBufferWriter.ForPrimitives));
-			bufferWriter.WriteValueSafe(in atCamp, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 1567928363u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			restingAtCamp = atCamp;
-			if (sleep)
-			{
-				eyesClosed = true;
-				creatureAnimator.SetBool("sleep", value: true);
-				creatureAnimator.SetBool("sit", value: false);
-			}
-			else
-			{
-				eyesClosed = false;
-				creatureAnimator.SetBool("sleep", value: false);
-				creatureAnimator.SetBool("sit", value: true);
-			}
+			eyesClosed = false;
+			creatureAnimator.SetBool("sleep", value: false);
+			creatureAnimator.SetBool("sit", value: true);
 		}
 	}
 
 	[ServerRpc]
 	public void EnemyGetUpServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3614203845u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 3614203845u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			EnemyGetUpClientRpc();
-		}
+		EnemyGetUpClientRpc();
 	}
 
 	[ClientRpc]
 	public void EnemyGetUpClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1155909339u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1155909339u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				creatureAnimator.SetBool("sit", value: false);
-			}
+			creatureAnimator.SetBool("sit", value: false);
 		}
 	}
 
@@ -1580,63 +1263,25 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc]
 	public void StartFocusOnThreatServerRpc(NetworkObjectReference netObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3933590138u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in netObject, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendServerRpc(ref bufferWriter, 3933590138u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			StartFocusOnThreatClientRpc(netObject);
-		}
+		StartFocusOnThreatClientRpc(netObject);
 	}
 
 	[ClientRpc]
 	public void StartFocusOnThreatClientRpc(NetworkObjectReference netObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		SwitchToBehaviourStateOnLocalClient(2);
+		if (!netObject.TryGet(out var networkObject))
 		{
+			Debug.LogError($"Baboon: Error, could not get network object from id for StartFocusOnThreatClientRpc; id: {networkObject.NetworkObjectId}");
 			return;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		if (!networkObject.transform.TryGetComponent<IVisibleThreat>(out var component))
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(991811456u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in netObject, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendClientRpc(ref bufferWriter, 991811456u, clientRpcParams, RpcDelivery.Reliable);
+			Debug.LogError($"Baboon: Error, threat transform did not contain IVisibleThreat in StartFocusOnThreatClientRpc; id: {networkObject.NetworkObjectId}");
+			return;
 		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			SwitchToBehaviourStateOnLocalClient(2);
-			if (!netObject.TryGet(out var networkObject))
-			{
-				Debug.LogError($"Baboon: Error, could not get network object from id for StartFocusOnThreatClientRpc; id: {networkObject.NetworkObjectId}");
-				return;
-			}
-			if (!networkObject.transform.TryGetComponent<IVisibleThreat>(out var component))
-			{
-				Debug.LogError($"Baboon: Error, threat transform did not contain IVisibleThreat in StartFocusOnThreatClientRpc; id: {networkObject.NetworkObjectId}");
-				return;
-			}
-			focusingOnThreat = true;
-			focusedThreatTransform = component.GetThreatLookTransform();
-		}
+		focusingOnThreat = true;
+		focusedThreatTransform = component.GetThreatLookTransform();
 	}
 
 	private float ReactToOtherBaboonSighted(BaboonBirdAI otherBaboon)
@@ -1873,52 +1518,16 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc]
 	public void PingBirdInterestServerRpc(Vector3 lookPosition, float timeToPeek)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1670979535u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in lookPosition);
-			bufferWriter.WriteValueSafe(in timeToPeek, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 1670979535u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			PingBirdInterestClientRpc(lookPosition, timeToPeek);
-		}
+		PingBirdInterestClientRpc(lookPosition, timeToPeek);
 	}
 
 	[ClientRpc]
 	public void PingBirdInterestClientRpc(Vector3 lookPosition, float timeToPeek)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2348332192u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in lookPosition);
-				bufferWriter.WriteValueSafe(in timeToPeek, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 2348332192u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				peekTimer = timeToPeek;
-				peekTarget = lookPosition;
-			}
+			peekTimer = timeToPeek;
+			peekTarget = lookPosition;
 		}
 	}
 
@@ -2013,220 +1622,43 @@ public class BaboonBirdAI : EnemyAI
 	[ServerRpc]
 	public void LeaveScoutingGroupServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2459653399u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 2459653399u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			LeaveScoutingGroupClientRpc();
-		}
+		LeaveScoutingGroupClientRpc();
 	}
 
 	[ClientRpc]
 	public void LeaveScoutingGroupClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(696889160u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 696889160u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				LeaveCurrentScoutingGroup(sync: false);
-			}
-		}
+		LeaveCurrentScoutingGroup(sync: false);
 	}
 
 	[ServerRpc]
 	public void StartScoutingGroupServerRpc(NetworkObjectReference leaderNetworkObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3367846835u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in leaderNetworkObject, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendServerRpc(ref bufferWriter, 3367846835u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			StartScoutingGroupClientRpc(leaderNetworkObject);
-		}
+		StartScoutingGroupClientRpc(leaderNetworkObject);
 	}
 
 	[ClientRpc]
 	public void StartScoutingGroupClientRpc(NetworkObjectReference leaderNetworkObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (!leaderNetworkObject.TryGet(out var networkObject))
 		{
+			Debug.LogError($"Baboon enemy #{thisEnemyIndex}: Could not get network object from reference in JoinScoutingGroupClientRpc; {leaderNetworkObject.NetworkObjectId}");
 			return;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1737299197u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in leaderNetworkObject, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendClientRpc(ref bufferWriter, 1737299197u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (!leaderNetworkObject.TryGet(out var networkObject))
-			{
-				Debug.LogError($"Baboon enemy #{thisEnemyIndex}: Could not get network object from reference in JoinScoutingGroupClientRpc; {leaderNetworkObject.NetworkObjectId}");
-				return;
-			}
-			BaboonBirdAI component = networkObject.gameObject.GetComponent<BaboonBirdAI>();
-			StartScoutingGroup(component, syncWithClients: false);
-		}
+		BaboonBirdAI component = networkObject.gameObject.GetComponent<BaboonBirdAI>();
+		StartScoutingGroup(component, syncWithClients: false);
 	}
 
 	[ServerRpc]
 	public void JoinScoutingGroupServerRpc(NetworkObjectReference otherBaboonNetworkObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1775372234u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in otherBaboonNetworkObject, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendServerRpc(ref bufferWriter, 1775372234u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			JoinScoutingGroupClientRpc(otherBaboonNetworkObject);
-		}
+		JoinScoutingGroupClientRpc(otherBaboonNetworkObject);
 	}
 
 	[ClientRpc]
 	public void JoinScoutingGroupClientRpc(NetworkObjectReference otherBaboonNetworkObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1078565091u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in otherBaboonNetworkObject, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendClientRpc(ref bufferWriter, 1078565091u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		if (!otherBaboonNetworkObject.TryGet(out var networkObject))
-		{
-			Debug.LogError($"Baboon enemy #{thisEnemyIndex}: Could not get network object from reference in JoinScoutingGroupClientRpc; {otherBaboonNetworkObject.NetworkObjectId}");
-			return;
-		}
-		BaboonBirdAI component = networkObject.gameObject.GetComponent<BaboonBirdAI>();
-		if ((component.scoutingGroup != scoutingGroup || !component.scoutingGroup.members.Contains(this)) && component.scoutingGroup != null)
-		{
-			if (component.scoutingGroup != scoutingGroup)
-			{
-				LeaveCurrentScoutingGroup(sync: false);
-			}
-			scoutingGroup = component.scoutingGroup;
-			if (!scoutingGroup.members.Contains(this))
-			{
-				scoutingGroup.members.Add(this);
-			}
-		}
-	}
-
-	public void CallToOtherBaboon(BaboonBirdAI otherBaboon)
-	{
-		if (!(timeSinceJoiningOrLeavingScoutingGroup <= 1f))
-		{
-			if (scoutingGroup != null)
-			{
-				scoutingGroup.timeAtLastCallToGroup = Time.realtimeSinceStartup;
-			}
-			StartMiscAnimation(0);
-			otherBaboon.PingBaboonInterest(base.transform.position, 2);
-		}
-	}
-
-	private void StartMiscAnimation(int anim)
-	{
-		if (!isEnemyDead && !(timeSinceLastMiscAnimation <= 0.4f))
-		{
-			timeSinceLastMiscAnimation = 0f;
-			StartMiscAnimationServerRpc(anim);
-		}
-	}
-
-	[ServerRpc]
-	public void StartMiscAnimationServerRpc(int miscAnimationId)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1580405641u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, miscAnimationId);
-			__endSendServerRpc(ref bufferWriter, 1580405641u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && !isEnemyDead && enemyType.miscAnimations.Length > miscAnimationId && !(creatureVoice == null) && (currentMiscAnimation == -1 || enemyType.miscAnimations[currentMiscAnimation].priority <= enemyType.miscAnimations[miscAnimationId].priority))
+		if (!isEnemyDead && enemyType.miscAnimations.Length > miscAnimationId && !(creatureVoice == null) && (currentMiscAnimation == -1 || enemyType.miscAnimations[currentMiscAnimation].priority <= enemyType.miscAnimations[miscAnimationId].priority))
 		{
 			StartMiscAnimationClientRpc(miscAnimationId);
 		}
@@ -2235,29 +1667,17 @@ public class BaboonBirdAI : EnemyAI
 	[ClientRpc]
 	public void StartMiscAnimationClientRpc(int miscAnimationId)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(3995026000u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, miscAnimationId);
-			__endSendClientRpc(ref bufferWriter, 3995026000u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !isEnemyDead && enemyType.miscAnimations.Length > miscAnimationId && !(creatureVoice == null) && (currentMiscAnimation == -1 || enemyType.miscAnimations[currentMiscAnimation].priority <= enemyType.miscAnimations[miscAnimationId].priority))
+		if (!isEnemyDead && enemyType.miscAnimations.Length > miscAnimationId && !(creatureVoice == null) && (currentMiscAnimation == -1 || enemyType.miscAnimations[currentMiscAnimation].priority <= enemyType.miscAnimations[miscAnimationId].priority))
 		{
 			currentMiscAnimation = miscAnimationId;
 			miscAnimationTimer = enemyType.miscAnimations[miscAnimationId].AnimLength;
 			if (!inSpecialAnimation || doingKillAnimation)
 			{
-				creatureVoice.pitch = UnityEngine.Random.Range(0.8f, 1.2f);
-				creatureVoice.PlayOneShot(enemyType.miscAnimations[miscAnimationId].AnimVoiceclip, UnityEngine.Random.Range(0.6f, 1f));
-				WalkieTalkie.TransmitOneShotAudio(creatureVoice, enemyType.miscAnimations[miscAnimationId].AnimVoiceclip, 0.7f);
-				creatureAnimator.ResetTrigger(enemyType.miscAnimations[miscAnimationId].AnimString);
-				creatureAnimator.SetTrigger(enemyType.miscAnimations[miscAnimationId].AnimString);
+			creatureVoice.pitch = UnityEngine.Random.Range(0.8f, 1.2f);
+			creatureVoice.PlayOneShot(enemyType.miscAnimations[miscAnimationId].AnimVoiceclip, UnityEngine.Random.Range(0.6f, 1f));
+			WalkieTalkie.TransmitOneShotAudio(creatureVoice, enemyType.miscAnimations[miscAnimationId].AnimVoiceclip, 0.7f);
+			creatureAnimator.ResetTrigger(enemyType.miscAnimations[miscAnimationId].AnimString);
+			creatureAnimator.SetTrigger(enemyType.miscAnimations[miscAnimationId].AnimString);
 			}
 		}
 	}
@@ -2272,568 +1692,5 @@ public class BaboonBirdAI : EnemyAI
 		previousPosition = base.transform.position;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_BaboonBirdAI()
-	{
-		NetworkManager.__rpc_func_table.Add(3452382367u, __rpc_handler_3452382367);
-		NetworkManager.__rpc_func_table.Add(3856685904u, __rpc_handler_3856685904);
-		NetworkManager.__rpc_func_table.Add(2476579270u, __rpc_handler_2476579270);
-		NetworkManager.__rpc_func_table.Add(3749667856u, __rpc_handler_3749667856);
-		NetworkManager.__rpc_func_table.Add(1418775270u, __rpc_handler_1418775270);
-		NetworkManager.__rpc_func_table.Add(1865475504u, __rpc_handler_1865475504);
-		NetworkManager.__rpc_func_table.Add(869682226u, __rpc_handler_869682226);
-		NetworkManager.__rpc_func_table.Add(1564051222u, __rpc_handler_1564051222);
-		NetworkManager.__rpc_func_table.Add(1546030380u, __rpc_handler_1546030380);
-		NetworkManager.__rpc_func_table.Add(3360048400u, __rpc_handler_3360048400);
-		NetworkManager.__rpc_func_table.Add(443869275u, __rpc_handler_443869275);
-		NetworkManager.__rpc_func_table.Add(1782649174u, __rpc_handler_1782649174);
-		NetworkManager.__rpc_func_table.Add(3428942850u, __rpc_handler_3428942850);
-		NetworkManager.__rpc_func_table.Add(2073937320u, __rpc_handler_2073937320);
-		NetworkManager.__rpc_func_table.Add(1806580287u, __rpc_handler_1806580287);
-		NetworkManager.__rpc_func_table.Add(1567928363u, __rpc_handler_1567928363);
-		NetworkManager.__rpc_func_table.Add(3614203845u, __rpc_handler_3614203845);
-		NetworkManager.__rpc_func_table.Add(1155909339u, __rpc_handler_1155909339);
-		NetworkManager.__rpc_func_table.Add(3933590138u, __rpc_handler_3933590138);
-		NetworkManager.__rpc_func_table.Add(991811456u, __rpc_handler_991811456);
-		NetworkManager.__rpc_func_table.Add(1670979535u, __rpc_handler_1670979535);
-		NetworkManager.__rpc_func_table.Add(2348332192u, __rpc_handler_2348332192);
-		NetworkManager.__rpc_func_table.Add(2459653399u, __rpc_handler_2459653399);
-		NetworkManager.__rpc_func_table.Add(696889160u, __rpc_handler_696889160);
-		NetworkManager.__rpc_func_table.Add(3367846835u, __rpc_handler_3367846835);
-		NetworkManager.__rpc_func_table.Add(1737299197u, __rpc_handler_1737299197);
-		NetworkManager.__rpc_func_table.Add(1775372234u, __rpc_handler_1775372234);
-		NetworkManager.__rpc_func_table.Add(1078565091u, __rpc_handler_1078565091);
-		NetworkManager.__rpc_func_table.Add(1580405641u, __rpc_handler_1580405641);
-		NetworkManager.__rpc_func_table.Add(3995026000u, __rpc_handler_3995026000);
-	}
-
-	private static void __rpc_handler_3452382367(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out Vector3 value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).SyncInitialValuesServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3856685904(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			reader.ReadValueSafe(out Vector3 value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).SyncInitialValuesClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2476579270(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).StabPlayerDeathAnimServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3749667856(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).StabPlayerDeathAnimClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1418775270(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-			return;
-		}
-		reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-		reader.ReadValueSafe(out Vector3 value2);
-		ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-		target.__rpc_exec_stage = __RpcExecStage.Server;
-		((BaboonBirdAI)target).DropScrapServerRpc(value, value2, value3);
-		target.__rpc_exec_stage = __RpcExecStage.None;
-	}
-
-	private static void __rpc_handler_1865475504(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			reader.ReadValueSafe(out Vector3 value2);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).DropScrapClientRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_869682226(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).GrabScrapServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1564051222(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).GrabScrapClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1546030380(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).StopFocusingThreatServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3360048400(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).StopFocusingThreatClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_443869275(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).SetAggressiveModeServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1782649174(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).SetAggressiveModeClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3428942850(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).SetThreatInViewServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2073937320(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).SetThreatInViewClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1806580287(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).EnemyEnterRestModeServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1567928363(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).EnemyEnterRestModeClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3614203845(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).EnemyGetUpServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1155909339(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).EnemyGetUpClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3933590138(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).StartFocusOnThreatServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_991811456(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).StartFocusOnThreatClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1670979535(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			reader.ReadValueSafe(out float value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).PingBirdInterestServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2348332192(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			reader.ReadValueSafe(out float value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).PingBirdInterestClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2459653399(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).LeaveScoutingGroupServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_696889160(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).LeaveScoutingGroupClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3367846835(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).StartScoutingGroupServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1737299197(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).StartScoutingGroupClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1775372234(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).JoinScoutingGroupServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1078565091(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).JoinScoutingGroupClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1580405641(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((BaboonBirdAI)target).StartMiscAnimationServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3995026000(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((BaboonBirdAI)target).StartMiscAnimationClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "BaboonBirdAI";
-	}
 }

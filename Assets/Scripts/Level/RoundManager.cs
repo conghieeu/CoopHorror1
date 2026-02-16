@@ -328,449 +328,7 @@ public class RoundManager : NetworkBehaviour
 	[ClientRpc]
 	public void SyncScrapValuesClientRpc(NetworkObjectReference[] spawnedScrap, int[] allScrapValue)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1659269112u, clientRpcParams, RpcDelivery.Reliable);
-			bool value = spawnedScrap != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(spawnedScrap, default(FastBufferWriter.ForNetworkSerializable));
-			}
-			bool value2 = allScrapValue != null;
-			bufferWriter.WriteValueSafe(in value2, default(FastBufferWriter.ForPrimitives));
-			if (value2)
-			{
-				bufferWriter.WriteValueSafe(allScrapValue, default(FastBufferWriter.ForPrimitives));
-			}
-			__endSendClientRpc(ref bufferWriter, 1659269112u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		Debug.Log($"clientRPC scrap values length: {allScrapValue.Length}");
-		ScrapValuesRandom = new System.Random(StartOfRound.Instance.randomMapSeed + 210);
-		int num = 0;
-		for (int i = 0; i < spawnedScrap.Length; i++)
-		{
-			if (spawnedScrap[i].TryGet(out var networkObject))
-			{
-				GrabbableObject component = networkObject.GetComponent<GrabbableObject>();
-				if (component != null)
-				{
-					if (i >= allScrapValue.Length)
-					{
-						Debug.LogError($"spawnedScrap amount exceeded allScrapValue!: {spawnedScrap.Length}");
-						break;
-					}
-					component.SetScrapValue(allScrapValue[i]);
-					num += allScrapValue[i];
-					if (component.itemProperties.meshVariants.Length != 0)
-					{
-						component.gameObject.GetComponent<MeshFilter>().mesh = component.itemProperties.meshVariants[ScrapValuesRandom.Next(0, component.itemProperties.meshVariants.Length)];
-					}
-					try
-					{
-						if (component.itemProperties.materialVariants.Length != 0)
-						{
-							component.gameObject.GetComponent<MeshRenderer>().sharedMaterial = component.itemProperties.materialVariants[ScrapValuesRandom.Next(0, component.itemProperties.materialVariants.Length)];
-						}
-					}
-					catch (Exception arg)
-					{
-						Debug.Log($"Item name: {component.gameObject.name}; {arg}");
-					}
-				}
-				else
-				{
-					Debug.LogError("Scrap networkobject object did not contain grabbable object!: " + networkObject.gameObject.name);
-				}
-			}
-			else
-			{
-				Debug.LogError($"Failed to get networkobject reference for scrap. id: {spawnedScrap[i].NetworkObjectId}");
-			}
-		}
-		totalScrapValueInLevel = num;
-		scrapCollectedInLevel = 0;
-		valueOfFoundScrapItems = 0;
-	}
-
-	public void SpawnSyncedProps()
-	{
-		try
-		{
-			spawnedSyncedObjects.Clear();
-			SpawnSyncedObject[] array = UnityEngine.Object.FindObjectsOfType<SpawnSyncedObject>();
-			if (array == null)
-			{
-				return;
-			}
-			mapPropsContainer = GameObject.FindGameObjectWithTag("MapPropsContainer");
-			Debug.Log($"Spawning synced props on server. Length: {array.Length}");
-			for (int i = 0; i < array.Length; i++)
-			{
-				GameObject gameObject = UnityEngine.Object.Instantiate(array[i].spawnPrefab, array[i].transform.position, array[i].transform.rotation, mapPropsContainer.transform);
-				if (gameObject != null)
-				{
-					gameObject.GetComponent<NetworkObject>().Spawn(destroyWithScene: true);
-					spawnedSyncedObjects.Add(gameObject);
-				}
-			}
-		}
-		catch (Exception arg)
-		{
-			Debug.Log($"Exception! Unable to sync spawned objects on host; {arg}");
-		}
-	}
-
-	public void SpawnMapObjects()
-	{
-		if (currentLevel.spawnableMapObjects.Length == 0)
-		{
-			return;
-		}
-		System.Random random = new System.Random(StartOfRound.Instance.randomMapSeed + 587);
-		mapPropsContainer = GameObject.FindGameObjectWithTag("MapPropsContainer");
-		RandomMapObject[] array = UnityEngine.Object.FindObjectsOfType<RandomMapObject>();
-		List<RandomMapObject> list = new List<RandomMapObject>();
-		for (int i = 0; i < currentLevel.spawnableMapObjects.Length; i++)
-		{
-			int num = (int)currentLevel.spawnableMapObjects[i].numberToSpawn.Evaluate((float)random.NextDouble());
-			if (increasedMapHazardSpawnRateIndex == i)
-			{
-				num = Mathf.Min(num * 2, 150);
-			}
-			if (num <= 0)
-			{
-				continue;
-			}
-			for (int j = 0; j < array.Length; j++)
-			{
-				if (array[j].spawnablePrefabs.Contains(currentLevel.spawnableMapObjects[i].prefabToSpawn))
-				{
-					list.Add(array[j]);
-				}
-			}
-			for (int k = 0; k < num; k++)
-			{
-				RandomMapObject randomMapObject = list[random.Next(0, list.Count)];
-				Vector3 position = randomMapObject.transform.position;
-				position = GetRandomNavMeshPositionInBoxPredictable(position, randomMapObject.spawnRange, default(NavMeshHit), random);
-				GameObject gameObject = UnityEngine.Object.Instantiate(currentLevel.spawnableMapObjects[i].prefabToSpawn, position, Quaternion.identity, mapPropsContainer.transform);
-				if (currentLevel.spawnableMapObjects[i].spawnFacingAwayFromWall)
-				{
-					gameObject.transform.eulerAngles = new Vector3(0f, YRotationThatFacesTheFarthestFromPosition(position + Vector3.up * 0.2f), 0f);
-				}
-				else
-				{
-					gameObject.transform.eulerAngles = new Vector3(gameObject.transform.eulerAngles.x, random.Next(0, 360), gameObject.transform.eulerAngles.z);
-				}
-				gameObject.GetComponent<NetworkObject>().Spawn(destroyWithScene: true);
-			}
-		}
-		for (int l = 0; l < array.Length; l++)
-		{
-			UnityEngine.Object.Destroy(array[l].gameObject);
-		}
-	}
-
-	public float YRotationThatFacesTheFarthestFromPosition(Vector3 pos, float maxDistance = 25f, int resolution = 6)
-	{
-		int num = 0;
-		float num2 = 0f;
-		for (int i = 0; i < 360; i += 360 / resolution)
-		{
-			tempTransform.eulerAngles = new Vector3(0f, i, 0f);
-			if (Physics.Raycast(pos, tempTransform.forward, out var hitInfo, maxDistance, StartOfRound.Instance.collidersAndRoomMask, QueryTriggerInteraction.Ignore))
-			{
-				if (hitInfo.distance > num2)
-				{
-					num2 = hitInfo.distance;
-					num = i;
-				}
-				continue;
-			}
-			num = i;
-			break;
-		}
-		if (!hasInitializedLevelRandomSeed)
-		{
-			return UnityEngine.Random.Range(num - 15, num + 15);
-		}
-		int num3 = AnomalyRandom.Next(num - 15, num + 15);
-		Debug.Log($"Anomaly random yrotation farthest: {num3}");
-		return num3;
-	}
-
-	public float YRotationThatFacesTheNearestFromPosition(Vector3 pos, float maxDistance = 25f, int resolution = 6)
-	{
-		int num = 0;
-		float num2 = 100f;
-		bool flag = false;
-		for (int i = 0; i < 360; i += 360 / resolution)
-		{
-			tempTransform.eulerAngles = new Vector3(0f, i, 0f);
-			if (!Physics.Raycast(pos, tempTransform.forward, out var hitInfo, maxDistance, StartOfRound.Instance.collidersAndRoomMask, QueryTriggerInteraction.Ignore))
-			{
-				break;
-			}
-			flag = true;
-			if (hitInfo.distance < num2)
-			{
-				num2 = hitInfo.distance;
-				num = i;
-			}
-		}
-		if (!flag)
-		{
-			return -777f;
-		}
-		if (!hasInitializedLevelRandomSeed)
-		{
-			return UnityEngine.Random.Range(num - 15, num + 15);
-		}
-		int num3 = AnomalyRandom.Next(num - 15, num + 15);
-		Debug.Log($"Anomaly random yrotation nearest: {num3}");
-		return num3;
-	}
-
-	public void GenerateNewFloor()
-	{
-		if (currentLevel.dungeonFlowTypes != null && currentLevel.dungeonFlowTypes.Length != 0)
-		{
-			List<int> list = new List<int>();
-			for (int i = 0; i < currentLevel.dungeonFlowTypes.Length; i++)
-			{
-				list.Add(currentLevel.dungeonFlowTypes[i].rarity);
-			}
-			int id = currentLevel.dungeonFlowTypes[GetRandomWeightedIndex(list.ToArray(), LevelRandom)].id;
-			dungeonGenerator.Generator.DungeonFlow = dungeonFlowTypes[id];
-			if (id < firstTimeDungeonAudios.Length && firstTimeDungeonAudios[id] != null)
-			{
-				EntranceTeleport[] array = UnityEngine.Object.FindObjectsOfType<EntranceTeleport>();
-				if (array != null && array.Length != 0)
-				{
-					for (int j = 0; j < array.Length; j++)
-					{
-						if (array[j].isEntranceToBuilding)
-						{
-							array[j].firstTimeAudio = firstTimeDungeonAudios[id];
-							array[j].dungeonFlowId = id;
-						}
-					}
-				}
-			}
-		}
-		dungeonGenerator.Generator.ShouldRandomizeSeed = false;
-		dungeonGenerator.Generator.Seed = LevelRandom.Next();
-		Debug.Log($"GenerateNewFloor(). Map generator's random seed: {dungeonGenerator.Generator.Seed}");
-		float lengthMultiplier = currentLevel.factorySizeMultiplier * mapSizeMultiplier;
-		dungeonGenerator.Generator.LengthMultiplier = lengthMultiplier;
-		dungeonGenerator.Generate();
-	}
-
-	public void GeneratedFloorPostProcessing()
-	{
-		if (base.IsServer)
-		{
-			SpawnScrapInLevel();
-			SpawnMapObjects();
-		}
-	}
-
-	public void TurnBreakerSwitchesOff()
-	{
-		BreakerBox breakerBox = UnityEngine.Object.FindObjectOfType<BreakerBox>();
-		if (breakerBox != null)
-		{
-			Debug.Log("Switching breaker switches off");
-			breakerBox.SetSwitchesOff();
-			SwitchPower(on: false);
-			onPowerSwitch.Invoke(arg0: false);
-		}
-	}
-
-	public void LoadNewLevel(int randomSeed, SelectableLevel newLevel)
-	{
-		if (base.IsServer)
-		{
-			currentLevel = newLevel;
-			dungeonFinishedGeneratingForAllPlayers = false;
-			playersManager.fullyLoadedPlayers.Clear();
-			if (dungeonGenerator != null)
-			{
-				dungeonGenerator.Generator.OnGenerationStatusChanged -= Generator_OnGenerationStatusChanged;
-			}
-			if (loadLevelCoroutine != null)
-			{
-				loadLevelCoroutine = null;
-			}
-			loadLevelCoroutine = StartCoroutine(LoadNewLevelWait(randomSeed));
-		}
-	}
-
-	private void SetChallengeFileRandomModifiers()
-	{
-		if (!StartOfRound.Instance.isChallengeFile)
-		{
-			return;
-		}
-		int[] array = new int[5];
-		for (int i = 0; i < array.Length; i++)
-		{
-			array[i] = AnomalyRandom.Next(0, 100);
-		}
-		if (array[0] < 45)
-		{
-			increasedInsideEnemySpawnRateIndex = AnomalyRandom.Next(0, currentLevel.Enemies.Count);
-			if (currentLevel.Enemies[increasedInsideEnemySpawnRateIndex].enemyType.spawningDisabled)
-			{
-				increasedInsideEnemySpawnRateIndex = AnomalyRandom.Next(0, currentLevel.Enemies.Count);
-			}
-		}
-		if (array[1] < 45)
-		{
-			increasedOutsideEnemySpawnRateIndex = AnomalyRandom.Next(0, currentLevel.OutsideEnemies.Count);
-		}
-		if (array[2] < 45)
-		{
-			increasedMapHazardSpawnRateIndex = AnomalyRandom.Next(0, currentLevel.spawnableMapObjects.Length);
-		}
-		if (array[3] < 45)
-		{
-			increasedMapPropSpawnRateIndex = AnomalyRandom.Next(0, currentLevel.spawnableOutsideObjects.Length);
-		}
-		if (array[4] < 45)
-		{
-			increasedScrapSpawnRateIndex = AnomalyRandom.Next(0, currentLevel.spawnableScrap.Count);
-		}
-	}
-
-	private IEnumerator LoadNewLevelWait(int randomSeed)
-	{
-		yield return null;
-		yield return null;
-		playersFinishedGeneratingFloor.Clear();
-		GenerateNewLevelClientRpc(randomSeed, currentLevel.levelID);
-		if (currentLevel.spawnEnemiesAndScrap)
-		{
-			yield return new WaitUntil(() => dungeonCompletedGenerating);
-			yield return null;
-			yield return new WaitUntil(() => playersFinishedGeneratingFloor.Count >= GameNetworkManager.Instance.connectedPlayers);
-			Debug.Log("Players finished generating the new floor");
-		}
-		yield return new WaitForSeconds(0.3f);
-		SpawnSyncedProps();
-		if (currentLevel.spawnEnemiesAndScrap)
-		{
-			GeneratedFloorPostProcessing();
-		}
-		yield return null;
-		playersFinishedGeneratingFloor.Clear();
-		dungeonFinishedGeneratingForAllPlayers = true;
-		RefreshEnemyVents();
-		FinishGeneratingNewLevelClientRpc();
-	}
-
-	[ClientRpc]
-	public void GenerateNewLevelClientRpc(int randomSeed, int levelID)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1193916134u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, randomSeed);
-			BytePacker.WriteValueBitPacked(bufferWriter, levelID);
-			__endSendClientRpc(ref bufferWriter, 1193916134u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
-		}
-		playersManager.randomMapSeed = randomSeed;
-		currentLevel = playersManager.levels[levelID];
-		InitializeRandomNumberGenerators();
-		SetChallengeFileRandomModifiers();
-		HUDManager.Instance.loadingText.text = $"Random seed: {randomSeed}";
-		HUDManager.Instance.loadingDarkenScreen.enabled = true;
-		dungeonCompletedGenerating = false;
-		mapPropsContainer = GameObject.FindGameObjectWithTag("MapPropsContainer");
-		if (!currentLevel.spawnEnemiesAndScrap)
-		{
-			return;
-		}
-		dungeonGenerator = UnityEngine.Object.FindObjectOfType<RuntimeDungeon>(includeInactive: false);
-		if (dungeonGenerator != null)
-		{
-			GenerateNewFloor();
-			if (dungeonGenerator.Generator.Status == GenerationStatus.Complete)
-			{
-				FinishGeneratingLevel();
-				Debug.Log("Dungeon finished generating in one frame.");
-			}
-			else
-			{
-				dungeonGenerator.Generator.OnGenerationStatusChanged += Generator_OnGenerationStatusChanged;
-				Debug.Log("Now listening to dungeon generator status.");
-			}
-		}
-		else
-		{
-			Debug.LogError($"This client could not find dungeon generator! scene count: {SceneManager.sceneCount}");
-		}
-	}
-
-	private void FinishGeneratingLevel()
-	{
-		insideAINodes = GameObject.FindGameObjectsWithTag("AINode");
-		outsideAINodes = GameObject.FindGameObjectsWithTag("OutsideAINode");
-		dungeonCompletedGenerating = true;
-		SetToCurrentLevelWeather();
-		SpawnOutsideHazards();
-		FinishedGeneratingLevelServerRpc(NetworkManager.Singleton.LocalClientId);
-	}
-
-	private void Generator_OnGenerationStatusChanged(DungeonGenerator generator, GenerationStatus status)
-	{
-		if (status == GenerationStatus.Complete && !dungeonCompletedGenerating)
-		{
-			FinishGeneratingLevel();
-			Debug.Log("Dungeon has finished generating on this client after multiple frames");
-		}
-		dungeonGenerator.Generator.OnGenerationStatusChanged -= Generator_OnGenerationStatusChanged;
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void FinishedGeneratingLevelServerRpc(ulong clientId)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(192551691u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, clientId);
-				__endSendServerRpc(ref bufferWriter, 192551691u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				playersFinishedGeneratingFloor.Add(clientId);
-			}
-		}
+		playersFinishedGeneratingFloor.Add(clientId);
 	}
 
 	public void DespawnPropsAtEndOfRound(bool despawnAllItems = false)
@@ -855,29 +413,7 @@ public class RoundManager : NetworkBehaviour
 	[ServerRpc]
 	public void FinishGeneratingNewLevelServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(710372063u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 710372063u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			FinishGeneratingNewLevelClientRpc();
-		}
+		FinishGeneratingNewLevelClientRpc();
 	}
 
 	private void SetToCurrentLevelWeather()
@@ -913,37 +449,23 @@ public class RoundManager : NetworkBehaviour
 	[ClientRpc]
 	public void FinishGeneratingNewLevelClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		HUDManager.Instance.loadingText.enabled = false;
+		HUDManager.Instance.loadingDarkenScreen.enabled = false;
+		RefreshLightsList();
+		StartOfRound.Instance.StartCoroutine(playersManager.openingDoorsSequence());
+		if (currentLevel.spawnEnemiesAndScrap)
 		{
-			return;
+			SetLevelObjectVariables();
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		ResetEnemySpawningVariables();
+		ResetEnemyTypesSpawnedCounts();
+		playersManager.newGameIsLoading = false;
+		FlashlightItem.globalFlashlightInterferenceLevel = 0;
+		powerOffPermanently = false;
+		RefreshEnemiesList();
+		if (StartOfRound.Instance.currentLevel.levelIncludesSnowFootprints)
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2729232387u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 2729232387u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			HUDManager.Instance.loadingText.enabled = false;
-			HUDManager.Instance.loadingDarkenScreen.enabled = false;
-			RefreshLightsList();
-			StartOfRound.Instance.StartCoroutine(playersManager.openingDoorsSequence());
-			if (currentLevel.spawnEnemiesAndScrap)
-			{
-				SetLevelObjectVariables();
-			}
-			ResetEnemySpawningVariables();
-			ResetEnemyTypesSpawnedCounts();
-			playersManager.newGameIsLoading = false;
-			FlashlightItem.globalFlashlightInterferenceLevel = 0;
-			powerOffPermanently = false;
-			RefreshEnemiesList();
-			if (StartOfRound.Instance.currentLevel.levelIncludesSnowFootprints)
-			{
-				StartOfRound.Instance.InstantiateFootprintsPooledObjects();
-			}
+			StartOfRound.Instance.InstantiateFootprintsPooledObjects();
 		}
 	}
 
@@ -1339,32 +861,7 @@ public class RoundManager : NetworkBehaviour
 	[ServerRpc]
 	public void SpawnEnemyServerRpc(Vector3 spawnPosition, float yRot, int enemyNumber)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(46494176u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in spawnPosition);
-			bufferWriter.WriteValueSafe(in yRot, default(FastBufferWriter.ForPrimitives));
-			BytePacker.WriteValueBitPacked(bufferWriter, enemyNumber);
-			__endSendServerRpc(ref bufferWriter, 46494176u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			SpawnEnemyGameObject(spawnPosition, yRot, enemyNumber);
-		}
+		SpawnEnemyGameObject(spawnPosition, yRot, enemyNumber);
 	}
 
 	public NetworkObjectReference SpawnEnemyGameObject(Vector3 spawnPosition, float yRot, int enemyNumber, EnemyType enemyType = null)
@@ -1422,21 +919,7 @@ public class RoundManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void DespawnEnemyServerRpc(NetworkObjectReference enemyNetworkObject)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(3840785488u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in enemyNetworkObject, default(FastBufferWriter.ForNetworkSerializable));
-				__endSendServerRpc(ref bufferWriter, 3840785488u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				DespawnEnemyGameObject(enemyNetworkObject);
-			}
-		}
+		DespawnEnemyGameObject(enemyNetworkObject);
 	}
 
 	private void DespawnEnemyGameObject(NetworkObjectReference enemyNetworkObject)
@@ -1488,42 +971,16 @@ public class RoundManager : NetworkBehaviour
 	[ClientRpc]
 	public void PowerSwitchOnClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1061166170u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1061166170u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				onPowerSwitch.Invoke(arg0: true);
-				TurnOnAllLights(on: true);
-			}
-		}
+		onPowerSwitch.Invoke(arg0: true);
+		TurnOnAllLights(on: true);
 	}
 
 	[ClientRpc]
 	public void PowerSwitchOffClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1586488299u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1586488299u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				Debug.Log("Calling power switch off event from roundmanager");
-				onPowerSwitch.Invoke(arg0: false);
-				TurnOnAllLights(on: false);
-			}
-		}
+		Debug.Log("Calling power switch off event from roundmanager");
+		onPowerSwitch.Invoke(arg0: false);
+		TurnOnAllLights(on: false);
 	}
 
 	public void TurnOnAllLights(bool on)
@@ -2048,100 +1505,27 @@ public class RoundManager : NetworkBehaviour
 	[ServerRpc]
 	public void LightningStrikeServerRpc(Vector3 strikePosition)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1145714957u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in strikePosition);
-			__endSendServerRpc(ref bufferWriter, 1145714957u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			LightningStrikeClientRpc(strikePosition);
-		}
+		LightningStrikeClientRpc(strikePosition);
 	}
 
 	[ClientRpc]
 	public void LightningStrikeClientRpc(Vector3 strikePosition)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(112447504u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in strikePosition);
-				__endSendClientRpc(ref bufferWriter, 112447504u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				UnityEngine.Object.FindObjectOfType<StormyWeather>(includeInactive: true).LightningStrike(strikePosition, useTargetedObject: true);
-			}
-		}
+		UnityEngine.Object.FindObjectOfType<StormyWeather>(includeInactive: true).LightningStrike(strikePosition, useTargetedObject: true);
 	}
 
 	[ServerRpc]
 	public void ShowStaticElectricityWarningServerRpc(NetworkObjectReference warningObject, float timeLeft)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(445397880u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in warningObject, default(FastBufferWriter.ForNetworkSerializable));
-			bufferWriter.WriteValueSafe(in timeLeft, default(FastBufferWriter.ForPrimitives));
-			__endSendServerRpc(ref bufferWriter, 445397880u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ShowStaticElectricityWarningClientRpc(warningObject, timeLeft);
-		}
+		ShowStaticElectricityWarningClientRpc(warningObject, timeLeft);
 	}
 
 	[ClientRpc]
 	public void ShowStaticElectricityWarningClientRpc(NetworkObjectReference warningObject, float timeLeft)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (warningObject.TryGet(out var networkObject))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3840203489u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in warningObject, default(FastBufferWriter.ForNetworkSerializable));
-				bufferWriter.WriteValueSafe(in timeLeft, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 3840203489u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && warningObject.TryGet(out var networkObject))
-			{
-				UnityEngine.Object.FindObjectOfType<StormyWeather>(includeInactive: true).SetStaticElectricityWarning(networkObject, timeLeft);
-			}
+			UnityEngine.Object.FindObjectOfType<StormyWeather>(includeInactive: true).SetStaticElectricityWarning(networkObject, timeLeft);
 		}
 	}
 
@@ -2504,241 +1888,5 @@ public class RoundManager : NetworkBehaviour
 		return p1.CompareTo(p2);
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_RoundManager()
-	{
-		NetworkManager.__rpc_func_table.Add(1659269112u, __rpc_handler_1659269112);
-		NetworkManager.__rpc_func_table.Add(1193916134u, __rpc_handler_1193916134);
-		NetworkManager.__rpc_func_table.Add(192551691u, __rpc_handler_192551691);
-		NetworkManager.__rpc_func_table.Add(710372063u, __rpc_handler_710372063);
-		NetworkManager.__rpc_func_table.Add(2729232387u, __rpc_handler_2729232387);
-		NetworkManager.__rpc_func_table.Add(46494176u, __rpc_handler_46494176);
-		NetworkManager.__rpc_func_table.Add(3840785488u, __rpc_handler_3840785488);
-		NetworkManager.__rpc_func_table.Add(1061166170u, __rpc_handler_1061166170);
-		NetworkManager.__rpc_func_table.Add(1586488299u, __rpc_handler_1586488299);
-		NetworkManager.__rpc_func_table.Add(1145714957u, __rpc_handler_1145714957);
-		NetworkManager.__rpc_func_table.Add(112447504u, __rpc_handler_112447504);
-		NetworkManager.__rpc_func_table.Add(445397880u, __rpc_handler_445397880);
-		NetworkManager.__rpc_func_table.Add(3840203489u, __rpc_handler_3840203489);
-	}
-
-	private static void __rpc_handler_1659269112(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			NetworkObjectReference[] value2 = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out value2, default(FastBufferWriter.ForNetworkSerializable));
-			}
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			int[] value4 = null;
-			if (value3)
-			{
-				reader.ReadValueSafe(out value4, default(FastBufferWriter.ForPrimitives));
-			}
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RoundManager)target).SyncScrapValuesClientRpc(value2, value4);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1193916134(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RoundManager)target).GenerateNewLevelClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_192551691(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out ulong value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RoundManager)target).FinishedGeneratingLevelServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_710372063(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RoundManager)target).FinishGeneratingNewLevelServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2729232387(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RoundManager)target).FinishGeneratingNewLevelClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_46494176(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-			return;
-		}
-		reader.ReadValueSafe(out Vector3 value);
-		reader.ReadValueSafe(out float value2, default(FastBufferWriter.ForPrimitives));
-		ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-		target.__rpc_exec_stage = __RpcExecStage.Server;
-		((RoundManager)target).SpawnEnemyServerRpc(value, value2, value3);
-		target.__rpc_exec_stage = __RpcExecStage.None;
-	}
-
-	private static void __rpc_handler_3840785488(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RoundManager)target).DespawnEnemyServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1061166170(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RoundManager)target).PowerSwitchOnClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1586488299(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RoundManager)target).PowerSwitchOffClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1145714957(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RoundManager)target).LightningStrikeServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_112447504(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RoundManager)target).LightningStrikeClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_445397880(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			reader.ReadValueSafe(out float value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((RoundManager)target).ShowStaticElectricityWarningServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3840203489(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			reader.ReadValueSafe(out float value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((RoundManager)target).ShowStaticElectricityWarningClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "RoundManager";
-	}
 }

@@ -72,51 +72,20 @@ public class LockPicker : GrabbableObject
 	[ServerRpc(RequireOwnership = false)]
 	public void PlaceLockPickerServerRpc(NetworkObjectReference doorObject, bool lockPicker1)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(345501982u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in doorObject, default(FastBufferWriter.ForNetworkSerializable));
-				bufferWriter.WriteValueSafe(in lockPicker1, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 345501982u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				PlaceLockPickerClientRpc(doorObject, lockPicker1);
-			}
-		}
+		PlaceLockPickerClientRpc(doorObject, lockPicker1);
 	}
 
 	[ClientRpc]
 	public void PlaceLockPickerClientRpc(NetworkObjectReference doorObject, bool lockPicker1)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (doorObject.TryGet(out var networkObject))
 		{
-			return;
+			DoorLock componentInChildren = networkObject.gameObject.GetComponentInChildren<DoorLock>();
+			PlaceOnDoor(componentInChildren, lockPicker1);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
+		else
 		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1656348772u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in doorObject, default(FastBufferWriter.ForNetworkSerializable));
-			bufferWriter.WriteValueSafe(in lockPicker1, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 1656348772u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (doorObject.TryGet(out var networkObject))
-			{
-				DoorLock componentInChildren = networkObject.gameObject.GetComponentInChildren<DoorLock>();
-				PlaceOnDoor(componentInChildren, lockPicker1);
-			}
-			else
-			{
-				Debug.LogError("Lock picker was placed but we can't get the reference for the door it was placed on; placed by " + playerHeldBy.gameObject.name);
-			}
+			Debug.LogError("Lock picker was placed but we can't get the reference for the door it was placed on; placed by " + playerHeldBy.gameObject.name);
 		}
 	}
 
@@ -201,74 +170,8 @@ public class LockPicker : GrabbableObject
 	[ClientRpc]
 	public void FinishPickingClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2012404935u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2012404935u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				FinishPickingLock();
-			}
-		}
+		FinishPickingLock();
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_LockPicker()
-	{
-		NetworkManager.__rpc_func_table.Add(345501982u, __rpc_handler_345501982);
-		NetworkManager.__rpc_func_table.Add(1656348772u, __rpc_handler_1656348772);
-		NetworkManager.__rpc_func_table.Add(2012404935u, __rpc_handler_2012404935);
-	}
-
-	private static void __rpc_handler_345501982(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((LockPicker)target).PlaceLockPickerServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1656348772(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((LockPicker)target).PlaceLockPickerClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2012404935(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((LockPicker)target).FinishPickingClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "LockPicker";
-	}
 }

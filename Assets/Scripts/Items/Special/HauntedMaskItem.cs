@@ -184,47 +184,15 @@ public class HauntedMaskItem : GrabbableObject, IVisibleThreat
 	[ServerRpc]
 	public void AttachServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(2665559382u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 2665559382u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			AttachClientRpc();
-		}
+		AttachClientRpc();
 	}
 
 	[ClientRpc]
 	public void AttachClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsOwner)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2055165511u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 2055165511u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsOwner)
-			{
-				AttachToPlayerOnLocalClient();
-			}
+			AttachToPlayerOnLocalClient();
 		}
 	}
 
@@ -300,86 +268,9 @@ public class HauntedMaskItem : GrabbableObject, IVisibleThreat
 	[ServerRpc]
 	public void CreateMimicServerRpc(bool inFactory, Vector3 playerPositionAtDeath)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (!base.IsServer)
 		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1065539967u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in inFactory, default(FastBufferWriter.ForPrimitives));
-			bufferWriter.WriteValueSafe(in playerPositionAtDeath);
-			__endSendServerRpc(ref bufferWriter, 1065539967u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost))
-		{
-			return;
-		}
-		if (previousPlayerHeldBy == null)
-		{
-			Debug.LogError("Previousplayerheldby is null so the mask mimic could not be spawned");
-		}
-		Debug.Log("Server creating mimic from mask");
-		Vector3 navMeshPosition = RoundManager.Instance.GetNavMeshPosition(playerPositionAtDeath, default(NavMeshHit), 10f);
-		if (RoundManager.Instance.GotNavMeshPositionResult)
-		{
-			if (mimicEnemy == null)
-			{
-				Debug.Log("No mimic enemy set for mask");
-				return;
-			}
-			NetworkObjectReference netObjectRef = RoundManager.Instance.SpawnEnemyGameObject(navMeshPosition, previousPlayerHeldBy.transform.eulerAngles.y, -1, mimicEnemy);
-			if (netObjectRef.TryGet(out var networkObject))
-			{
-				Debug.Log("Got network object for mask enemy");
-				MaskedPlayerEnemy component = networkObject.GetComponent<MaskedPlayerEnemy>();
-				component.SetSuit(previousPlayerHeldBy.currentSuitID);
-				component.mimickingPlayer = previousPlayerHeldBy;
-				component.SetEnemyOutside(!inFactory);
-				component.SetVisibilityOfMaskedEnemy();
-				component.SetMaskType(maskTypeId);
-				previousPlayerHeldBy.redirectToEnemy = component;
-				if (previousPlayerHeldBy.deadBody != null)
-				{
-					previousPlayerHeldBy.deadBody.DeactivateBody(setActive: false);
-				}
-			}
-			CreateMimicClientRpc(netObjectRef, inFactory);
-		}
-		else
-		{
-			Debug.Log("No nav mesh found; no mimic could be created");
-		}
-	}
-
-	[ClientRpc]
-	public void CreateMimicClientRpc(NetworkObjectReference netObjectRef, bool inFactory)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3721656136u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in netObjectRef, default(FastBufferWriter.ForNetworkSerializable));
-				bufferWriter.WriteValueSafe(in inFactory, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 3721656136u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsServer)
-			{
-				StartCoroutine(waitForMimicEnemySpawn(netObjectRef, inFactory));
-			}
+			StartCoroutine(waitForMimicEnemySpawn(netObjectRef, inFactory));
 		}
 	}
 
@@ -490,92 +381,5 @@ public class HauntedMaskItem : GrabbableObject, IVisibleThreat
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_HauntedMaskItem()
-	{
-		NetworkManager.__rpc_func_table.Add(2665559382u, __rpc_handler_2665559382);
-		NetworkManager.__rpc_func_table.Add(2055165511u, __rpc_handler_2055165511);
-		NetworkManager.__rpc_func_table.Add(1065539967u, __rpc_handler_1065539967);
-		NetworkManager.__rpc_func_table.Add(3721656136u, __rpc_handler_3721656136);
-	}
-
-	private static void __rpc_handler_2665559382(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HauntedMaskItem)target).AttachServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2055165511(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HauntedMaskItem)target).AttachClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1065539967(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			reader.ReadValueSafe(out Vector3 value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((HauntedMaskItem)target).CreateMimicServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3721656136(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			reader.ReadValueSafe(out bool value2, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((HauntedMaskItem)target).CreateMimicClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "HauntedMaskItem";
-	}
 }

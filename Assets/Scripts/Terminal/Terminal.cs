@@ -251,40 +251,15 @@ public class Terminal : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void PlayTerminalAudioServerRpc(int clipIndex)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(1713627637u, serverRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, clipIndex);
-				__endSendServerRpc(ref bufferWriter, 1713627637u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				PlayTerminalAudioClientRpc(clipIndex);
-			}
-		}
+		PlayTerminalAudioClientRpc(clipIndex);
 	}
 
 	[ClientRpc]
 	public void PlayTerminalAudioClientRpc(int clipIndex)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!(GameNetworkManager.Instance.localPlayerController == null))
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1118892272u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, clipIndex);
-				__endSendClientRpc(ref bufferWriter, 1118892272u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !(GameNetworkManager.Instance.localPlayerController == null))
-			{
-				terminalAudio.PlayOneShot(syncedAudios[clipIndex]);
-			}
+			terminalAudio.PlayOneShot(syncedAudios[clipIndex]);
 		}
 	}
 
@@ -818,26 +793,7 @@ public class Terminal : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void BuyItemsServerRpc(int[] boughtItems, int newGroupCredits, int numItemsInShip)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(4003509079u, serverRpcParams, RpcDelivery.Reliable);
-			bool value = boughtItems != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(boughtItems, default(FastBufferWriter.ForPrimitives));
-			}
-			BytePacker.WriteValueBitPacked(bufferWriter, newGroupCredits);
-			BytePacker.WriteValueBitPacked(bufferWriter, numItemsInShip);
-			__endSendServerRpc(ref bufferWriter, 4003509079u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && boughtItems.Length <= 12 && newGroupCredits <= groupCredits)
+		if (boughtItems.Length <= 12 && newGroupCredits <= groupCredits)
 		{
 			orderedItemsFromTerminal.AddRange(boughtItems.ToList());
 			groupCredits = newGroupCredits;
@@ -848,62 +804,23 @@ public class Terminal : NetworkBehaviour
 	[ServerRpc]
 	public void SyncGroupCreditsServerRpc(int newGroupCredits, int numItemsInShip)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (newGroupCredits < 0)
 		{
-			return;
+			newGroupCredits = groupCredits;
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			if (base.OwnerClientId != networkManager.LocalClientId)
-			{
-				if (networkManager.LogLevel <= LogLevel.Normal)
-				{
-					Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-				}
-				return;
-			}
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3085407145u, serverRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, newGroupCredits);
-			BytePacker.WriteValueBitPacked(bufferWriter, numItemsInShip);
-			__endSendServerRpc(ref bufferWriter, 3085407145u, serverRpcParams, RpcDelivery.Reliable);
+			groupCredits = newGroupCredits;
 		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (newGroupCredits < 0)
-			{
-				newGroupCredits = groupCredits;
-			}
-			else
-			{
-				groupCredits = newGroupCredits;
-			}
-			SyncGroupCreditsClientRpc(newGroupCredits, numItemsInShip);
-		}
+		SyncGroupCreditsClientRpc(newGroupCredits, numItemsInShip);
 	}
 
 	[ClientRpc]
 	public void SyncGroupCreditsClientRpc(int newGroupCredits, int numItemsInShip)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2039928764u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, newGroupCredits);
-				BytePacker.WriteValueBitPacked(bufferWriter, numItemsInShip);
-				__endSendClientRpc(ref bufferWriter, 2039928764u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				numberOfItemsInDropship = numItemsInShip;
-				useCreditsCooldown = false;
-				groupCredits = newGroupCredits;
-			}
-		}
+		numberOfItemsInDropship = numItemsInShip;
+		useCreditsCooldown = false;
+		groupCredits = newGroupCredits;
 	}
 
 	private TerminalNode ParsePlayerSentence()
@@ -1326,346 +1243,27 @@ public class Terminal : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void SyncTerminalValuesServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		if (scannedEnemyIDs.Count > 0)
 		{
-			return;
+			SyncTerminalValuesClientRpc(groupCredits, numberOfItemsInDropship, scannedEnemyIDs.ToArray(), unlockedStoryLogs.ToArray());
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1261428289u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 1261428289u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			if (scannedEnemyIDs.Count > 0)
-			{
-				SyncTerminalValuesClientRpc(groupCredits, numberOfItemsInDropship, scannedEnemyIDs.ToArray(), unlockedStoryLogs.ToArray());
-			}
-			else
-			{
-				SyncTerminalValuesClientRpc(groupCredits, numberOfItemsInDropship);
-			}
+			SyncTerminalValuesClientRpc(groupCredits, numberOfItemsInDropship);
 		}
 	}
 
 	[ClientRpc]
 	public void SyncTerminalValuesClientRpc(int newGroupCredits = 0, int numItemsInDropship = 0, int[] scannedEnemies = null, int[] storyLogs = null)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1148560877u, clientRpcParams, RpcDelivery.Reliable);
-			BytePacker.WriteValueBitPacked(bufferWriter, newGroupCredits);
-			BytePacker.WriteValueBitPacked(bufferWriter, numItemsInDropship);
-			bool value = scannedEnemies != null;
-			bufferWriter.WriteValueSafe(in value, default(FastBufferWriter.ForPrimitives));
-			if (value)
-			{
-				bufferWriter.WriteValueSafe(scannedEnemies, default(FastBufferWriter.ForPrimitives));
-			}
-			bool value2 = storyLogs != null;
-			bufferWriter.WriteValueSafe(in value2, default(FastBufferWriter.ForPrimitives));
-			if (value2)
-			{
-				bufferWriter.WriteValueSafe(storyLogs, default(FastBufferWriter.ForPrimitives));
-			}
-			__endSendClientRpc(ref bufferWriter, 1148560877u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || syncedTerminalValues)
-		{
-			return;
-		}
-		syncedTerminalValues = true;
-		startingCreditsAmount = newGroupCredits;
-		numberOfItemsInDropship = numItemsInDropship;
-		groupCredits = newGroupCredits;
-		if (base.IsServer)
-		{
-			return;
-		}
-		if (scannedEnemies != null)
-		{
-			for (int i = 0; i < scannedEnemies.Length; i++)
-			{
-				scannedEnemyIDs.Add(scannedEnemies[i]);
-				Debug.Log("Syncing scanned enemies list with clients");
-			}
-		}
-		if (storyLogs != null)
-		{
-			for (int j = 0; j < storyLogs.Length; j++)
-			{
-				unlockedStoryLogs.Add(storyLogs[j]);
-			}
-		}
-	}
-
-	public void BeginUsingTerminal()
-	{
-		terminalInUse = true;
-		try
-		{
-			StartCoroutine(waitUntilFrameEndToSetActive(active: true));
-			GameNetworkManager.Instance.localPlayerController.inTerminalMenu = true;
-			Debug.Log($"Set interminalmenu to true: {GameNetworkManager.Instance.localPlayerController.inTerminalMenu}");
-			if (selectTextFieldCoroutine != null)
-			{
-				StopCoroutine(selectTextFieldCoroutine);
-			}
-			selectTextFieldCoroutine = StartCoroutine(selectTextFieldDelayed());
-			HUDManager.Instance.PingHUDElement(HUDManager.Instance.Inventory, 0f, 0.13f, 0.13f);
-			HUDManager.Instance.PingHUDElement(HUDManager.Instance.PlayerInfo, 0f, 0.13f, 0.13f);
-			HUDManager.Instance.PingHUDElement(HUDManager.Instance.Chat, 0f, 0.35f, 0.13f);
-			HUDManager.Instance.PingHUDElement(HUDManager.Instance.Tooltips, 1f, 0f, 0.6f);
-			inputFieldText.enableWordWrapping = true;
-			if (!ES3.Load("HasUsedTerminal", "LCGeneralSaveData", defaultValue: false))
-			{
-				LoadNewNode(terminalNodes.specialNodes[0]);
-			}
-			else if (!usedTerminalThisSession)
-			{
-				LoadNewNode(terminalNodes.specialNodes[1]);
-			}
-			else
-			{
-				LoadNewNode(terminalNodes.specialNodes[13]);
-			}
-			if (!usedTerminalThisSession)
-			{
-				usedTerminalThisSession = true;
-				if (!syncedTerminalValues)
-				{
-					SyncTerminalValuesServerRpc();
-				}
-			}
-			SetTerminalInUseLocalClient(inUse: true);
-			if (StartOfRound.Instance.localPlayerUsingController && !GameNetworkManager.Instance.disableSteam)
-			{
-				SteamUtils.ShowGamepadTextInput(GamepadTextInputMode.Normal, GamepadTextInputLineMode.SingleLine, "Type command", currentNode.maxCharactersToType);
-				SteamUtils.OnGamepadTextInputDismissed += OnGamepadTextInputDismissed_t;
-				displayingSteamKeyboard = true;
-			}
-			terminalAudio.PlayOneShot(enterTerminalSFX);
-			if (StartOfRound.Instance.localPlayerUsingController)
-			{
-				HUDManager.Instance.ChangeControlTip(0, "Quit terminal : [Start]", clearAllOther: true);
-			}
-			else
-			{
-				HUDManager.Instance.ChangeControlTip(0, "Quit terminal : [TAB]", clearAllOther: true);
-			}
-		}
-		catch (Exception arg)
-		{
-			Debug.Log($"Caught error while entering computer terminal. Exiting player from terminal. Error: {arg}");
-			QuitTerminal();
-		}
-	}
-
-	public void OnGamepadTextInputDismissed_t(bool submitted)
-	{
-		if (submitted)
-		{
-			int maxCharactersToType = currentNode.maxCharactersToType;
-			string enteredGamepadText = SteamUtils.GetEnteredGamepadText();
-			if (string.IsNullOrEmpty(enteredGamepadText) || enteredGamepadText.Length <= maxCharactersToType)
-			{
-				screenText.text += textAdded;
-				OnSubmit();
-			}
-		}
-	}
-
-	private IEnumerator selectTextFieldDelayed()
-	{
-		screenText.ActivateInputField();
-		yield return new WaitForSeconds(1f);
-		screenText.Select();
-	}
-
-	public void QuitTerminal()
-	{
-		PlayerControllerB localPlayerController = GameNetworkManager.Instance.localPlayerController;
-		terminalTrigger.StopSpecialAnimation();
-		terminalInUse = false;
-		StartCoroutine(waitUntilFrameEndToSetActive(active: false));
-		localPlayerController.inTerminalMenu = false;
-		timeSinceTerminalInUse = 0f;
-		Debug.Log("Quit terminal; inTerminalMenu true?: {playerScript.inTerminalMenu}");
-		if (selectTextFieldCoroutine != null)
-		{
-			StopCoroutine(selectTextFieldCoroutine);
-		}
-		screenText.ReleaseSelection();
-		screenText.DeactivateInputField();
-		if (EventSystem.current != null)
-		{
-			EventSystem.current.SetSelectedGameObject(null);
-		}
-		scrollBarVertical.value = 0f;
-		HUDManager.Instance.PingHUDElement(HUDManager.Instance.Inventory, 0f, 0.5f, 0.5f);
-		HUDManager.Instance.PingHUDElement(HUDManager.Instance.PlayerInfo, 0f, 1f, 1f);
-		HUDManager.Instance.PingHUDElement(HUDManager.Instance.Chat, 0f, 1f, 1f);
-		HUDManager.Instance.PingHUDElement(HUDManager.Instance.Tooltips, 0f, 1f, 1f);
-		if (displayingSteamKeyboard)
-		{
-			SteamUtils.OnGamepadTextInputDismissed -= OnGamepadTextInputDismissed_t;
-		}
-		if (localPlayerController.isHoldingObject && localPlayerController.currentlyHeldObjectServer != null)
-		{
-			localPlayerController.currentlyHeldObjectServer.SetControlTipsForItem();
-		}
-		else
-		{
-			HUDManager.Instance.ClearControlTips();
-		}
-		SetTerminalInUseLocalClient(inUse: false);
-		terminalAudio.PlayOneShot(leaveTerminalSFX);
-	}
-
-	private void OnEnable()
-	{
-		playerActions.Movement.OpenMenu.performed += PressESC;
-	}
-
-	private void OnDisable()
-	{
-		Debug.Log("Terminal disabled, disabling ESC key listener");
-		playerActions.Movement.OpenMenu.performed -= PressESC;
-	}
-
-	private void PressESC(InputAction.CallbackContext context)
-	{
-		if (context.performed && terminalInUse)
-		{
-			QuitTerminal();
-		}
-	}
-
-	public void RotateShipDecorSelection()
-	{
-		System.Random random = new System.Random(StartOfRound.Instance.randomMapSeed + 65);
-		ShipDecorSelection.Clear();
-		List<TerminalNode> list = new List<TerminalNode>();
-		for (int i = 0; i < StartOfRound.Instance.unlockablesList.unlockables.Count; i++)
-		{
-			if (StartOfRound.Instance.unlockablesList.unlockables[i].shopSelectionNode != null && !StartOfRound.Instance.unlockablesList.unlockables[i].alwaysInStock)
-			{
-				list.Add(StartOfRound.Instance.unlockablesList.unlockables[i].shopSelectionNode);
-			}
-		}
-		int num = random.Next(4, 6);
-		for (int j = 0; j < num; j++)
-		{
-			if (list.Count <= 0)
-			{
-				break;
-			}
-			TerminalNode item = list[random.Next(0, list.Count)];
-			ShipDecorSelection.Add(item);
-			list.Remove(item);
-		}
-	}
-
-	private void InitializeItemSalesPercentages()
-	{
-		itemSalesPercentages = new int[buyableItemsList.Length];
-		for (int i = 0; i < itemSalesPercentages.Length; i++)
-		{
-			Debug.Log($"Item sales percentages #{i}: {itemSalesPercentages[i]}");
-			itemSalesPercentages[i] = 100;
-		}
-	}
-
-	public void SetItemSales()
-	{
-		if (itemSalesPercentages == null || itemSalesPercentages.Length == 0)
-		{
-			InitializeItemSalesPercentages();
-		}
-		System.Random random = new System.Random(StartOfRound.Instance.randomMapSeed + 90);
-		int num = Mathf.Clamp(random.Next(-10, 5), 0, 5);
-		if (num <= 0)
-		{
-			return;
-		}
-		List<int> list = new List<int>();
-		for (int i = 0; i < buyableItemsList.Length; i++)
-		{
-			list.Add(i);
-			itemSalesPercentages[i] = 100;
-		}
-		for (int j = 0; j < num; j++)
-		{
-			if (list.Count <= 0)
-			{
-				break;
-			}
-			int num2 = random.Next(0, list.Count);
-			int maxValue = Mathf.Clamp(buyableItemsList[num2].highestSalePercentage, 0, 90);
-			int i2 = 100 - random.Next(0, maxValue);
-			i2 = RoundToNearestTen(i2);
-			itemSalesPercentages[num2] = i2;
-			list.RemoveAt(num2);
-		}
-	}
-
-	private int RoundToNearestTen(int i)
-	{
-		return (int)Math.Round((double)i / 10.0) * 10;
-	}
-
-	public void SetTerminalInUseLocalClient(bool inUse)
-	{
-		SetTerminalInUseServerRpc(inUse);
-	}
-
-	[ServerRpc(RequireOwnership = false)]
-	public void SetTerminalInUseServerRpc(bool inUse)
-	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-			{
-				ServerRpcParams serverRpcParams = default(ServerRpcParams);
-				FastBufferWriter bufferWriter = __beginSendServerRpc(4047492032u, serverRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in inUse, default(FastBufferWriter.ForPrimitives));
-				__endSendServerRpc(ref bufferWriter, 4047492032u, serverRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-			{
-				SetTerminalInUseClientRpc(inUse);
-			}
-		}
+		SetTerminalInUseClientRpc(inUse);
 	}
 
 	[ClientRpc]
 	public void SetTerminalInUseClientRpc(bool inUse)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2420057819u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in inUse, default(FastBufferWriter.ForPrimitives));
-				__endSendClientRpc(ref bufferWriter, 2420057819u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				placeableObject.inUse = inUse;
-				terminalLight.enabled = inUse;
-			}
-		}
+		placeableObject.inUse = inUse;
+		terminalLight.enabled = inUse;
 	}
 
 	public void SetTerminalNoLongerInUse()
@@ -1674,167 +1272,5 @@ public class Terminal : NetworkBehaviour
 		terminalLight.enabled = false;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_Terminal()
-	{
-		NetworkManager.__rpc_func_table.Add(1713627637u, __rpc_handler_1713627637);
-		NetworkManager.__rpc_func_table.Add(1118892272u, __rpc_handler_1118892272);
-		NetworkManager.__rpc_func_table.Add(4003509079u, __rpc_handler_4003509079);
-		NetworkManager.__rpc_func_table.Add(3085407145u, __rpc_handler_3085407145);
-		NetworkManager.__rpc_func_table.Add(2039928764u, __rpc_handler_2039928764);
-		NetworkManager.__rpc_func_table.Add(1261428289u, __rpc_handler_1261428289);
-		NetworkManager.__rpc_func_table.Add(1148560877u, __rpc_handler_1148560877);
-		NetworkManager.__rpc_func_table.Add(4047492032u, __rpc_handler_4047492032);
-		NetworkManager.__rpc_func_table.Add(2420057819u, __rpc_handler_2420057819);
-	}
-
-	private static void __rpc_handler_1713627637(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Terminal)target).PlayTerminalAudioServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1118892272(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Terminal)target).PlayTerminalAudioClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4003509079(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			int[] value2 = null;
-			if (value)
-			{
-				reader.ReadValueSafe(out value2, default(FastBufferWriter.ForPrimitives));
-			}
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value4);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Terminal)target).BuyItemsServerRpc(value2, value3, value4);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3085407145(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (rpcParams.Server.Receive.SenderClientId != target.OwnerClientId)
-		{
-			if (networkManager.LogLevel <= LogLevel.Normal)
-			{
-				Debug.LogError("Only the owner can invoke a ServerRpc that requires ownership!");
-			}
-		}
-		else
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Terminal)target).SyncGroupCreditsServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2039928764(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Terminal)target).SyncGroupCreditsClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1261428289(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Terminal)target).SyncTerminalValuesServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1148560877(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			reader.ReadValueSafe(out bool value3, default(FastBufferWriter.ForPrimitives));
-			int[] value4 = null;
-			if (value3)
-			{
-				reader.ReadValueSafe(out value4, default(FastBufferWriter.ForPrimitives));
-			}
-			reader.ReadValueSafe(out bool value5, default(FastBufferWriter.ForPrimitives));
-			int[] value6 = null;
-			if (value5)
-			{
-				reader.ReadValueSafe(out value6, default(FastBufferWriter.ForPrimitives));
-			}
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Terminal)target).SyncTerminalValuesClientRpc(value, value2, value4, value6);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_4047492032(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((Terminal)target).SetTerminalInUseServerRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2420057819(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out bool value, default(FastBufferWriter.ForPrimitives));
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((Terminal)target).SetTerminalInUseClientRpc(value);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "Terminal";
-	}
 }

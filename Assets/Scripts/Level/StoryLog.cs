@@ -48,13 +48,5 @@ public class StoryLog : NetworkBehaviour
 		storyLogID = logID;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "StoryLog";
-	}
 }

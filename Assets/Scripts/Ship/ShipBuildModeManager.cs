@@ -358,31 +358,16 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void PlaceShipObjectServerRpc(Vector3 newPosition, Vector3 newRotation, NetworkObjectReference objectRef, int playerWhoMoved)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(861494715u, serverRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in newPosition);
-			bufferWriter.WriteValueSafe(in newRotation);
-			bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
-			BytePacker.WriteValueBitPacked(bufferWriter, playerWhoMoved);
-			__endSendServerRpc(ref bufferWriter, 861494715u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost) && objectRef.TryGet(out var networkObject))
+		if (objectRef.TryGet(out var networkObject))
 		{
 			PlaceableShipObject componentInChildren = networkObject.gameObject.GetComponentInChildren<PlaceableShipObject>();
 			if (componentInChildren != null && !StartOfRound.Instance.unlockablesList.unlockables[componentInChildren.unlockableID].inStorage)
 			{
-				PlaceShipObjectClientRpc(newPosition, newRotation, objectRef, playerWhoMoved);
+			PlaceShipObjectClientRpc(newPosition, newRotation, objectRef, playerWhoMoved);
 			}
 			else
 			{
-				Debug.Log($"Error! Object was in storage on server. object id: {networkObject.NetworkObjectId}; name: {networkObject.gameObject.name}");
+			Debug.Log($"Error! Object was in storage on server. object id: {networkObject.NetworkObjectId}; name: {networkObject.gameObject.name}");
 			}
 		}
 	}
@@ -390,7 +375,6 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ClientRpc]
 	public void PlaceShipObjectClientRpc(Vector3 newPosition, Vector3 newRotation, NetworkObjectReference objectRef, int playerWhoMoved)
 	{
-		NetworkManager networkManager = base.NetworkManager;
 		if ((object)networkManager == null || !networkManager.IsListening)
 		{
 			return;
@@ -468,7 +452,6 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void StoreObjectServerRpc(NetworkObjectReference objectRef, int playerWhoStored)
 	{
-		NetworkManager networkManager = base.NetworkManager;
 		if ((object)networkManager == null || !networkManager.IsListening)
 		{
 			return;
@@ -509,7 +492,6 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ClientRpc]
 	public void StoreShipObjectClientRpc(NetworkObjectReference objectRef, int playerWhoStored, int unlockableID)
 	{
-		NetworkManager networkManager = base.NetworkManager;
 		if ((object)networkManager == null || !networkManager.IsListening)
 		{
 			return;
@@ -598,79 +580,5 @@ public class ShipBuildModeManager : NetworkBehaviour
 		}
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_ShipBuildModeManager()
-	{
-		NetworkManager.__rpc_func_table.Add(861494715u, __rpc_handler_861494715);
-		NetworkManager.__rpc_func_table.Add(1606360774u, __rpc_handler_1606360774);
-		NetworkManager.__rpc_func_table.Add(3086821980u, __rpc_handler_3086821980);
-		NetworkManager.__rpc_func_table.Add(2797045448u, __rpc_handler_2797045448);
-	}
-
-	private static void __rpc_handler_861494715(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			reader.ReadValueSafe(out Vector3 value2);
-			reader.ReadValueSafe(out NetworkObjectReference value3, default(FastBufferWriter.ForNetworkSerializable));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value4);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ShipBuildModeManager)target).PlaceShipObjectServerRpc(value, value2, value3, value4);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1606360774(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out Vector3 value);
-			reader.ReadValueSafe(out Vector3 value2);
-			reader.ReadValueSafe(out NetworkObjectReference value3, default(FastBufferWriter.ForNetworkSerializable));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value4);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ShipBuildModeManager)target).PlaceShipObjectClientRpc(value, value2, value3, value4);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3086821980(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((ShipBuildModeManager)target).StoreObjectServerRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_2797045448(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out NetworkObjectReference value, default(FastBufferWriter.ForNetworkSerializable));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((ShipBuildModeManager)target).StoreShipObjectClientRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "ShipBuildModeManager";
-	}
 }

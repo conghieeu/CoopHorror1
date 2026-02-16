@@ -293,24 +293,9 @@ public class TimeOfDay : NetworkBehaviour
 	[ClientRpc]
 	public void SyncTimeClientRpc(float time, int deadline)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3168707752u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in time, default(FastBufferWriter.ForPrimitives));
-				BytePacker.WriteValueBitPacked(bufferWriter, deadline);
-				__endSendClientRpc(ref bufferWriter, 3168707752u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				globalTime = time;
-				timeUntilDeadline = deadline;
-				onTimeSync.Invoke();
-			}
-		}
+		globalTime = time;
+		timeUntilDeadline = deadline;
+		onTimeSync.Invoke();
 	}
 
 	public void TimeOfDayEvents()
@@ -355,31 +340,15 @@ public class TimeOfDay : NetworkBehaviour
 	[ClientRpc]
 	public void SyncNewProfitQuotaClientRpc(int newProfitQuota, int overtimeBonus, int fulfilledQuota)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1041683203u, clientRpcParams, RpcDelivery.Reliable);
-				BytePacker.WriteValueBitPacked(bufferWriter, newProfitQuota);
-				BytePacker.WriteValueBitPacked(bufferWriter, overtimeBonus);
-				BytePacker.WriteValueBitPacked(bufferWriter, fulfilledQuota);
-				__endSendClientRpc(ref bufferWriter, 1041683203u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				quotaFulfilled = 0;
-				profitQuota = newProfitQuota;
-				timeUntilDeadline = totalTime * (float)quotaVariables.deadlineDaysAmount;
-				timesFulfilledQuota = fulfilledQuota;
-				StartOfRound.Instance.companyBuyingRate = 0.3f;
-				Terminal terminal = UnityEngine.Object.FindObjectOfType<Terminal>();
-				terminal.groupCredits = Mathf.Clamp(terminal.groupCredits + overtimeBonus, terminal.groupCredits, 100000000);
-				terminal.RotateShipDecorSelection();
-				HUDManager.Instance.DisplayNewDeadline(overtimeBonus);
-			}
-		}
+		quotaFulfilled = 0;
+		profitQuota = newProfitQuota;
+		timeUntilDeadline = totalTime * (float)quotaVariables.deadlineDaysAmount;
+		timesFulfilledQuota = fulfilledQuota;
+		StartOfRound.Instance.companyBuyingRate = 0.3f;
+		Terminal terminal = UnityEngine.Object.FindObjectOfType<Terminal>();
+		terminal.groupCredits = Mathf.Clamp(terminal.groupCredits + overtimeBonus, terminal.groupCredits, 100000000);
+		terminal.RotateShipDecorSelection();
+		HUDManager.Instance.DisplayNewDeadline(overtimeBonus);
 	}
 
 	public void UpdateProfitQuotaCurrentTime()
@@ -411,20 +380,7 @@ public class TimeOfDay : NetworkBehaviour
 	[ClientRpc]
 	public void SetShipToLeaveOnMidnightClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(749416460u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 749416460u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				StartOfRound.Instance.ShipLeaveAutomatically(leavingOnMidnight: true);
-			}
-		}
+		StartOfRound.Instance.ShipLeaveAutomatically(leavingOnMidnight: true);
 	}
 
 	public void VoteShipToLeaveEarly()
@@ -439,97 +395,45 @@ public class TimeOfDay : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void SetShipLeaveEarlyServerRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager == null || !networkManager.IsListening)
+		votesForShipToLeaveEarly++;
+		int num = StartOfRound.Instance.connectedPlayersAmount + 1 - StartOfRound.Instance.livingPlayers;
+		if (votesForShipToLeaveEarly >= num)
 		{
-			return;
+			SetShipLeaveEarlyClientRpc(normalizedTimeOfDay + 0.1f, votesForShipToLeaveEarly);
 		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
+		else
 		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(543987598u, serverRpcParams, RpcDelivery.Reliable);
-			__endSendServerRpc(ref bufferWriter, 543987598u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage == __RpcExecStage.Server && (networkManager.IsServer || networkManager.IsHost))
-		{
-			votesForShipToLeaveEarly++;
-			int num = StartOfRound.Instance.connectedPlayersAmount + 1 - StartOfRound.Instance.livingPlayers;
-			if (votesForShipToLeaveEarly >= num)
-			{
-				SetShipLeaveEarlyClientRpc(normalizedTimeOfDay + 0.1f, votesForShipToLeaveEarly);
-			}
-			else
-			{
-				AddVoteForShipToLeaveEarlyClientRpc();
-			}
+			AddVoteForShipToLeaveEarlyClientRpc();
 		}
 	}
 
 	[ClientRpc]
 	public void AddVoteForShipToLeaveEarlyClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
+		if (!base.IsServer)
 		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(1359513530u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 1359513530u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost) && !base.IsServer)
-			{
-				votesForShipToLeaveEarly++;
-				HUDManager.Instance.SetShipLeaveEarlyVotesText(votesForShipToLeaveEarly);
-			}
+			votesForShipToLeaveEarly++;
+			HUDManager.Instance.SetShipLeaveEarlyVotesText(votesForShipToLeaveEarly);
 		}
 	}
 
 	[ClientRpc]
 	public void SetShipLeaveEarlyClientRpc(float timeToLeaveEarly, int votes)
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(3001101610u, clientRpcParams, RpcDelivery.Reliable);
-				bufferWriter.WriteValueSafe(in timeToLeaveEarly, default(FastBufferWriter.ForPrimitives));
-				BytePacker.WriteValueBitPacked(bufferWriter, votes);
-				__endSendClientRpc(ref bufferWriter, 3001101610u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				votesForShipToLeaveEarly = votes;
-				HUDManager.Instance.SetShipLeaveEarlyVotesText(votes);
-				shipLeaveAutomaticallyTime = timeToLeaveEarly;
-				shipLeavingAlertCalled = true;
-				shipLeavingEarlyDialogue[0].bodyText = "WARNING! Please return by " + HUDManager.Instance.SetClock(timeToLeaveEarly, numberOfHours, createNewLine: false) + ". A vote has been cast, and the autopilot ship will leave early.";
-				HUDManager.Instance.ReadDialogue(shipLeavingEarlyDialogue);
-				HUDManager.Instance.shipLeavingEarlyIcon.enabled = true;
-			}
-		}
+		votesForShipToLeaveEarly = votes;
+		HUDManager.Instance.SetShipLeaveEarlyVotesText(votes);
+		shipLeaveAutomaticallyTime = timeToLeaveEarly;
+		shipLeavingAlertCalled = true;
+		shipLeavingEarlyDialogue[0].bodyText = "WARNING! Please return by " + HUDManager.Instance.SetClock(timeToLeaveEarly, numberOfHours, createNewLine: false) + ". A vote has been cast, and the autopilot ship will leave early.";
+		HUDManager.Instance.ReadDialogue(shipLeavingEarlyDialogue);
+		HUDManager.Instance.shipLeavingEarlyIcon.enabled = true;
 	}
 
 	[ClientRpc]
 	public void ShipFullCapacityMidnightClientRpc()
 	{
-		NetworkManager networkManager = base.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(711575688u, clientRpcParams, RpcDelivery.Reliable);
-				__endSendClientRpc(ref bufferWriter, 711575688u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage == __RpcExecStage.Client && (networkManager.IsClient || networkManager.IsHost))
-			{
-				shipLeavingEarlyDialogue[0].bodyText = "ALERT! The ship has reached full carrying capacity and cannot leave until items are removed!";
-				HUDManager.Instance.ReadDialogue(shipLeavingEarlyDialogue);
-			}
-		}
+		shipLeavingEarlyDialogue[0].bodyText = "ALERT! The ship has reached full carrying capacity and cannot leave until items are removed!";
+		HUDManager.Instance.ReadDialogue(shipLeavingEarlyDialogue);
 	}
 
 	public DayMode GetDayPhase(float time)
@@ -729,109 +633,5 @@ public class TimeOfDay : NetworkBehaviour
 		StartOfRound.Instance.companyBuyingRate = num2 * (float)(quotaVariables.deadlineDaysAmount - daysUntilDeadline) + num;
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	[RuntimeInitializeOnLoadMethod]
-	internal static void InitializeRPCS_TimeOfDay()
-	{
-		NetworkManager.__rpc_func_table.Add(3168707752u, __rpc_handler_3168707752);
-		NetworkManager.__rpc_func_table.Add(1041683203u, __rpc_handler_1041683203);
-		NetworkManager.__rpc_func_table.Add(749416460u, __rpc_handler_749416460);
-		NetworkManager.__rpc_func_table.Add(543987598u, __rpc_handler_543987598);
-		NetworkManager.__rpc_func_table.Add(1359513530u, __rpc_handler_1359513530);
-		NetworkManager.__rpc_func_table.Add(3001101610u, __rpc_handler_3001101610);
-		NetworkManager.__rpc_func_table.Add(711575688u, __rpc_handler_711575688);
-	}
-
-	private static void __rpc_handler_3168707752(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out float value, default(FastBufferWriter.ForPrimitives));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((TimeOfDay)target).SyncTimeClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1041683203(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			ByteUnpacker.ReadValueBitPacked(reader, out int value);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			ByteUnpacker.ReadValueBitPacked(reader, out int value3);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((TimeOfDay)target).SyncNewProfitQuotaClientRpc(value, value2, value3);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_749416460(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((TimeOfDay)target).SetShipToLeaveOnMidnightClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_543987598(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Server;
-			((TimeOfDay)target).SetShipLeaveEarlyServerRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_1359513530(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((TimeOfDay)target).AddVoteForShipToLeaveEarlyClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_3001101610(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			reader.ReadValueSafe(out float value, default(FastBufferWriter.ForPrimitives));
-			ByteUnpacker.ReadValueBitPacked(reader, out int value2);
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((TimeOfDay)target).SetShipLeaveEarlyClientRpc(value, value2);
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	private static void __rpc_handler_711575688(NetworkBehaviour target, FastBufferReader reader, __RpcParams rpcParams)
-	{
-		NetworkManager networkManager = target.NetworkManager;
-		if ((object)networkManager != null && networkManager.IsListening)
-		{
-			target.__rpc_exec_stage = __RpcExecStage.Client;
-			((TimeOfDay)target).ShipFullCapacityMidnightClientRpc();
-			target.__rpc_exec_stage = __RpcExecStage.None;
-		}
-	}
-
-	protected internal override string __getTypeName()
-	{
-		return "TimeOfDay";
-	}
 }

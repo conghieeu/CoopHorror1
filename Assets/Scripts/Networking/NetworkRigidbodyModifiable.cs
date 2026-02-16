@@ -76,13 +76,5 @@ public class NetworkRigidbodyModifiable : NetworkBehaviour
 		UpdateRigidbodyKinematicMode();
 	}
 
-	protected override void __initializeVariables()
-	{
-		base.__initializeVariables();
-	}
 
-	protected internal override string __getTypeName()
-	{
-		return "NetworkRigidbodyModifiable";
-	}
 }
