@@ -232,9 +232,6 @@ public class PlayerInventory : NetworkBehaviour
         SwapSlotsServerRpc(slotA, slotB);
     }
 
-
-    // --- SERVER RPCS (XỬ LÝ DỮ LIỆU & QUYỀN) ---
-
     [ServerRpc]
     private void GrabObjectServerRpc(NetworkObjectReference itemRef, int slotIndex)
     {
