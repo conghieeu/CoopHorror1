@@ -104,20 +104,9 @@ public class FlashlightItem : GrabbableObject
 	[ClientRpc]
 	public void PocketFlashlightClientRpc(bool stillUsingFlashlight)
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
 		{
 			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(4121415408u, clientRpcParams, RpcDelivery.Reliable);
 			bufferWriter.WriteValueSafe(in stillUsingFlashlight, default(FastBufferWriter.ForPrimitives));
-			__endSendClientRpc(ref bufferWriter, 4121415408u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || base.IsOwner)
-		{
-			return;
 		}
 		flashlightBulb.enabled = false;
 		flashlightBulbGlow.enabled = false;

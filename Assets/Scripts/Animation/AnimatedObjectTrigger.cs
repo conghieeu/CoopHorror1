@@ -176,19 +176,8 @@ public class AnimatedObjectTrigger : NetworkBehaviour
 	[ClientRpc]
 	private void UpdateAnimTriggerClientRpc()
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
 		{
 			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1023577379u, clientRpcParams, RpcDelivery.Reliable);
-			__endSendClientRpc(ref bufferWriter, 1023577379u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
 		}
 		onTriggerBool.Invoke(arg0: false);
 		if (localPlayerTriggered)

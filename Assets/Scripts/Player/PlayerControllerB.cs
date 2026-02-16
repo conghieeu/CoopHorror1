@@ -3874,23 +3874,12 @@ namespace GameNetcodeStuff
 		[ClientRpc]
 		public void DamagePlayerFromOtherClientClientRpc(int damageAmount, Vector3 hitDirection, int playerWhoHit, int newHealthAmount)
 		{
-			if ((object)networkManager == null || !networkManager.IsListening)
-			{
-				return;
-			}
-			if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
 			{
 				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				FastBufferWriter bufferWriter = __beginSendClientRpc(2557046125u, clientRpcParams, RpcDelivery.Reliable);
 				BytePacker.WriteValueBitPacked(bufferWriter, damageAmount);
 				bufferWriter.WriteValueSafe(in hitDirection);
 				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoHit);
 				BytePacker.WriteValueBitPacked(bufferWriter, newHealthAmount);
-				__endSendClientRpc(ref bufferWriter, 2557046125u, clientRpcParams, RpcDelivery.Reliable);
-			}
-			if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || !AllowPlayerDeath())
-			{
-				return;
 			}
 			DamageOnOtherClients(damageAmount, newHealthAmount);
 			if (base.IsOwner && isPlayerControlled)
@@ -3935,6 +3924,72 @@ namespace GameNetcodeStuff
 			return -361f;
 		}
 
+		float IShockableWithGun.GetDifficultyMultiplier()
+		{
+			return 1f;
+		}
+
+		Vector3 IShockableWithGun.GetShockablePosition()
+		{
+			return base.transform.position;
+		}
+
+		Transform IShockableWithGun.GetShockableTransform()
+		{
+			return base.transform;
+		}
+
+		NetworkObject IShockableWithGun.GetNetworkObject()
+		{
+			return base.NetworkObject;
+		}
+
+		bool IShockableWithGun.CanBeShocked()
+		{
+			return !isPlayerDead;
+		}
+
+		void IShockableWithGun.StopShockingWithGun()
+		{
+			// No-op for player
+		}
+
+		void IShockableWithGun.ShockWithGun(PlayerControllerB shockedByPlayer)
+		{
+			// Player shocked by patcher tool
+		}
+
+		public void Crouch(bool crouch)
+		{
+			isCrouching = crouch;
+			playerBodyAnimator.SetBool("Crouching", crouch);
+		}
+
+		private void Crouch_performed(UnityEngine.InputSystem.InputAction.CallbackContext context)
+		{
+			if (context.performed && !inSpecialInteractAnimation && thisPlayerMovementEnabled && !isTypingChat)
+			{
+				Crouch(!isCrouching);
+			}
+		}
+
+		public void SetItemInElevator(bool droppedInShipRoom, bool droppedInElevator, GrabbableObject gObject)
+		{
+			if (gObject != null)
+			{
+				gObject.isInShipRoom = droppedInShipRoom;
+				gObject.isInElevator = droppedInElevator;
+			}
+		}
+
+		public void UpdateSpecialAnimationValue(bool specialAnimation, short clampValue = 0, float terpAmount = 0f, bool clampWithNormalizedTime = false)
+		{
+			playerBodyAnimator.SetBool("SA_inAnimation", specialAnimation);
+			if (clampValue > 0)
+			{
+				playerBodyAnimator.SetFloat("SA_VarA", terpAmount);
+			}
+		}
 
 	}
 }

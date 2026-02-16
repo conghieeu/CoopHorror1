@@ -3,6 +3,8 @@
 
 public static class ES3
 {
+    public static void Init() { }
+
     public static bool FileExists(string filePath) { return false; }
     public static void DeleteFile(string filePath) { }
 

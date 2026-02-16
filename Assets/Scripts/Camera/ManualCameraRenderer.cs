@@ -311,20 +311,9 @@ public class ManualCameraRenderer : NetworkBehaviour
 	[ClientRpc]
 	public void SwitchRadarTargetClientRpc(int switchToIndex)
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
 		{
 			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(3551312642u, clientRpcParams, RpcDelivery.Reliable);
 			BytePacker.WriteValueBitPacked(bufferWriter, switchToIndex);
-			__endSendClientRpc(ref bufferWriter, 3551312642u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
 		}
 		if (syncingTargetPlayer)
 		{

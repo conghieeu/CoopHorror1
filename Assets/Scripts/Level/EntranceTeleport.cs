@@ -119,20 +119,9 @@ public class EntranceTeleport : NetworkBehaviour
 	[ClientRpc]
 	public void TeleportPlayerClientRpc(int playerObj)
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
 		{
 			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(3168414823u, clientRpcParams, RpcDelivery.Reliable);
 			BytePacker.WriteValueBitPacked(bufferWriter, playerObj);
-			__endSendClientRpc(ref bufferWriter, 3168414823u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || playersManager.allPlayerScripts[playerObj] == GameNetworkManager.Instance.localPlayerController)
-		{
-			return;
 		}
 		FindExitPoint();
 		playersManager.allPlayerScripts[playerObj].TeleportPlayer(exitPoint.position, withRotation: true, exitPoint.eulerAngles.y);

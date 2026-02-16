@@ -71,27 +71,15 @@ public class GlobalEffects : NetworkBehaviour
 	[ClientRpc]
 	private void PlayAnimationClientRpc(ServerAnimation serverAnimation)
 	{
-		PlayAudioClientRpc(serverAudio);
+		if (serverAnimation.animatorObj.TryGet(out var networkObject))
+		{
+			networkObject.GetComponent<Animator>().SetTrigger(serverAnimation.animationString);
+		}
 	}
 
 	[ClientRpc]
 	private void PlayAudioClientRpc(ServerAudio serverAudio)
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(182727243u, clientRpcParams, RpcDelivery.Reliable);
-			bufferWriter.WriteValueSafe(in serverAudio, default(FastBufferWriter.ForNetworkSerializable));
-			__endSendClientRpc(ref bufferWriter, 182727243u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || base.IsOwner)
-		{
-			return;
-		}
 		if (serverAudio.audioObj.TryGet(out var networkObject))
 		{
 			AudioSource component = networkObject.gameObject.GetComponent<AudioSource>();

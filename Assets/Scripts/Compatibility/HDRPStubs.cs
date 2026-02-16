@@ -78,3 +78,19 @@ namespace UnityEngine.Rendering.HighDefinition
         Everything = 255
     }
 }
+
+namespace UnityEngine.Rendering.Universal
+{
+    // URP stub for DepthOfField if not already provided by URP
+}
+
+// Stub for post-processing types used in settings
+public class DepthOfField : UnityEngine.Rendering.VolumeComponent
+{
+    public UnityEngine.Rendering.MinFloatParameter nearFocusEnd = new UnityEngine.Rendering.MinFloatParameter(0.2f, 0f);
+}
+
+public class LiftGammaGain : UnityEngine.Rendering.VolumeComponent
+{
+    public UnityEngine.Rendering.Vector4Parameter gamma = new UnityEngine.Rendering.Vector4Parameter(Vector4.zero);
+}

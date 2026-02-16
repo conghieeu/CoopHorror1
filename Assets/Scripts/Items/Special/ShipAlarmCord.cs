@@ -132,20 +132,9 @@ public class ShipAlarmCord : NetworkBehaviour
 	[ClientRpc]
 	public void StopPullingCordClientRpc(int playerPullingCord)
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
 		{
 			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2882145839u, clientRpcParams, RpcDelivery.Reliable);
 			BytePacker.WriteValueBitPacked(bufferWriter, playerPullingCord);
-			__endSendClientRpc(ref bufferWriter, 2882145839u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost))
-		{
-			return;
 		}
 		Debug.Log("Received STOP pull cord client rpc");
 		if (!(GameNetworkManager.Instance.localPlayerController == null) && (int)GameNetworkManager.Instance.localPlayerController.playerClientId != playerPullingCord)

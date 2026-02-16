@@ -705,7 +705,7 @@ public class SoundManager : NetworkBehaviour
 	[ClientRpc]
 	public void PlayAmbienceClipClientRpc(int soundType, int clipIndex, float soundVolume, bool playInsanitySounds)
 	{
-		PlayAudio1AtPositionClientRpc(audioPos, clipIndex);
+		PlayAmbienceClipLocal(soundType, clipIndex, soundVolume, playInsanitySounds);
 	}
 
 	[ClientRpc]
@@ -713,7 +713,60 @@ public class SoundManager : NetworkBehaviour
 	{
 		tempAudio1.transform.position = audioPos;
 		tempAudio1.PlayOneShot(syncedAudioClips[clipIndex], 1f);
+	
+	public void SetDiageticMixerSnapshot(int snapshotID = 0, float transitionTime = 1f)
+	{
+		currentMixerSnapshotID = snapshotID;
+		if (snapshotID >= 0 && snapshotID < mixerSnapshots.Length)
+		{
+			mixerSnapshots[snapshotID].TransitionTo(transitionTime);
+		}
 	}
+
+	public void ResumeCurrentMixerSnapshot(float transitionTime = 1f)
+	{
+		SetDiageticMixerSnapshot(currentMixerSnapshotID, transitionTime);
+	}
+
+	private void PlayAmbienceClipLocal(int soundType, int clipIndex, float soundVolume, bool playInsanitySounds)
+	{
+		// Play ambience locally
+		if (StartOfRound.Instance.currentLevel.levelAmbienceClips == null) return;
+		AudioClip clip = null;
+		switch (soundType)
+		{
+			case 0: // Inside
+				if (playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.insideAmbienceInsanity.Length)
+					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.insideAmbienceInsanity[clipIndex].audioClip;
+				else if (!playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.insideAmbience.Length)
+					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.insideAmbience[clipIndex].audioClip;
+				break;
+			case 1: // Outside
+				if (playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.outsideAmbienceInsanity.Length)
+					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.outsideAmbienceInsanity[clipIndex].audioClip;
+				else if (!playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.outsideAmbience.Length)
+					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.outsideAmbience[clipIndex].audioClip;
+				break;
+			case 2: // Ship
+				if (playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.shipAmbienceInsanity.Length)
+					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.shipAmbienceInsanity[clipIndex].audioClip;
+				else if (!playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.shipAmbience.Length)
+					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.shipAmbience[clipIndex].audioClip;
+				break;
+		}
+		if (clip != null)
+		{
+			ambienceAudio.PlayOneShot(clip, soundVolume);
+		}
+	}
+
+	public void PlayAudio1AtPositionForAllClients(Vector3 pos, int clipIndex)
+	{
+		tempAudio1.transform.position = pos;
+		tempAudio1.PlayOneShot(syncedAudioClips[clipIndex], 1f);
+	}
+
+}
 
 
 }

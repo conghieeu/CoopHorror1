@@ -1,6 +1,7 @@
 using System;
 using GameNetcodeStuff;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 
 public abstract class GrabbableObject : NetworkBehaviour
@@ -742,20 +743,9 @@ public abstract class GrabbableObject : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void ChangeOwnershipOfPropServerRpc(ulong NewOwner)
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
 		{
 			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(1391130874u, serverRpcParams, RpcDelivery.Reliable);
 			BytePacker.WriteValueBitPacked(bufferWriter, NewOwner);
-			__endSendServerRpc(ref bufferWriter, 1391130874u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost))
-		{
-			return;
 		}
 		try
 		{

@@ -375,23 +375,12 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ClientRpc]
 	public void PlaceShipObjectClientRpc(Vector3 newPosition, Vector3 newRotation, NetworkObjectReference objectRef, int playerWhoMoved)
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
 		{
 			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(1606360774u, clientRpcParams, RpcDelivery.Reliable);
 			bufferWriter.WriteValueSafe(in newPosition);
 			bufferWriter.WriteValueSafe(in newRotation);
 			bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
 			BytePacker.WriteValueBitPacked(bufferWriter, playerWhoMoved);
-			__endSendClientRpc(ref bufferWriter, 1606360774u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || NetworkManager.Singleton == null || base.NetworkManager.ShutdownInProgress || GameNetworkManager.Instance == null || StartOfRound.Instance == null || (GameNetworkManager.Instance.localPlayerController != null && playerWhoMoved == (int)GameNetworkManager.Instance.localPlayerController.playerClientId))
-		{
-			return;
 		}
 		if (objectRef.TryGet(out var networkObject))
 		{
@@ -452,21 +441,10 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void StoreObjectServerRpc(NetworkObjectReference objectRef, int playerWhoStored)
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server && (networkManager.IsClient || networkManager.IsHost))
 		{
 			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			FastBufferWriter bufferWriter = __beginSendServerRpc(3086821980u, serverRpcParams, RpcDelivery.Reliable);
 			bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
 			BytePacker.WriteValueBitPacked(bufferWriter, playerWhoStored);
-			__endSendServerRpc(ref bufferWriter, 3086821980u, serverRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Server || (!networkManager.IsServer && !networkManager.IsHost) || !objectRef.TryGet(out var networkObject))
-		{
-			return;
 		}
 		PlaceableShipObject componentInChildren = networkObject.gameObject.GetComponentInChildren<PlaceableShipObject>();
 		if (componentInChildren != null && !StartOfRound.Instance.unlockablesList.unlockables[componentInChildren.unlockableID].inStorage && StartOfRound.Instance.unlockablesList.unlockables[componentInChildren.unlockableID].canBeStored)
@@ -492,22 +470,11 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ClientRpc]
 	public void StoreShipObjectClientRpc(NetworkObjectReference objectRef, int playerWhoStored, int unlockableID)
 	{
-		if ((object)networkManager == null || !networkManager.IsListening)
-		{
-			return;
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client && (networkManager.IsServer || networkManager.IsHost))
 		{
 			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			FastBufferWriter bufferWriter = __beginSendClientRpc(2797045448u, clientRpcParams, RpcDelivery.Reliable);
 			bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
 			BytePacker.WriteValueBitPacked(bufferWriter, playerWhoStored);
 			BytePacker.WriteValueBitPacked(bufferWriter, unlockableID);
-			__endSendClientRpc(ref bufferWriter, 2797045448u, clientRpcParams, RpcDelivery.Reliable);
-		}
-		if (__rpc_exec_stage != __RpcExecStage.Client || (!networkManager.IsClient && !networkManager.IsHost) || NetworkManager.Singleton == null || base.NetworkManager.ShutdownInProgress || base.IsServer || playerWhoStored == (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
-		{
-			return;
 		}
 		StartOfRound.Instance.unlockablesList.unlockables[unlockableID].inStorage = true;
 		if (objectRef.TryGet(out var networkObject))

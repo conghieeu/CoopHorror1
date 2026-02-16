@@ -1899,7 +1899,118 @@ public class HUDManager : NetworkBehaviour
 			playerUsername = playerUsername.Substring(0, Mathf.Clamp(5, 1, playerUsername.Length));
 			Instance.errorLogText.text = (Instance.errorLogText.text + "\n\n" + playerUsername + ": " + errorMessage).Substring(Mathf.Max(0, Instance.errorLogText.text.Length - 1000));
 		}
+	
+	public void DisplayTip(string headerText, string bodyText, bool isWarning = false, bool useSave = false, string prefsKey = "LC_Tip1")
+	{
+		if (useSave && ES3.Load(prefsKey, "LCGeneralSaveData", false)) return;
+		if (useSave) ES3.Save(prefsKey, true, "LCGeneralSaveData");
+		tipsPanelHeader.text = headerText;
+		tipsPanelBody.text = bodyText;
+		tipsPanelAnimator.SetTrigger("TriggerHint");
+		if (isWarning) UIAudio.PlayOneShot(warningSFX[0]);
+		else UIAudio.PlayOneShot(tipsSFX[0]);
 	}
+
+	public void DisplayStatusEffect(string statusEffect)
+	{
+		statusEffectText.text = statusEffect;
+		statusEffectAnimator.SetTrigger("display");
+	}
+
+	public void SetClock(float timeNormalized, float numberOfHours, bool createNewLine = true)
+	{
+		int num = (int)(timeNormalized * (60f * numberOfHours)) + 360;
+		int num2 = (int)Mathf.Floor(num / 60);
+		int num3 = num % 60;
+		amPM = ((num2 >= 12) ? "PM" : "AM");
+		if (num2 > 12) num2 -= 12;
+		if (num2 == 0) num2 = 12;
+		newLine = (createNewLine ? "\n" : " ");
+		clockNumber.text = $"{num2}:{num3:00}{newLine}{amPM}";
+	}
+
+	public void SetClockVisible(bool visible)
+	{
+		PingHUDElement(Clock, visible ? 1f : 0f, 1f, visible ? 1f : 0f);
+	}
+
+	public void SetClockIcon(Sprite icon)
+	{
+		clockIcon.sprite = icon;
+	}
+
+	public void ClearControlTips()
+	{
+		for (int i = 0; i < controlTipLines.Length; i++)
+		{
+			controlTipLines[i].text = "";
+		}
+	}
+
+	public void ChangeControlTip(int toolTipNumber, string changeTo, bool clearAllOther = false)
+	{
+		if (clearAllOther) ClearControlTips();
+		if (toolTipNumber >= 0 && toolTipNumber < controlTipLines.Length)
+		{
+			controlTipLines[toolTipNumber].text = changeTo;
+		}
+	}
+
+	public void ChangeControlTipMultiple(string[] allLines, bool holdingItem = false, Item itemProperties = null)
+	{
+		ClearControlTips();
+		for (int i = 0; i < allLines.Length && i < controlTipLines.Length; i++)
+		{
+			controlTipLines[i].text = allLines[i];
+		}
+	}
+
+	public void AddNewScrapFoundToDisplay(GrabbableObject scrapObject)
+	{
+		itemsToBeDisplayed.Add(scrapObject);
+	}
+
+	private void DisplayNewScrapFound()
+	{
+		if (itemsToBeDisplayed.Count <= 0) return;
+		// Simple stub - just track display
+		itemsToBeDisplayed.RemoveAt(0);
+	}
+
+	private void DisplaySpectatorVoteTip()
+	{
+		// Stub for spectator vote tip display
+	}
+
+	public void SetPlayerLevel(int level)
+	{
+		localPlayerLevel = level;
+	}
+
+	public void ApplyPenalty(int totalScrapCollected, int profitQuota)
+	{
+		// Stub for penalty display
+	}
+
+	public void TriggerAlarmHornEffect()
+	{
+		alarmHornEffect.SetTrigger("blast");
+		UIAudio.PlayOneShot(shipAlarmHornSFX);
+	}
+
+	public void SetDebugText(string text)
+	{
+		Debug.Log("[DEBUG] " + text);
+	}
+
+	[ClientRpc]
+	public void SyncPlayerLevelClientRpc(int playerId, int playerLevelIndex, bool hasBeta)
+	{
+		StartOfRound.Instance.allPlayerScripts[playerId].playerLevelNumber = playerLevelIndex;
+		StartOfRound.Instance.allPlayerScripts[playerId].playerBetaBadgeMesh.enabled = hasBeta;
+	}
+
+}
 
 
 }

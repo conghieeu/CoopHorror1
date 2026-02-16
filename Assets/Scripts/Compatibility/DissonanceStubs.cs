@@ -15,6 +15,8 @@ namespace Dissonance
         public string LocalPlayerName { get; set; } = "";
         public event Action<string> LocalPlayerNameChanged;
         public bool IsMuted { get; set; }
+        public string MicrophoneName { get; set; } = "";
+        public void ResetMicrophoneCapture() { }
 
         public VoicePlayerState FindPlayer(string playerName)
         {
@@ -39,6 +41,8 @@ namespace Dissonance
         public string Name { get; private set; }
         public float Amplitude { get; set; }
         public bool IsSpeaking { get; set; }
+        public bool IsLocallyMuted { get; set; }
+        public float Volume { get; set; } = 1f;
 
         public VoicePlayerState(string name = "")
         {

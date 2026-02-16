@@ -1886,7 +1886,72 @@ public class RoundManager : NetworkBehaviour
 	private static int SortBySize(int p1, int p2)
 	{
 		return p1.CompareTo(p2);
+	
+	public float YRotationThatFacesTheFarthestFromPosition(Vector3 position, float additionalAngle = 0f, int numberOfRays = 30)
+	{
+		float bestAngle = 0f;
+		float bestDist = 0f;
+		for (int i = 0; i < numberOfRays; i++)
+		{
+			float angle = (float)i / (float)numberOfRays * 360f;
+			Vector3 dir = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+			if (Physics.Raycast(position + Vector3.up * 0.5f, dir, out RaycastHit hit2, 30f, StartOfRound.Instance.collidersAndRoomMaskAndDefault))
+			{
+				if (hit2.distance > bestDist)
+				{
+					bestDist = hit2.distance;
+					bestAngle = angle;
+				}
+			}
+			else
+			{
+				bestDist = 999f;
+				bestAngle = angle;
+			}
+		}
+		return bestAngle + additionalAngle;
 	}
+
+	public float YRotationThatFacesTheNearestFromPosition(Vector3 position, float additionalAngle = 0f, int numberOfRays = 30)
+	{
+		float bestAngle = 0f;
+		float bestDist = 999f;
+		for (int i = 0; i < numberOfRays; i++)
+		{
+			float angle = (float)i / (float)numberOfRays * 360f;
+			Vector3 dir = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+			if (Physics.Raycast(position + Vector3.up * 0.5f, dir, out RaycastHit hit2, 30f, StartOfRound.Instance.collidersAndRoomMaskAndDefault))
+			{
+				if (hit2.distance < bestDist)
+				{
+					bestDist = hit2.distance;
+					bestAngle = angle;
+				}
+			}
+		}
+		return bestAngle + additionalAngle;
+	}
+
+	private void TurnBreakerSwitchesOff()
+	{
+		BreakerBox breakerBox = Object.FindObjectOfType<BreakerBox>();
+		if (breakerBox != null)
+		{
+			breakerBox.gameObject.SetActive(false);
+		}
+	}
+
+	public void LoadNewLevel(int randomSeed, SelectableLevel newLevel)
+	{
+		// Stub: level loading is handled by the dungeon generator
+	}
+
+	private void Generator_OnGenerationStatusChanged(DunGen.GenerationStatus status)
+	{
+		// Stub for dungeon generation callback
+	}
+
+}
 
 
 }
