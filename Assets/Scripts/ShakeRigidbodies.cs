@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// lắc các Rigidbody trong một mảng để tạo hiệu ứng rung động
 public class ShakeRigidbodies : MonoBehaviour
 {
 	public Rigidbody[] rigidBodies;

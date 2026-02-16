@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// tạo một đường nối giữa hai điểm sử dụng LineRenderer
 public class SetLineRendererPoints : MonoBehaviour
 {
 	private LineRenderer lineRenderer;

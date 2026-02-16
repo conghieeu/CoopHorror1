@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// đây là một lớp MonoBehaviour để bật hoặc tắt tất cả các đèn trong một container và thay đổi vật liệu của chúng dựa trên trạng thái đèn.
 public class ToggleAllLightsInContainer : MonoBehaviour
 {
 	public Material offMaterial;
