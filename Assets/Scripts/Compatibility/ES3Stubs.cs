@@ -1,6 +1,6 @@
 // Stub for Easy Save 3 (ES3) - allows compilation without the ES3 plugin installed.
 // Actual save/load functionality will NOT work with these stubs.
-
+#if false
 public static class ES3
 {
     public static void Init() { }
@@ -22,3 +22,4 @@ public static class ES3
     public static void DeleteKey(string key) { }
     public static void DeleteKey(string key, string filePath) { }
 }
+#endif

@@ -311,10 +311,6 @@ public class ManualCameraRenderer : NetworkBehaviour
 	[ClientRpc]
 	public void SwitchRadarTargetClientRpc(int switchToIndex)
 	{
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			BytePacker.WriteValueBitPacked(bufferWriter, switchToIndex);
-		}
 		if (syncingTargetPlayer)
 		{
 			syncingTargetPlayer = false;

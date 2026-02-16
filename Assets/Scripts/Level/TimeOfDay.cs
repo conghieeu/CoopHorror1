@@ -424,7 +424,8 @@ public class TimeOfDay : NetworkBehaviour
 		HUDManager.Instance.SetShipLeaveEarlyVotesText(votes);
 		shipLeaveAutomaticallyTime = timeToLeaveEarly;
 		shipLeavingAlertCalled = true;
-		shipLeavingEarlyDialogue[0].bodyText = "WARNING! Please return by " + HUDManager.Instance.SetClock(timeToLeaveEarly, numberOfHours, createNewLine: false) + ". A vote has been cast, and the autopilot ship will leave early.";
+		string leaveTime = HUDManager.Instance.GetClockText(timeToLeaveEarly, numberOfHours, createNewLine: false);
+		shipLeavingEarlyDialogue[0].bodyText = "WARNING! Please return by " + leaveTime + ". A vote has been cast, and the autopilot ship will leave early.";
 		HUDManager.Instance.ReadDialogue(shipLeavingEarlyDialogue);
 		HUDManager.Instance.shipLeavingEarlyIcon.enabled = true;
 	}

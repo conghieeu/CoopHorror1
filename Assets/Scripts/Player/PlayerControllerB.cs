@@ -436,6 +436,8 @@ namespace GameNetcodeStuff
 
 		public bool isHoldingObject;
 
+		public bool thisPlayerMovementEnabled = true;
+
 		private bool hasThrownObject;
 
 		public bool twoHanded;
@@ -1890,18 +1892,9 @@ namespace GameNetcodeStuff
 		private void ThrowObjectClientRpc(bool droppedInElevator, bool droppedInShipRoom, Vector3 targetFloorPosition, NetworkObjectReference grabbedObject, int floorYRot)
 		{
 			NetworkObject networkObject3;
-			NetworkObject networkObject4;
-			if (grabbedObject.TryGet(out var _) && parentObject.TryGet(out var _))
-			{
-				PlaceObjectClientRpc(parentObject, placePositionOffset, matchRotationOfParent, grabbedObject);
-			}
-			else if (!grabbedObject.TryGet(out networkObject3))
+			if (!grabbedObject.TryGet(out networkObject3))
 			{
 				Debug.LogError($"Object placement not synced to clients, missing reference to a network object: placing object with id: {grabbedObject.NetworkObjectId}; player #{playerClientId}");
-			}
-			else if (!parentObject.TryGet(out networkObject4))
-			{
-				Debug.LogError($"Object placement not synced to clients, missing reference to a network object: parent object with id: {grabbedObject.NetworkObjectId}; player #{playerClientId}");
 			}
 		}
 
@@ -1947,11 +1940,6 @@ namespace GameNetcodeStuff
 		private void PlaceObjectClientRpc(NetworkObjectReference parentObjectReference, Vector3 placePositionOffset, bool matchRotationOfParent, NetworkObjectReference grabbedObject)
 		{
 			playersManager.gameStats.allPlayerStats[playerClientId].turnAmount++;
-			if (!base.IsOwner)
-			{
-				targetYRot = newYRot;
-				targetLookRot = newRot;
-			}
 		}
 
 		[ServerRpc]
@@ -1993,7 +1981,7 @@ namespace GameNetcodeStuff
 		[ServerRpc]
 		private void UpdatePlayerAnimationServerRpc(int animationState, float animationSpeed)
 		{
-			LandFromJumpClientRpc(fallHard);
+			// Stub to sync animation state
 		}
 
 		[ClientRpc]
@@ -2415,7 +2403,6 @@ namespace GameNetcodeStuff
 							vector2 += Vector3.Normalize((base.transform.position - nearByPlayers[j].transform.position) * 100f) * 0.16f;
 						}
 					}
-					float num6 = 1f;
 					walkForce = Vector3.MoveTowards(maxDistanceDelta: ((isFallingFromJump || isFallingNoJump) ? 1.33f : ((drunkness > 0.3f) ? Mathf.Clamp(Mathf.Abs(drunkness - 2.25f), 0.3f, 2.5f) : ((!isCrouching && timeSinceCrouching < 0.2f) ? 15f : ((!isSprinting) ? (10f / carryWeight) : (5f / (carryWeight * 1.5f)))))) * Time.deltaTime, current: walkForce, target: base.transform.right * moveInputVector.x + base.transform.forward * moveInputVector.y);
 					Vector3 vector3 = walkForce * num3 * sprintMultiplier + new Vector3(0f, fallValue, 0f) + vector2;
 					vector3 += externalForces;
@@ -3166,7 +3153,7 @@ namespace GameNetcodeStuff
 		[ServerRpc]
 		private void KillPlayerServerRpc(int playerId, bool spawnBody, Vector3 bodyVelocity, int causeOfDeath, int deathAnimation)
 		{
-			DestroyItemInSlotClientRpc(itemSlot);
+			// Stub for server-side death handling
 		}
 
 		[ClientRpc]
@@ -3832,7 +3819,7 @@ namespace GameNetcodeStuff
 			}
 		}
 
-		bool IHittable.Hit(int force, Vector3 hitDirection, PlayerControllerB playerWhoHit, bool playHitSFX = false)
+		bool IHittable.Hit(int force, Vector3 hitDirection, PlayerControllerB playerWhoHit, bool playHitSFX)
 		{
 			if (!AllowPlayerDeath())
 			{
@@ -3874,13 +3861,6 @@ namespace GameNetcodeStuff
 		[ClientRpc]
 		public void DamagePlayerFromOtherClientClientRpc(int damageAmount, Vector3 hitDirection, int playerWhoHit, int newHealthAmount)
 		{
-			{
-				ClientRpcParams clientRpcParams = default(ClientRpcParams);
-				BytePacker.WriteValueBitPacked(bufferWriter, damageAmount);
-				bufferWriter.WriteValueSafe(in hitDirection);
-				BytePacker.WriteValueBitPacked(bufferWriter, playerWhoHit);
-				BytePacker.WriteValueBitPacked(bufferWriter, newHealthAmount);
-			}
 			DamageOnOtherClients(damageAmount, newHealthAmount);
 			if (base.IsOwner && isPlayerControlled)
 			{
@@ -3959,6 +3939,175 @@ namespace GameNetcodeStuff
 			// Player shocked by patcher tool
 		}
 
+		private void Look_performed(UnityEngine.InputSystem.InputAction.CallbackContext context)
+		{
+			// Stub for look input
+		}
+
+		private void Jump_performed(UnityEngine.InputSystem.InputAction.CallbackContext context)
+		{
+			// Stub for jump input
+		}
+
+		private void Discard_performed(UnityEngine.InputSystem.InputAction.CallbackContext context)
+		{
+			// Stub for discard input
+		}
+
+		private void OpenMenu_performed(UnityEngine.InputSystem.InputAction.CallbackContext context)
+		{
+			// Stub for menu input
+		}
+
+		[ServerRpc]
+		private void MakeCriticallyInjuredServerRpc()
+		{
+			// Stub for injury sync
+		}
+
+		private void DespawnHeldObjectOnClient()
+		{
+			if (currentlyHeldObjectServer != null)
+			{
+				currentlyHeldObjectServer.gameObject.SetActive(false);
+			}
+			isHoldingObject = false;
+		}
+
+		public void DespawnHeldObject()
+		{
+			DespawnHeldObjectOnClient();
+		}
+
+		private void SetObjectAsNoLongerHeld(bool droppedInElevator, bool droppedInShipRoom, Vector3 targetFloorPosition, GrabbableObject placeObject, int floorYRot)
+		{
+			if (placeObject != null)
+			{
+				placeObject.isHeld = false;
+				placeObject.isPocketed = false;
+				SetItemInElevator(droppedInShipRoom, droppedInElevator, placeObject);
+			}
+		}
+
+		[ServerRpc]
+		private void PlaceObjectServerRpc(NetworkObjectReference grabbedObject, NetworkObjectReference parentObjectReference, Vector3 placePositionOffset, bool matchRotationOfParent)
+		{
+			PlaceObjectClientRpc(parentObjectReference, placePositionOffset, matchRotationOfParent, grabbedObject);
+		}
+
+		private void ChangeAudioListenerToObject(GameObject target)
+		{
+			// Stub for audio listener switch
+		}
+
+		private void ConnectClientToPlayerObject()
+		{
+			// Stub for client connection hook
+		}
+
+		private void PlayerHitGroundEffects()
+		{
+			// Stub for landing effects
+		}
+
+		private void ForceTurnTowardsTarget()
+		{
+			// Stub for forced turn
+		}
+
+		private void GetCurrentMaterialStandingOn()
+		{
+			// Stub for surface check
+		}
+
+		[ServerRpc(RequireOwnership = false)]
+		private void DisableJetpackModeServerRpc()
+		{
+			// Stub for jetpack disable
+		}
+
+		private void CalculateGroundNormal()
+		{
+			// Stub for ground normal calculation
+		}
+
+		private void PlayerLookInput()
+		{
+			// Stub for look input update
+		}
+
+		[ServerRpc]
+		private void UpdatePlayerPositionServerRpc(Vector3 localPosition, bool inElevator, bool inShipRoom, bool isExhausted, bool isGrounded)
+		{
+			// Stub for position sync
+		}
+
+		private void SpawnDeadBody(int playerId, Vector3 bodyVelocity, int causeOfDeath, PlayerControllerB playerKilled, int deathAnimation)
+		{
+			// Stub for body spawn
+		}
+
+		public void ChangeHelmetLight(int lightIndex)
+		{
+			ChangeHelmetLight(lightIndex, on: true);
+		}
+
+		public void ChangeHelmetLight(int lightIndex, bool on)
+		{
+			if (allHelmetLights == null || allHelmetLights.Length == 0)
+			{
+				return;
+			}
+			for (int i = 0; i < allHelmetLights.Length; i++)
+			{
+				allHelmetLights[i].enabled = on && i == lightIndex;
+			}
+			helmetLight = allHelmetLights[Mathf.Clamp(lightIndex, 0, allHelmetLights.Length - 1)];
+		}
+
+		public void DestroyItemInSlotAndSync(int itemSlot)
+		{
+			DestroyItemInSlot(itemSlot);
+			DestroyItemInSlotClientRpc(itemSlot);
+		}
+
+		public void ResetFallGravity()
+		{
+			fallValue = 0f;
+			fallValueUncapped = 0f;
+			takingFallDamage = false;
+		}
+
+		public void SetAllItemsInElevator(bool inShipRoom, bool inElevator)
+		{
+			for (int i = 0; i < ItemSlots.Length; i++)
+			{
+				if (ItemSlots[i] != null)
+				{
+					ItemSlots[i].isInShipRoom = inShipRoom;
+					ItemSlots[i].isInElevator = inElevator;
+				}
+			}
+		}
+
+		public void ResetZAndXRotation()
+		{
+			Vector3 eulerAngles = base.transform.localEulerAngles;
+			eulerAngles.x = 0f;
+			eulerAngles.z = 0f;
+			base.transform.localEulerAngles = eulerAngles;
+		}
+
+		public void PlayFootstepServer()
+		{
+			// Stub for footstep server
+		}
+
+		public void PlayFootstepLocal()
+		{
+			// Stub for footstep local
+		}
+
 		public void Crouch(bool crouch)
 		{
 			isCrouching = crouch;
@@ -3982,7 +4131,7 @@ namespace GameNetcodeStuff
 			}
 		}
 
-		public void UpdateSpecialAnimationValue(bool specialAnimation, short clampValue = 0, float terpAmount = 0f, bool clampWithNormalizedTime = false)
+		public void UpdateSpecialAnimationValue(bool specialAnimation, short clampValue = 0, float terpAmount = 0f, bool clampWithNormalizedTime = false, bool climbingLadder = false)
 		{
 			playerBodyAnimator.SetBool("SA_inAnimation", specialAnimation);
 			if (clampValue > 0)

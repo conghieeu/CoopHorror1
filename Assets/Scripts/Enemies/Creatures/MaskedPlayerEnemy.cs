@@ -1030,7 +1030,7 @@ public class MaskedPlayerEnemy : EnemyAI
 			inKillAnimation = true;
 			inSpecialAnimation = true;
 			isClientCalculatingAI = false;
-			KillPlayerAnimationClientRpc(playerObjectId);
+			KillPlayerAnimationClientRpc(playerObjectId, base.NetworkObject, !isOutside);
 		}
 		else
 		{
@@ -1048,11 +1048,11 @@ public class MaskedPlayerEnemy : EnemyAI
 	}
 
 	[ClientRpc]
-	public void KillPlayerAnimationClientRpc(int playerObjectId)
+	public void KillPlayerAnimationClientRpc(int playerObjectId, NetworkObjectReference netObjectRef, bool inFactory)
 	{
 		if (!base.IsServer)
 		{
-			StartCoroutine(waitForMimicEnemySpawn(netObjectRef, inFactory, playerKilled));
+			StartCoroutine(waitForMimicEnemySpawn(netObjectRef, inFactory, playerObjectId));
 		}
 	}
 

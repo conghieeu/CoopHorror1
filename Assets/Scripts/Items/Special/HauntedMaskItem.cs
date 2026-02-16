@@ -268,10 +268,7 @@ public class HauntedMaskItem : GrabbableObject, IVisibleThreat
 	[ServerRpc]
 	public void CreateMimicServerRpc(bool inFactory, Vector3 playerPositionAtDeath)
 	{
-		if (!base.IsServer)
-		{
-			StartCoroutine(waitForMimicEnemySpawn(netObjectRef, inFactory));
-		}
+		// Stub for server-side mimic spawn
 	}
 
 	private IEnumerator waitForMimicEnemySpawn(NetworkObjectReference netObjectRef, bool inFactory)

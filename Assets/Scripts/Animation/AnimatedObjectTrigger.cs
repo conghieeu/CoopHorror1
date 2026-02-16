@@ -170,7 +170,30 @@ public class AnimatedObjectTrigger : NetworkBehaviour
 	[ClientRpc]
 	private void UpdateAnimClientRpc(bool setBool, bool playSecondaryAudios = false, int playerWhoTriggered = -1)
 	{
-		UpdateAnimTriggerClientRpc();
+		if (isBool)
+		{
+			if (localPlayerTriggered)
+			{
+				localPlayerTriggered = false;
+				return;
+			}
+			boolValue = setBool;
+			if (triggerAnimator != null)
+			{
+				triggerAnimator.SetBool(animationString, boolValue);
+			}
+			if (triggerAnimatorB != null)
+			{
+				triggerAnimatorB.SetBool("on", boolValue);
+			}
+			SetParticleBasedOnBoolean();
+			PlayAudio(boolValue, playSecondaryAudios);
+			onTriggerBool.Invoke(boolValue);
+		}
+		else
+		{
+			UpdateAnimTriggerClientRpc();
+		}
 	}
 
 	[ClientRpc]
@@ -190,6 +213,45 @@ public class AnimatedObjectTrigger : NetworkBehaviour
 			triggerAnimator.SetTrigger(animationString);
 		}
 		PlayAudio(boolVal: false);
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	private void UpdateAnimTriggerServerRpc()
+	{
+		UpdateAnimTriggerClientRpc();
+	}
+
+	public void SetBoolOnClientOnly(bool setTo)
+	{
+		boolValue = setTo;
+		if (triggerAnimator != null)
+		{
+			triggerAnimator.SetBool(animationString, boolValue);
+		}
+		if (triggerAnimatorB != null)
+		{
+			triggerAnimatorB.SetBool("on", boolValue);
+		}
+		SetParticleBasedOnBoolean();
+	}
+
+	private void SetParticleBasedOnBoolean()
+	{
+		if (playParticle == null)
+		{
+			return;
+		}
+		if (boolValue)
+		{
+			if (!playParticle.isPlaying)
+			{
+				playParticle.Play();
+			}
+		}
+		else if (playParticle.isPlaying)
+		{
+			playParticle.Stop();
+		}
 	}
 
 	private void PlayAudio(bool boolVal, bool playSecondaryAudios = false)

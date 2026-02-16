@@ -1,3 +1,5 @@
+using UnityEngine;
+
 // Stub types for HDRP compatibility (project uses URP)
 // These provide empty implementations so code that references HDRP types can compile
 

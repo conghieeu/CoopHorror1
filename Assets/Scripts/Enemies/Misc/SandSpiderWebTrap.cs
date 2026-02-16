@@ -73,16 +73,18 @@ public class SandSpiderWebTrap : MonoBehaviour, IHittable
 		{
 			if (NetworkManager.Singleton.IsHost && !currentTrappedPlayer.isPlayerControlled && !currentTrappedPlayer.isPlayerDead)
 			{
+				int playerId = (int)currentTrappedPlayer.playerClientId;
 				currentTrappedPlayer = null;
-				mainScript.PlayerLeaveWebServerRpc(trapID, (int)currentTrappedPlayer.playerClientId);
+				mainScript.PlayerLeaveWebServerRpc(trapID, playerId);
 			}
 			else if (GameNetworkManager.Instance.localPlayerController == currentTrappedPlayer && GameNetworkManager.Instance.localPlayerController.isPlayerDead)
 			{
-				currentTrappedPlayer = null;
+				int playerId = (int)currentTrappedPlayer.playerClientId;
 				currentTrappedPlayer.isMovementHindered--;
 				currentTrappedPlayer.hinderedMultiplier = Mathf.Clamp(currentTrappedPlayer.hinderedMultiplier * 0.4f, 1f, 100f);
+				currentTrappedPlayer = null;
 				hinderingLocalPlayer = false;
-				mainScript.PlayerLeaveWebServerRpc(trapID, (int)currentTrappedPlayer.playerClientId);
+				mainScript.PlayerLeaveWebServerRpc(trapID, playerId);
 			}
 		}
 	}

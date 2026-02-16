@@ -328,7 +328,7 @@ public class RoundManager : NetworkBehaviour
 	[ClientRpc]
 	public void SyncScrapValuesClientRpc(NetworkObjectReference[] spawnedScrap, int[] allScrapValue)
 	{
-		playersFinishedGeneratingFloor.Add(clientId);
+		playersFinishedGeneratingFloor.Add(NetworkManager.Singleton.LocalClientId);
 	}
 
 	public void DespawnPropsAtEndOfRound(bool despawnAllItems = false)
@@ -1886,6 +1886,7 @@ public class RoundManager : NetworkBehaviour
 	private static int SortBySize(int p1, int p2)
 	{
 		return p1.CompareTo(p2);
+	}
 	
 	public float YRotationThatFacesTheFarthestFromPosition(Vector3 position, float additionalAngle = 0f, int numberOfRays = 30)
 	{
@@ -1934,7 +1935,7 @@ public class RoundManager : NetworkBehaviour
 
 	private void TurnBreakerSwitchesOff()
 	{
-		BreakerBox breakerBox = Object.FindObjectOfType<BreakerBox>();
+		BreakerBox breakerBox = UnityEngine.Object.FindObjectOfType<BreakerBox>();
 		if (breakerBox != null)
 		{
 			breakerBox.gameObject.SetActive(false);
@@ -1946,12 +1947,9 @@ public class RoundManager : NetworkBehaviour
 		// Stub: level loading is handled by the dungeon generator
 	}
 
-	private void Generator_OnGenerationStatusChanged(DunGen.GenerationStatus status)
+	private void Generator_OnGenerationStatusChanged(DunGen.DungeonGenerator generator, DunGen.GenerationStatus status)
 	{
 		// Stub for dungeon generation callback
 	}
-
-}
-
 
 }

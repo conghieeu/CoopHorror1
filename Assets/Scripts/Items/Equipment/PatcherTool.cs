@@ -635,6 +635,12 @@ public class PatcherTool : GrabbableObject
 		Debug.Log("Patcher tool server rpc received");
 	}
 
+	[ServerRpc(RequireOwnership = false)]
+	public void StopShockingServerRpc()
+	{
+		StopShockingClientRpc();
+	}
+
 	[ClientRpc]
 	public void ShockPatcherToolClientRpc(NetworkObjectReference netObject)
 	{

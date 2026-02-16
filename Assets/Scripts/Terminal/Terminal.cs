@@ -1256,7 +1256,7 @@ public class Terminal : NetworkBehaviour
 	[ClientRpc]
 	public void SyncTerminalValuesClientRpc(int newGroupCredits = 0, int numItemsInDropship = 0, int[] scannedEnemies = null, int[] storyLogs = null)
 	{
-		SetTerminalInUseClientRpc(inUse);
+		SetTerminalInUseClientRpc(placeableObject != null && placeableObject.inUse);
 	}
 
 	[ClientRpc]
@@ -1270,6 +1270,32 @@ public class Terminal : NetworkBehaviour
 	{
 		placeableObject.inUse = false;
 		terminalLight.enabled = false;
+	}
+
+	public void SetItemSales()
+	{
+		InitializeItemSalesPercentages();
+	}
+
+	public void RotateShipDecorSelection()
+	{
+		// Stub for ship decor rotation
+	}
+
+	public void QuitTerminal()
+	{
+		SetTerminalNoLongerInUse();
+		terminalUIScreen.gameObject.SetActive(false);
+	}
+
+	private void InitializeItemSalesPercentages()
+	{
+		// Stub for item sales initialization
+	}
+
+	public void OnGamepadTextInputDismissed_t(bool submitted)
+	{
+		displayingSteamKeyboard = false;
 	}
 
 

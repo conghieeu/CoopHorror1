@@ -375,13 +375,6 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ClientRpc]
 	public void PlaceShipObjectClientRpc(Vector3 newPosition, Vector3 newRotation, NetworkObjectReference objectRef, int playerWhoMoved)
 	{
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			bufferWriter.WriteValueSafe(in newPosition);
-			bufferWriter.WriteValueSafe(in newRotation);
-			bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
-			BytePacker.WriteValueBitPacked(bufferWriter, playerWhoMoved);
-		}
 		if (objectRef.TryGet(out var networkObject))
 		{
 			if (networkObject == null)
@@ -441,10 +434,10 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	public void StoreObjectServerRpc(NetworkObjectReference objectRef, int playerWhoStored)
 	{
+		if (!objectRef.TryGet(out var networkObject))
 		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
-			BytePacker.WriteValueBitPacked(bufferWriter, playerWhoStored);
+			Debug.Log("Error! Could not get network object in StoreObjectServerRpc");
+			return;
 		}
 		PlaceableShipObject componentInChildren = networkObject.gameObject.GetComponentInChildren<PlaceableShipObject>();
 		if (componentInChildren != null && !StartOfRound.Instance.unlockablesList.unlockables[componentInChildren.unlockableID].inStorage && StartOfRound.Instance.unlockablesList.unlockables[componentInChildren.unlockableID].canBeStored)
@@ -470,12 +463,6 @@ public class ShipBuildModeManager : NetworkBehaviour
 	[ClientRpc]
 	public void StoreShipObjectClientRpc(NetworkObjectReference objectRef, int playerWhoStored, int unlockableID)
 	{
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			bufferWriter.WriteValueSafe(in objectRef, default(FastBufferWriter.ForNetworkSerializable));
-			BytePacker.WriteValueBitPacked(bufferWriter, playerWhoStored);
-			BytePacker.WriteValueBitPacked(bufferWriter, unlockableID);
-		}
 		StartOfRound.Instance.unlockablesList.unlockables[unlockableID].inStorage = true;
 		if (objectRef.TryGet(out var networkObject))
 		{

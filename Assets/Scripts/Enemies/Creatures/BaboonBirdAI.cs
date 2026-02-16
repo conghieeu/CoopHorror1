@@ -1658,10 +1658,16 @@ public class BaboonBirdAI : EnemyAI
 	[ClientRpc]
 	public void JoinScoutingGroupClientRpc(NetworkObjectReference otherBaboonNetworkObject)
 	{
-		if (!isEnemyDead && enemyType.miscAnimations.Length > miscAnimationId && !(creatureVoice == null) && (currentMiscAnimation == -1 || enemyType.miscAnimations[currentMiscAnimation].priority <= enemyType.miscAnimations[miscAnimationId].priority))
+		if (!isEnemyDead && enemyType.miscAnimations.Length > 0 && !(creatureVoice == null) && (currentMiscAnimation == -1 || enemyType.miscAnimations[currentMiscAnimation].priority <= enemyType.miscAnimations[0].priority))
 		{
-			StartMiscAnimationClientRpc(miscAnimationId);
+			StartMiscAnimationClientRpc(0);
 		}
+	}
+
+	[ServerRpc]
+	public void StartMiscAnimationServerRpc(int miscAnimationId)
+	{
+		StartMiscAnimationClientRpc(miscAnimationId);
 	}
 
 	[ClientRpc]

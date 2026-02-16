@@ -127,6 +127,12 @@ public class ShipTeleporter : NetworkBehaviour
 	[ClientRpc]
 	public void PressTeleportButtonClientRpc()
 	{
+		if (StartOfRound.Instance.mapScreen == null)
+		{
+			return;
+		}
+		int playerObj = StartOfRound.Instance.mapScreen.targetTransformIndex;
+		Vector3 teleportPos = (teleportOutPosition != null) ? teleportOutPosition.position : Vector3.zero;
 		TeleportPlayerOutClientRpc(playerObj, teleportPos);
 	}
 

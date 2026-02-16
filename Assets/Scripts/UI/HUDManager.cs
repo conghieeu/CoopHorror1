@@ -1808,7 +1808,18 @@ public class HUDManager : NetworkBehaviour
 	[ServerRpc]
 	public void SyncAllPlayerLevelsServerRpc()
 	{
-		SyncPlayerLevelClientRpc(playerId, playerLevelIndex, hasBeta);
+		if (!base.IsServer || StartOfRound.Instance == null)
+		{
+			return;
+		}
+		for (int i = 0; i < StartOfRound.Instance.allPlayerScripts.Length; i++)
+		{
+			PlayerControllerB playerControllerB = StartOfRound.Instance.allPlayerScripts[i];
+			if (playerControllerB != null)
+			{
+				SyncPlayerLevelClientRpc(i, playerControllerB.playerLevelNumber, playerControllerB.playerBetaBadgeMesh != null && playerControllerB.playerBetaBadgeMesh.enabled);
+			}
+		}
 	}
 
 	[ServerRpc(RequireOwnership = false)]
@@ -1899,6 +1910,7 @@ public class HUDManager : NetworkBehaviour
 			playerUsername = playerUsername.Substring(0, Mathf.Clamp(5, 1, playerUsername.Length));
 			Instance.errorLogText.text = (Instance.errorLogText.text + "\n\n" + playerUsername + ": " + errorMessage).Substring(Mathf.Max(0, Instance.errorLogText.text.Length - 1000));
 		}
+	}
 	
 	public void DisplayTip(string headerText, string bodyText, bool isWarning = false, bool useSave = false, string prefsKey = "LC_Tip1")
 	{
@@ -1919,6 +1931,11 @@ public class HUDManager : NetworkBehaviour
 
 	public void SetClock(float timeNormalized, float numberOfHours, bool createNewLine = true)
 	{
+		clockNumber.text = GetClockText(timeNormalized, numberOfHours, createNewLine);
+	}
+
+	public string GetClockText(float timeNormalized, float numberOfHours, bool createNewLine = true)
+	{
 		int num = (int)(timeNormalized * (60f * numberOfHours)) + 360;
 		int num2 = (int)Mathf.Floor(num / 60);
 		int num3 = num % 60;
@@ -1926,7 +1943,7 @@ public class HUDManager : NetworkBehaviour
 		if (num2 > 12) num2 -= 12;
 		if (num2 == 0) num2 = 12;
 		newLine = (createNewLine ? "\n" : " ");
-		clockNumber.text = $"{num2}:{num3:00}{newLine}{amPM}";
+		return $"{num2}:{num3:00}{newLine}{amPM}";
 	}
 
 	public void SetClockVisible(bool visible)
@@ -1937,6 +1954,16 @@ public class HUDManager : NetworkBehaviour
 	public void SetClockIcon(Sprite icon)
 	{
 		clockIcon.sprite = icon;
+	}
+
+	public void SetClockIcon(DayMode dayMode)
+	{
+		if (clockIcons == null || clockIcons.Length == 0)
+		{
+			return;
+		}
+		int index = Mathf.Clamp((int)dayMode, 0, clockIcons.Length - 1);
+		clockIcon.sprite = clockIcons[index];
 	}
 
 	public void ClearControlTips()
@@ -1987,6 +2014,11 @@ public class HUDManager : NetworkBehaviour
 		localPlayerLevel = level;
 	}
 
+	public void SetPlayerLevel(bool isPlayerDead, bool wasMostProfitableThisRound, bool allPlayersDead)
+	{
+		// Stub for end-of-round level UI
+	}
+
 	public void ApplyPenalty(int totalScrapCollected, int profitQuota)
 	{
 		// Stub for penalty display
@@ -2009,8 +2041,5 @@ public class HUDManager : NetworkBehaviour
 		StartOfRound.Instance.allPlayerScripts[playerId].playerLevelNumber = playerLevelIndex;
 		StartOfRound.Instance.allPlayerScripts[playerId].playerBetaBadgeMesh.enabled = hasBeta;
 	}
-
-}
-
 
 }

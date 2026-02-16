@@ -922,7 +922,24 @@ public class SandSpiderAI : EnemyAI
 	{
 		Vector3 position = webTraps[trapID].centerOfWeb.position;
 		BreakWebClientRpc(position, trapID);
-		ChasePlayer(StartOfRound.Instance.allPlayerScripts[playerWhoHit]);
+		if (playerNum >= 0 && playerNum < StartOfRound.Instance.allPlayerScripts.Length)
+		{
+			ChasePlayer(StartOfRound.Instance.allPlayerScripts[playerNum]);
+		}
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void BreakWebServerRpc(int trapID, int playerWhoHit)
+	{
+		if (trapID >= 0 && trapID < webTraps.Count)
+		{
+			Vector3 position = webTraps[trapID].centerOfWeb.position;
+			BreakWebClientRpc(position, trapID);
+		}
+		if (playerWhoHit >= 0 && playerWhoHit < StartOfRound.Instance.allPlayerScripts.Length)
+		{
+			ChasePlayer(StartOfRound.Instance.allPlayerScripts[playerWhoHit]);
+		}
 	}
 
 	[ClientRpc]
@@ -962,6 +979,14 @@ public class SandSpiderAI : EnemyAI
 			targetPlayer = playerScript;
 			chaseTimer = 12.5f;
 			SwitchToBehaviourState(2);
+		}
+	}
+
+	private void ChasePlayer(PlayerControllerB playerScript)
+	{
+		if (playerScript != null)
+		{
+			TriggerChaseWithPlayer(playerScript);
 		}
 	}
 

@@ -119,10 +119,6 @@ public class EntranceTeleport : NetworkBehaviour
 	[ClientRpc]
 	public void TeleportPlayerClientRpc(int playerObj)
 	{
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerObj);
-		}
 		FindExitPoint();
 		playersManager.allPlayerScripts[playerObj].TeleportPlayer(exitPoint.position, withRotation: true, exitPoint.eulerAngles.y);
 		playersManager.allPlayerScripts[playerObj].isInElevator = false;

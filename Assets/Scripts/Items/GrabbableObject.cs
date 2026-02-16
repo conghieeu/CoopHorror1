@@ -743,10 +743,6 @@ public abstract class GrabbableObject : NetworkBehaviour
 	[ServerRpc(RequireOwnership = false)]
 	private void ChangeOwnershipOfPropServerRpc(ulong NewOwner)
 	{
-		{
-			ServerRpcParams serverRpcParams = default(ServerRpcParams);
-			BytePacker.WriteValueBitPacked(bufferWriter, NewOwner);
-		}
 		try
 		{
 			base.gameObject.GetComponent<NetworkRigidbodyModifiable>().kinematicOnOwner = true;

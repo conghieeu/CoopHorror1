@@ -123,6 +123,12 @@ public class ShipAlarmCord : NetworkBehaviour
 		PullCordClientRpc(playerPullingCord);
 	}
 
+	[ServerRpc(RequireOwnership = false)]
+	public void StopPullingCordServerRpc(int playerPullingCord)
+	{
+		StopPullingCordClientRpc(playerPullingCord);
+	}
+
 	[ClientRpc]
 	public void PullCordClientRpc(int playerPullingCord)
 	{
@@ -132,10 +138,6 @@ public class ShipAlarmCord : NetworkBehaviour
 	[ClientRpc]
 	public void StopPullingCordClientRpc(int playerPullingCord)
 	{
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			BytePacker.WriteValueBitPacked(bufferWriter, playerPullingCord);
-		}
 		Debug.Log("Received STOP pull cord client rpc");
 		if (!(GameNetworkManager.Instance.localPlayerController == null) && (int)GameNetworkManager.Instance.localPlayerController.playerClientId != playerPullingCord)
 		{

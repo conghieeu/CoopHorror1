@@ -713,6 +713,7 @@ public class SoundManager : NetworkBehaviour
 	{
 		tempAudio1.transform.position = audioPos;
 		tempAudio1.PlayOneShot(syncedAudioClips[clipIndex], 1f);
+	}
 	
 	public void SetDiageticMixerSnapshot(int snapshotID = 0, float transitionTime = 1f)
 	{
@@ -739,19 +740,19 @@ public class SoundManager : NetworkBehaviour
 				if (playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.insideAmbienceInsanity.Length)
 					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.insideAmbienceInsanity[clipIndex].audioClip;
 				else if (!playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.insideAmbience.Length)
-					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.insideAmbience[clipIndex].audioClip;
+					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.insideAmbience[clipIndex];
 				break;
 			case 1: // Outside
 				if (playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.outsideAmbienceInsanity.Length)
 					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.outsideAmbienceInsanity[clipIndex].audioClip;
 				else if (!playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.outsideAmbience.Length)
-					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.outsideAmbience[clipIndex].audioClip;
+					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.outsideAmbience[clipIndex];
 				break;
 			case 2: // Ship
 				if (playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.shipAmbienceInsanity.Length)
 					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.shipAmbienceInsanity[clipIndex].audioClip;
 				else if (!playInsanitySounds && clipIndex < StartOfRound.Instance.currentLevel.levelAmbienceClips.shipAmbience.Length)
-					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.shipAmbience[clipIndex].audioClip;
+					clip = StartOfRound.Instance.currentLevel.levelAmbienceClips.shipAmbience[clipIndex];
 				break;
 		}
 		if (clip != null)
@@ -765,8 +766,5 @@ public class SoundManager : NetworkBehaviour
 		tempAudio1.transform.position = pos;
 		tempAudio1.PlayOneShot(syncedAudioClips[clipIndex], 1f);
 	}
-
-}
-
 
 }

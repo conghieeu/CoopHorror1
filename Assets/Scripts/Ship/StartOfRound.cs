@@ -29,6 +29,8 @@ public class StartOfRound : NetworkBehaviour
 
 	public List<ulong> fullyLoadedPlayers = new List<ulong>(4);
 
+	private int playersLoadedWhenLanding;
+
 	public int livingPlayers = 4;
 
 	private bool mostRecentlyJoinedClient;
@@ -187,6 +189,8 @@ public class StartOfRound : NetworkBehaviour
 	public AudioClip zeroDaysLeftAlertSFX;
 
 	public bool shipLeftAutomatically;
+
+	private bool shipLeavingOnMidnight;
 
 	public DialogueSegment[] openingDoorDialogue;
 
@@ -477,17 +481,10 @@ public class StartOfRound : NetworkBehaviour
 	[ClientRpc]
 	private void ResetPlayersLoadedValueClientRpc(bool landingShip = false)
 	{
-		Debug.Log($"Purchasing ship unlockable on host: {unlockableID}");
-		if (unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer || newGroupCreditsAmount > UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits)
+		fullyLoadedPlayers.Clear();
+		if (landingShip)
 		{
-			Debug.Log("Unlockable was already unlocked! Setting group credits back to server's amount on all clients.");
-			BuyShipUnlockableClientRpc(UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits);
-		}
-		else
-		{
-			UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
-			BuyShipUnlockableClientRpc(newGroupCreditsAmount, unlockableID);
-			UnlockShipObject(unlockableID);
+			playersLoadedWhenLanding = 0;
 		}
 	}
 
@@ -2416,11 +2413,7 @@ public class StartOfRound : NetworkBehaviour
 			quickMenuManager.doorGameObjects[i].SetActive(!enable);
 			}
 			quickMenuManager.outOfBoundsCollider.enabled = !enable;
-			if (enable)
-			{
-			StartCoroutine(SetTestRoomDebug(objectRef));
-			}
-			else if (testRoom != null)
+			if (!enable && testRoom != null)
 			{
 			UnityEngine.Object.Destroy(testRoom);
 			}
@@ -2482,7 +2475,7 @@ public class StartOfRound : NetworkBehaviour
 			}
 			else
 			{
-				DiscordController.Instance.status_Details = HUDManager.Instance.SetClock(TimeOfDay.Instance.normalizedTimeOfDay, TimeOfDay.Instance.numberOfHours, createNewLine: false);
+				DiscordController.Instance.status_Details = HUDManager.Instance.GetClockText(TimeOfDay.Instance.normalizedTimeOfDay, TimeOfDay.Instance.numberOfHours, createNewLine: false);
 				DiscordController.Instance.status_largeText = "On " + currentLevel.PlanetName;
 				if (currentLevel.levelIconString != "")
 				{
@@ -2543,6 +2536,85 @@ public class StartOfRound : NetworkBehaviour
 			}
 		}
 		return num;
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void StartGameServerRpc()
+	{
+		StartGame();
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void BuyShipUnlockableServerRpc(int unlockableID, int newGroupCreditsAmount)
+	{
+		BuyShipUnlockableClientRpc(newGroupCreditsAmount, unlockableID);
+		UnlockShipObject(unlockableID);
+	}
+
+	private void UnlockShipObject(int unlockableID)
+	{
+		if (unlockablesList != null && unlockableID >= 0 && unlockableID < unlockablesList.unlockables.Count)
+		{
+			unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer = true;
+		}
+	}
+
+	private void PositionSuitsOnRack()
+	{
+		// Stub for suit rack placement
+	}
+
+	public void ShipLeaveAutomatically(bool leavingOnMidnight = false)
+	{
+		shipLeavingOnMidnight = leavingOnMidnight;
+	}
+
+	public void StartTrackingAllPlayerVoices()
+	{
+		// Stub for voice tracking
+	}
+
+	public Vector3 GetPlayerSpawnPosition(int playerClientId, bool simpleTeleport = false)
+	{
+		if (playerSpawnPositions != null && playerSpawnPositions.Length > 0)
+		{
+			int index = Mathf.Clamp(playerClientId, 0, playerSpawnPositions.Length - 1);
+			return playerSpawnPositions[index].position;
+		}
+		return base.transform.position;
+	}
+
+	public void SetSpectateCameraToGameOverMode(bool enableGameOver, PlayerControllerB playerControllerB = null)
+	{
+		if (spectateCamera != null)
+		{
+			spectateCamera.enabled = true;
+		}
+	}
+
+	public void SwitchCamera(Camera newCamera)
+	{
+		if (newCamera == null)
+		{
+			return;
+		}
+		newCamera.enabled = true;
+		CameraSwitchEvent?.Invoke();
+	}
+
+	private bool IsClientFriendsWithHost()
+	{
+		return true;
+	}
+
+	private void SceneManager_OnLoadComplete1(ulong clientId, string sceneName, LoadSceneMode loadSceneMode)
+	{
+		// Stub for scene load complete
+	}
+
+	private void SceneManager_OnLoad(ulong clientId, string sceneName, LoadSceneMode loadSceneMode, AsyncOperation asyncOperation)
+	{
+		// Stub for scene load
 	}
 
 

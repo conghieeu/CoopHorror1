@@ -104,10 +104,6 @@ public class FlashlightItem : GrabbableObject
 	[ClientRpc]
 	public void PocketFlashlightClientRpc(bool stillUsingFlashlight)
 	{
-		{
-			ClientRpcParams clientRpcParams = default(ClientRpcParams);
-			bufferWriter.WriteValueSafe(in stillUsingFlashlight, default(FastBufferWriter.ForPrimitives));
-		}
 		flashlightBulb.enabled = false;
 		flashlightBulbGlow.enabled = false;
 		if (stillUsingFlashlight)
