@@ -39,7 +39,7 @@ namespace Heathen.SteamworksIntegration.API
                 m_FriendsEnumerateFollowingList_t = null;
                 m_FriendsGetFollowerCount_t = null;
                 m_FriendsIsFollowing_t = null;
-                m_SetPersonaNameResponse_t = null;
+
                 m_GameConnectedFriendChatMsg_t = null;
                 m_AvatarImageLoaded_t = null;
                 m_PersonaStateChange_t = null;
@@ -117,9 +117,12 @@ namespace Heathen.SteamworksIntegration.API
             /// </summary>
             public static EPersonaState PersonaState => SteamFriends.GetPersonaState();
             /// <summary>
-            /// Checks if current user is chat restricted. See <see cref="EUserRestriction"/>
+            /// Checks if current user is chat restricted.
             /// </summary>
-            public static uint Restrictions => SteamFriends.GetUserRestrictions();
+            /// <remarks>
+            /// This API has been removed from Steamworks.NET. Always returns 0.
+            /// </remarks>
+            public static uint Restrictions => 0;
 
             private static GameConnectedFriendChatMsgEvent eventFriendMessageReceived = new GameConnectedFriendChatMsgEvent();
             private static bool listeningForFriendMessages = false;
@@ -134,8 +137,6 @@ namespace Heathen.SteamworksIntegration.API
             private static CallResult<FriendsGetFollowerCount_t> m_FriendsGetFollowerCount_t;
             private static CallResult<FriendsIsFollowing_t> m_FriendsIsFollowing_t;
 
-
-            private static CallResult<SetPersonaNameResponse_t> m_SetPersonaNameResponse_t;
 
             private static Callback<GameConnectedFriendChatMsg_t> m_GameConnectedFriendChatMsg_t;
             private static Callback<AvatarImageLoaded_t> m_AvatarImageLoaded_t;
@@ -739,27 +740,18 @@ namespace Heathen.SteamworksIntegration.API
             /// <returns></returns>
             public static void SetListenForFriendsMessages(bool enabled) => SteamFriends.SetListenForFriendsMessages(enabled);
             /// <summary>
-            /// Sets the current user's persona name, stores it on the server and publishes the changes to all friends who are online.
+            /// Sets the current user's persona name.
             /// </summary>
             /// <remarks>
-            /// <para>
-            /// Changes take place locally immediately, and a PersonaStateChange_t callback is posted, presuming success.
-            /// </para>
-            /// <para>
-            /// If the name change fails to happen on the server, then an additional PersonaStateChange_t callback will be posted to change the name back, in addition to the final result available in the call result.
-            /// </para>
+            /// This API (SetPersonaName/SetPersonaNameResponse_t) has been removed from Steamworks.NET.
+            /// This method is kept for compatibility but will log a warning and not perform any action.
             /// </remarks>
             /// <param name="name"></param>
-            public static void SetPersonaName(string name, Action<SetPersonaNameResponse_t, bool> callback)
+            /// <param name="callback"></param>
+            public static void SetPersonaName(string name, Action<bool> callback)
             {
-                if (callback == null)
-                    return;
-
-                if (m_SetPersonaNameResponse_t == null)
-                    m_SetPersonaNameResponse_t = CallResult<SetPersonaNameResponse_t>.Create();
-
-                var handle = SteamFriends.SetPersonaName(name);
-                m_SetPersonaNameResponse_t.Set(handle, callback.Invoke);
+                Debug.LogWarning("[Heathen Steamworks] SteamFriends.SetPersonaName is no longer available in the current version of Steamworks.NET.");
+                callback?.Invoke(false);
             }
             /// <summary>
             /// Mark a target user as 'played with'.

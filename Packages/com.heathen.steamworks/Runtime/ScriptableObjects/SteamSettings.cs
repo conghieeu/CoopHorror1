@@ -544,7 +544,7 @@ namespace Heathen.SteamworksIntegration
 
         public static bool HasDemoSettings()
         {
-            return UnityEditor.AssetDatabase.AssetPathExists(k_SteamworksDemoPath);
+            return UnityEditor.AssetDatabase.LoadAssetAtPath<SteamSettings>(k_SteamworksDemoPath) != null;
         }
 
         public static UnityEditor.SerializedObject GetSerializedSettings()
