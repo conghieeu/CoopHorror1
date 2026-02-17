@@ -30,6 +30,9 @@ MonoBehaviour:
     - 62e09e1e4aed9424ba218499f11ea644
     - a725de072e7eb4d449d782a7c86fd0bf
     - a5810db7e2f75fd4281a8ace4949bec8
+    - 60aecd2120316bb46bd5cb952d42efef
+    - 38e9c28d88e1e6c47924d97bedc52b68
+    - f30dc46fd44209a4f80e346006d86f09
     values:
     - colorIndex: 0
       iconNameOrGuid: TextAsset Icon
@@ -63,3 +66,9 @@ MonoBehaviour:
       iconNameOrGuid: Mesh Icon
     - colorIndex: 0
       iconNameOrGuid: Cubemap Icon
+    - colorIndex: 1
+      iconNameOrGuid: 
+    - colorIndex: 0
+      iconNameOrGuid: Material Icon
+    - colorIndex: 0
+      iconNameOrGuid: Mesh Icon
