@@ -33,6 +33,7 @@ MonoBehaviour:
     - 60aecd2120316bb46bd5cb952d42efef
     - 38e9c28d88e1e6c47924d97bedc52b68
     - f30dc46fd44209a4f80e346006d86f09
+    - 9e8be860ac63de541abf8e653915230e
     values:
     - colorIndex: 0
       iconNameOrGuid: TextAsset Icon
@@ -72,3 +73,5 @@ MonoBehaviour:
       iconNameOrGuid: Material Icon
     - colorIndex: 0
       iconNameOrGuid: Mesh Icon
+    - colorIndex: 0
+      iconNameOrGuid: AudioClip Icon
