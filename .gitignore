@@ -97,7 +97,7 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
-/*.rar
+*.rar
 
 # Steamworks SDK / Toolkit
 /[Aa]ssets/[Ss]amples/Toolkit for Steamworks*

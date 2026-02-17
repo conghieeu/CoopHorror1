@@ -1,0 +1,30 @@
+{
+    "name": "Lethal",
+    "rootNamespace": "",
+    "references": [
+        "GUID:1491147abca9d7d4bb7105af628b223e",
+        "GUID:3b8ed52f1b5c64994af4c4e0aa4b6c4b",
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:4307f53044263cf4b835bd812fc161a4",
+        "GUID:8c4dd21966739024fbd72155091d199e",
+        "GUID:b86a2c45e07cba7419c757a0a689fd50",
+        "GUID:fb24642277b1db2449da7ac148ce939d",
+        "GUID:7f7d1af65c2641843945d409d28f2e20",
+        "GUID:2bafac87e7f4b9b418d9448d219b01ab",
+        "GUID:e0cd26848372d4e5c891c569017e11f1",
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95",
+        "GUID:f2d49d9fa7e7eb3418e39723a7d3b92f",
+        "GUID:2aa43b0c797e0d444a7e82e75d4f2082",
+        "GUID:d874f2e35966a4a4c8144144065bed4e"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

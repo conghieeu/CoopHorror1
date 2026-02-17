@@ -27,6 +27,9 @@ MonoBehaviour:
     - d42840d3f8de2c846889c690951c46d7
     - ed5cc06472bb24d419458b6ece5b79eb
     - bc688fc4c70b02044b054f994d6e36e6
+    - 62e09e1e4aed9424ba218499f11ea644
+    - a725de072e7eb4d449d782a7c86fd0bf
+    - a5810db7e2f75fd4281a8ace4949bec8
     values:
     - colorIndex: 0
       iconNameOrGuid: TextAsset Icon
@@ -38,7 +41,7 @@ MonoBehaviour:
       iconNameOrGuid: SceneAsset Icon
     - colorIndex: 9
       iconNameOrGuid: Material Icon
-    - colorIndex: 8
+    - colorIndex: 0
       iconNameOrGuid: AnimationClip Icon
     - colorIndex: 0
       iconNameOrGuid: PrefabModel Icon
@@ -54,3 +57,9 @@ MonoBehaviour:
       iconNameOrGuid: Texture Icon
     - colorIndex: 9
       iconNameOrGuid: 
+    - colorIndex: 0
+      iconNameOrGuid: Material Icon
+    - colorIndex: 0
+      iconNameOrGuid: Mesh Icon
+    - colorIndex: 0
+      iconNameOrGuid: Cubemap Icon
