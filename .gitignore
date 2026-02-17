@@ -101,3 +101,6 @@ InitTestScene*.unity*
 
 # Steamworks SDK / Toolkit
 /[Aa]ssets/[Ss]amples/Toolkit for Steamworks*
+
+# Block Lethal Company assets, which can be very large and are not needed for development
+/[Aa]ssets/[Ll]ethalCompany

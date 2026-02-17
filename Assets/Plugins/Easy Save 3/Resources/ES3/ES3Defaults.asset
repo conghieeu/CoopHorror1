@@ -35,11 +35,13 @@ MonoBehaviour:
     referenceMode: 2
     serializationDepthLimit: 64
     assemblyNames:
-    - Assembly-CSharp
     - Assembly-CSharp-firstpass
     - BetterHierarchyDemoScripts
     - Cinemachine
     - Discord.Sdk
+    - ES3
+    - Facepunch Transport for Netcode for GameObjects
+    - Lethal
     - QFSW.QC
     - QFSW.QC.Demo
     - QFSW.QC.Extras
