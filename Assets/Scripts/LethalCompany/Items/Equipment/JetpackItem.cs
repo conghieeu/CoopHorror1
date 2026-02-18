@@ -1,0 +1,266 @@
+using GameNetcodeStuff;
+using Unity.Netcode;
+using UnityEngine;
+
+public class JetpackItem : GrabbableObject
+{
+	public Transform backPart;
+
+	public Vector3 backPartRotationOffset;
+
+	public Vector3 backPartPositionOffset;
+
+	private float jetpackPower;
+
+	private bool jetpackActivated;
+
+	private Vector3 forces;
+
+	private bool jetpackActivatedPreviousFrame;
+
+	public GameObject fireEffect;
+
+	public AudioSource jetpackAudio;
+
+	public AudioSource jetpackBeepsAudio;
+
+	public AudioClip startJetpackSFX;
+
+	public AudioClip jetpackSustainSFX;
+
+	public AudioClip jetpackBrokenSFX;
+
+	public AudioClip jetpackWarningBeepSFX;
+
+	public AudioClip jetpackLowBatteriesSFX;
+
+	public ParticleSystem smokeTrailParticle;
+
+	private PlayerControllerB previousPlayerHeldBy;
+
+	private bool jetpackBroken;
+
+	private bool jetpackPlayingWarningBeep;
+
+	private bool jetpackPlayingLowBatteryBeep;
+
+	private float noiseInterval;
+
+	private RaycastHit rayHit;
+
+	public override void ItemActivate(bool used, bool buttonDown = true)
+	{
+		base.ItemActivate(used, buttonDown);
+		if (buttonDown)
+		{
+			ActivateJetpack();
+		}
+		else
+		{
+			DeactivateJetpack();
+		}
+	}
+
+	private void DeactivateJetpack()
+	{
+		if (previousPlayerHeldBy.jetpackControls)
+		{
+			previousPlayerHeldBy.disablingJetpackControls = true;
+		}
+		jetpackActivated = false;
+		jetpackActivatedPreviousFrame = false;
+		jetpackPlayingLowBatteryBeep = false;
+		jetpackPlayingWarningBeep = false;
+		jetpackBeepsAudio.Stop();
+		jetpackAudio.Stop();
+		smokeTrailParticle.Stop(withChildren: true, ParticleSystemStopBehavior.StopEmitting);
+		if (!jetpackBroken)
+		{
+			JetpackEffect(enable: false);
+		}
+	}
+
+	private void ActivateJetpack()
+	{
+		if (jetpackBroken)
+		{
+			jetpackAudio.PlayOneShot(jetpackBrokenSFX);
+			return;
+		}
+		if (!jetpackActivatedPreviousFrame)
+		{
+			playerHeldBy.jetpackTurnCompass.rotation = playerHeldBy.transform.rotation;
+			JetpackEffect(enable: true);
+			jetpackActivatedPreviousFrame = true;
+		}
+		playerHeldBy.disablingJetpackControls = false;
+		playerHeldBy.jetpackControls = true;
+		jetpackActivated = true;
+		playerHeldBy.syncFullRotation = playerHeldBy.transform.eulerAngles;
+	}
+
+	private void JetpackEffect(bool enable)
+	{
+		fireEffect.SetActive(enable);
+		if (enable)
+		{
+			if (!jetpackActivatedPreviousFrame)
+			{
+				jetpackAudio.PlayOneShot(startJetpackSFX);
+			}
+			smokeTrailParticle.Play();
+			jetpackAudio.clip = jetpackSustainSFX;
+			jetpackAudio.Play();
+			Debug.Log($"Is jetpack audio playing?: {jetpackAudio.isPlaying}");
+		}
+		else
+		{
+			smokeTrailParticle.Stop(withChildren: true, ParticleSystemStopBehavior.StopEmitting);
+			jetpackAudio.Stop();
+		}
+		if (Vector3.Distance(GameNetworkManager.Instance.localPlayerController.transform.position, base.transform.position) < 10f)
+		{
+			HUDManager.Instance.ShakeCamera(ScreenShakeType.Big);
+		}
+	}
+
+	public override void UseUpBatteries()
+	{
+		DeactivateJetpack();
+	}
+
+	public override void DiscardItem()
+	{
+		Debug.Log($"Owner of jetpack?: {base.IsOwner}");
+		Debug.Log($"Is dead?: {playerHeldBy.isPlayerDead}");
+		if (base.IsOwner && playerHeldBy.isPlayerDead && !jetpackBroken && playerHeldBy.jetpackControls)
+		{
+			ExplodeJetpackServerRpc();
+		}
+		JetpackEffect(enable: false);
+		DeactivateJetpack();
+		jetpackPower = 0f;
+		base.DiscardItem();
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void ExplodeJetpackServerRpc()
+	{
+		ExplodeJetpackClientRpc();
+	}
+
+	[ClientRpc]
+	public void ExplodeJetpackClientRpc()
+	{
+		if (!jetpackBroken)
+		{
+			jetpackBroken = true;
+			itemUsedUp = true;
+			Debug.Log("Spawning explosion");
+			Landmine.SpawnExplosion(base.transform.position, spawnExplosionEffect: true, 5f, 7f);
+		}
+	}
+
+	public override void EquipItem()
+	{
+		base.EquipItem();
+		previousPlayerHeldBy = playerHeldBy;
+	}
+
+	public override void Update()
+	{
+		base.Update();
+		if (GameNetworkManager.Instance == null || GameNetworkManager.Instance.localPlayerController == null)
+		{
+			return;
+		}
+		SetJetpackAudios();
+		if (playerHeldBy == null || !base.IsOwner || playerHeldBy != GameNetworkManager.Instance.localPlayerController)
+		{
+			return;
+		}
+		if (jetpackActivated)
+		{
+			jetpackPower = Mathf.Clamp(jetpackPower + Time.deltaTime * 10f, 0f, 500f);
+		}
+		else
+		{
+			jetpackPower = Mathf.Clamp(jetpackPower - Time.deltaTime * 75f, 0f, 1000f);
+			if (playerHeldBy.thisController.isGrounded)
+			{
+				jetpackPower = 0f;
+			}
+		}
+		forces = Vector3.Lerp(forces, Vector3.ClampMagnitude(playerHeldBy.transform.up * jetpackPower, 400f), Time.deltaTime);
+		if (!playerHeldBy.jetpackControls)
+		{
+			forces = Vector3.zero;
+		}
+		if (!playerHeldBy.isPlayerDead && Physics.Raycast(playerHeldBy.transform.position, forces, out rayHit, 25f, StartOfRound.Instance.allPlayersCollideWithMask) && forces.magnitude - rayHit.distance > 50f && rayHit.distance < 4f)
+		{
+			playerHeldBy.KillPlayer(forces, spawnBody: true, CauseOfDeath.Gravity);
+		}
+		playerHeldBy.externalForces += forces;
+	}
+
+	private void SetJetpackAudios()
+	{
+		if (jetpackActivated)
+		{
+			if (noiseInterval >= 0.5f)
+			{
+				noiseInterval = 0f;
+				RoundManager.Instance.PlayAudibleNoise(base.transform.position, 25f, 0.85f, 0, playerHeldBy.isInHangarShipRoom && StartOfRound.Instance.hangarDoorsClosed, 41);
+			}
+			else
+			{
+				noiseInterval += Time.deltaTime;
+			}
+			if (insertedBattery.charge < 0.15f)
+			{
+				if (!jetpackPlayingLowBatteryBeep)
+				{
+					jetpackPlayingLowBatteryBeep = true;
+					jetpackBeepsAudio.clip = jetpackLowBatteriesSFX;
+					jetpackBeepsAudio.Play();
+				}
+			}
+			else if (Physics.CheckSphere(base.transform.position, 6f, StartOfRound.Instance.collidersAndRoomMaskAndDefault))
+			{
+				if (!jetpackPlayingWarningBeep && !jetpackPlayingLowBatteryBeep)
+				{
+					jetpackPlayingWarningBeep = true;
+					jetpackBeepsAudio.clip = jetpackWarningBeepSFX;
+					jetpackBeepsAudio.Play();
+				}
+			}
+			else
+			{
+				jetpackBeepsAudio.Stop();
+			}
+		}
+		else
+		{
+			jetpackPlayingWarningBeep = false;
+			jetpackPlayingLowBatteryBeep = false;
+			jetpackBeepsAudio.Stop();
+		}
+	}
+
+	public override void LateUpdate()
+	{
+		base.LateUpdate();
+		if (playerHeldBy != null && isHeld)
+		{
+			backPart.position = playerHeldBy.lowerSpine.position;
+			backPart.rotation = playerHeldBy.lowerSpine.rotation;
+			base.transform.Rotate(backPartRotationOffset);
+			backPart.position = playerHeldBy.lowerSpine.position;
+			Vector3 vector = backPartPositionOffset;
+			vector = playerHeldBy.lowerSpine.rotation * vector;
+			backPart.position += vector;
+		}
+	}
+
+
+}

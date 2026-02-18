@@ -1,0 +1,2621 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using Dissonance;
+using Dissonance.Integrations.Unity_NFGO;
+using GameNetcodeStuff;
+using Steamworks;
+using TMPro;
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.Audio;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using UnityEngine.Video;
+
+public class StartOfRound : NetworkBehaviour
+{
+	public bool shouldApproveConnection;
+
+	public bool allowLocalPlayerDeath = true;
+
+	[Space(3f)]
+	public int connectedPlayersAmount;
+
+	public int thisClientPlayerId;
+
+	public List<ulong> fullyLoadedPlayers = new List<ulong>(4);
+
+	private int playersLoadedWhenLanding;
+
+	public int livingPlayers = 4;
+
+	private bool mostRecentlyJoinedClient;
+
+	public bool allPlayersDead;
+
+	public Dictionary<ulong, int> ClientPlayerList = new Dictionary<ulong, int>();
+
+	public List<ulong> KickedClientIds = new List<ulong>();
+
+	public int daysPlayersSurvivedInARow;
+
+	[Space(5f)]
+	private bool hasHostSpawned;
+
+	public bool inShipPhase = true;
+
+	public float timeSinceRoundStarted;
+
+	public bool shipIsLeaving;
+
+	public bool displayedLevelResults;
+
+	public bool newGameIsLoading;
+
+	private int playersRevived;
+
+	public EndOfGameStats gameStats;
+
+	private bool localPlayerWasMostProfitableThisRound;
+
+	[Header("Important objects")]
+	public Camera spectateCamera;
+
+	public AudioListener audioListener;
+
+	[HideInInspector]
+	public bool overrideSpectateCamera;
+
+	public GameObject[] allPlayerObjects;
+
+	public PlayerControllerB[] allPlayerScripts;
+
+	public Transform[] playerSpawnPositions;
+
+	public Transform outsideShipSpawnPosition;
+
+	public Transform notSpawnedPosition;
+
+	public Transform propsContainer;
+
+	public Transform elevatorTransform;
+
+	public Transform playersContainer;
+
+	public PlayerControllerB localPlayerController;
+
+	public List<PlayerControllerB> OtherClients = new List<PlayerControllerB>();
+
+	[Space(3f)]
+	public UnlockablesList unlockablesList;
+
+	public AudioClip changeSuitSFX;
+
+	public GameObject suitPrefab;
+
+	public int suitsPlaced;
+
+	public Transform rightmostSuitPosition;
+
+	[Space(5f)]
+	public GameObject playerPrefab;
+
+	public GameObject ragdollGrabbableObjectPrefab;
+
+	public List<GameObject> playerRagdolls = new List<GameObject>();
+
+	public GameObject playerBloodPrefab;
+
+	public Transform bloodObjectsContainer;
+
+	public Camera introCamera;
+
+	public Camera activeCamera;
+
+	public SimpleEvent CameraSwitchEvent = new SimpleEvent();
+
+	public SimpleEvent StartNewRoundEvent = new SimpleEvent();
+
+	public GameObject testRoom;
+
+	public GameObject testRoomPrefab;
+
+	public Transform testRoomSpawnPosition;
+
+	public bool localClientHasControl;
+
+	public RuntimeAnimatorController localClientAnimatorController;
+
+	public RuntimeAnimatorController otherClientsAnimatorController;
+
+	public int playersMask = 8;
+
+	public int collidersAndRoomMask = 2304;
+
+	public int collidersAndRoomMaskAndPlayers = 2312;
+
+	public int collidersAndRoomMaskAndDefault = 2305;
+
+	public int collidersRoomMaskDefaultAndPlayers = 2313;
+
+	public int collidersRoomDefaultAndFoliage = 3329;
+
+	public int allPlayersCollideWithMask = -4493385;
+
+	public int walkableSurfacesMask = 268437769;
+
+	[Header("Physics")]
+	public Collider[] PlayerPhysicsColliders;
+
+	[Header("Ship Animations")]
+	public NetworkObject shipAnimatorObject;
+
+	public Animator shipAnimator;
+
+	public AudioSource shipAmbianceAudio;
+
+	public AudioSource ship3DAudio;
+
+	public AudioClip shipDepartSFX;
+
+	public AudioClip shipArriveSFX;
+
+	public AudioSource shipDoorAudioSource;
+
+	public AudioSource speakerAudioSource;
+
+	public AudioClip suckedIntoSpaceSFX;
+
+	public AudioClip airPressureSFX;
+
+	public AudioClip[] shipCreakSFX;
+
+	public AudioClip alarmSFX;
+
+	public AudioClip firedVoiceSFX;
+
+	public AudioClip openingHangarDoorAudio;
+
+	public AudioClip allPlayersDeadAudio;
+
+	public AudioClip shipIntroSpeechSFX;
+
+	public AudioClip disableSpeakerSFX;
+
+	public AudioClip zeroDaysLeftAlertSFX;
+
+	public bool shipLeftAutomatically;
+
+	private bool shipLeavingOnMidnight;
+
+	public DialogueSegment[] openingDoorDialogue;
+
+	public DialogueSegment[] gameOverDialogue;
+
+	public DialogueSegment[] shipLeavingOnMidnightDialogue;
+
+	public bool shipDoorsEnabled;
+
+	public bool shipHasLanded;
+
+	public Animator shipDoorsAnimator;
+
+	public bool hangarDoorsClosed = true;
+
+	private Coroutine shipTravelCoroutine;
+
+	public ShipLights shipRoomLights;
+
+	public AnimatedObjectTrigger closetLeftDoor;
+
+	public AnimatedObjectTrigger closetRightDoor;
+
+	public GameObject starSphereObject;
+
+	public Dictionary<int, GameObject> SpawnedShipUnlockables = new Dictionary<int, GameObject>();
+
+	public Transform gameOverCameraHandle;
+
+	public Transform freeCinematicCameraTurnCompass;
+
+	public Camera freeCinematicCamera;
+
+	[Header("Players fired animation")]
+	public bool firingPlayersCutsceneRunning;
+
+	public bool suckingPlayersOutOfShip;
+
+	private bool choseRandomFlyDirForPlayer;
+
+	private Vector3 randomFlyDir = Vector3.zero;
+
+	public float suckingPower;
+
+	public bool suckingFurnitureOutOfShip;
+
+	public Transform middleOfShipNode;
+
+	public Transform shipDoorNode;
+
+	public Transform middleOfSpaceNode;
+
+	public Transform moveAwayFromShipNode;
+
+	[Header("Level selection")]
+	public GameObject currentPlanetPrefab;
+
+	public Animator currentPlanetAnimator;
+
+	public Animator outerSpaceSunAnimator;
+
+	public Transform planetContainer;
+
+	public SelectableLevel[] levels;
+
+	public SelectableLevel currentLevel;
+
+	public int currentLevelID;
+
+	public bool isChallengeFile;
+
+	public bool hasSubmittedChallengeRank;
+
+	public int defaultPlanet;
+
+	public bool travellingToNewLevel;
+
+	public AnimationCurve planetsWeatherRandomCurve;
+
+	public int maxShipItemCapacity = 45;
+
+	public int currentShipItemCount;
+
+	[Header("Ship Monitors")]
+	public TextMeshProUGUI screenLevelDescription;
+
+	public VideoPlayer screenLevelVideoReel;
+
+	public TextMeshProUGUI mapScreenPlayerName;
+
+	public ManualCameraRenderer mapScreen;
+
+	public GameObject objectCodePrefab;
+
+	public GameObject itemRadarIconPrefab;
+
+	[Space(5f)]
+	public Image deadlineMonitorBGImage;
+
+	public Image profitQuotaMonitorBGImage;
+
+	public TextMeshProUGUI deadlineMonitorText;
+
+	public TextMeshProUGUI profitQuotaMonitorText;
+
+	public GameObject upperMonitorsCanvas;
+
+	public Canvas radarCanvas;
+
+	[Header("Randomization")]
+	public int randomMapSeed;
+
+	public bool overrideRandomSeed;
+
+	public int overrideSeedNumber;
+
+	public AnimationCurve objectFallToGroundCurve;
+
+	public AnimationCurve objectFallToGroundCurveNoBounce;
+
+	public AnimationCurve playerSinkingCurve;
+
+	[Header("Voice chat")]
+	public DissonanceComms voiceChatModule;
+
+	public float averageVoiceAmplitude;
+
+	public int movingAverageLength = 20;
+
+	public int averageCount;
+
+	private float voiceChatNoiseCooldown;
+
+	public bool updatedPlayerVoiceEffectsThisFrame;
+
+	[Header("Player Audios")]
+	public AudioMixerGroup playersVoiceMixerGroup;
+
+	public FootstepSurface[] footstepSurfaces;
+
+	public string[] naturalSurfaceTags;
+
+	public AudioClip[] statusEffectClips;
+
+	public AudioClip HUDSystemAlertSFX;
+
+	public AudioClip playerJumpSFX;
+
+	public AudioClip playerHitGroundSoft;
+
+	public AudioClip playerHitGroundHard;
+
+	public AudioClip damageSFX;
+
+	public AudioClip fallDamageSFX;
+
+	public AudioClip bloodGoreSFX;
+
+	[Space(5f)]
+	public float drowningTimer;
+
+	[HideInInspector]
+	public bool playedDrowningSFX;
+
+	public AudioClip[] bodyCollisionSFX;
+
+	public AudioClip playerFallDeath;
+
+	public AudioClip hitPlayerSFX;
+
+	private Coroutine fadeVolumeCoroutine;
+
+	public List<DecalProjector> snowFootprintsPooledObjects = new List<DecalProjector>();
+
+	public GameObject footprintDecal;
+
+	public int currentFootprintIndex;
+
+	public GameObject explosionPrefab;
+
+	public float fearLevel;
+
+	public bool fearLevelIncreasing;
+
+	[Header("Company building game loop")]
+	public float companyBuyingRate = 1f;
+
+	public int hoursSinceLastCompanyVisit;
+
+	public AudioClip companyVisitMusic;
+
+	public bool localPlayerUsingController;
+
+	private bool subscribedToConnectionApproval;
+
+	public Collider shipBounds;
+
+	public Collider shipInnerRoomBounds;
+
+	private Coroutine updateVoiceEffectsCoroutine;
+
+	public ReverbPreset shipReverb;
+
+	public AnimationCurve drunknessSpeedEffect;
+
+	public AnimationCurve drunknessSideEffect;
+
+	private float updatePlayerVoiceInterval;
+
+	public Volume blackSkyVolume;
+
+	[Space(5f)]
+	public AllItemsList allItemsList;
+
+	public InteractEvent playerTeleportedEvent;
+
+	[Space(3f)]
+	public string[] randomNames;
+
+	public float timeAtStartOfRun;
+
+	public float playerLookMagnitudeThisFrame;
+
+	public float timeAtMakingLastPersonalMovement;
+
+	public Transform[] insideShipPositions;
+
+	public int scrapCollectedLastRound;
+
+	public static StartOfRound Instance { get; private set; }
+
+	public void InstantiateFootprintsPooledObjects()
+	{
+		int num = 250;
+		for (int i = 0; i < num; i++)
+		{
+			GameObject gameObject = UnityEngine.Object.Instantiate(footprintDecal, bloodObjectsContainer);
+			snowFootprintsPooledObjects.Add(gameObject.GetComponent<DecalProjector>());
+		}
+	}
+
+	private void ResetPooledObjects(bool destroy = false)
+	{
+		for (int i = 0; i < snowFootprintsPooledObjects.Count; i++)
+		{
+			snowFootprintsPooledObjects[i].enabled = false;
+		}
+		for (int num = SprayPaintItem.sprayPaintDecals.Count - 1; num >= 0; num--)
+		{
+			if (destroy || !(SprayPaintItem.sprayPaintDecals[num] != null) || !SprayPaintItem.sprayPaintDecals[num].transform.IsChildOf(elevatorTransform))
+			{
+				UnityEngine.Object.Destroy(SprayPaintItem.sprayPaintDecals[num]);
+				SprayPaintItem.sprayPaintDecals.RemoveAt(num);
+			}
+		}
+	}
+
+	private void Awake()
+	{
+		if (Instance == null)
+		{
+			Instance = this;
+			timeAtStartOfRun = Time.realtimeSinceStartup;
+		}
+		else
+		{
+			UnityEngine.Object.Destroy(Instance.gameObject);
+			Instance = this;
+		}
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	private void PlayerLoadedServerRpc(ulong clientId)
+	{
+		fullyLoadedPlayers.Add(clientId);
+		PlayerLoadedClientRpc(clientId);
+	}
+
+	[ClientRpc]
+	private void PlayerLoadedClientRpc(ulong clientId)
+	{
+		if (!base.IsServer)
+		{
+			fullyLoadedPlayers.Add(clientId);
+		}
+	}
+
+	[ClientRpc]
+	private void ResetPlayersLoadedValueClientRpc(bool landingShip = false)
+	{
+		fullyLoadedPlayers.Clear();
+		if (landingShip)
+		{
+			playersLoadedWhenLanding = 0;
+		}
+	}
+
+	[ClientRpc]
+	public void BuyShipUnlockableClientRpc(int newGroupCreditsAmount, int unlockableID = -1)
+	{
+		if (!(NetworkManager.Singleton == null) && !base.NetworkManager.ShutdownInProgress && !base.IsServer)
+		{
+			if (unlockableID != -1)
+			{
+			unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer = true;
+			}
+			UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
+		}
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void ReturnUnlockableFromStorageServerRpc(int unlockableID)
+	{
+		SyncSuitsClientRpc();
+	}
+
+	[ClientRpc]
+	public void SyncSuitsClientRpc()
+	{
+		PositionSuitsOnRack();
+	}
+
+	private void LoadShipGrabbableItems()
+	{
+		if (!ES3.KeyExists("shipGrabbableItemIDs", GameNetworkManager.Instance.currentSaveFileName))
+		{
+			Debug.Log("Key 'shipGrabbableItems' does not exist");
+			return;
+		}
+		int[] array = ES3.Load<int[]>("shipGrabbableItemIDs", GameNetworkManager.Instance.currentSaveFileName);
+		Vector3[] array2 = ES3.Load<Vector3[]>("shipGrabbableItemPos", GameNetworkManager.Instance.currentSaveFileName);
+		if (array == null || array2 == null)
+		{
+			Debug.LogError("Ship items list loaded from file returns a null value!");
+			return;
+		}
+		Debug.Log($"Ship grabbable items list loaded. Count: {array.Length}");
+		bool flag = ES3.KeyExists("shipScrapValues", GameNetworkManager.Instance.currentSaveFileName);
+		int[] array3 = null;
+		if (flag)
+		{
+			array3 = ES3.Load<int[]>("shipScrapValues", GameNetworkManager.Instance.currentSaveFileName);
+		}
+		int[] array4 = null;
+		bool flag2 = false;
+		if (ES3.KeyExists("shipItemSaveData", GameNetworkManager.Instance.currentSaveFileName))
+		{
+			flag2 = true;
+			array4 = ES3.Load<int[]>("shipItemSaveData", GameNetworkManager.Instance.currentSaveFileName);
+		}
+		int num = 0;
+		int num2 = 0;
+		for (int i = 0; i < array.Length; i++)
+		{
+			if (allItemsList.itemsList.Count >= array[i])
+			{
+				if (!shipBounds.bounds.Contains(array2[i]))
+				{
+					array2[i] = playerSpawnPositions[1].position;
+					array2[i].x += UnityEngine.Random.Range(-0.7f, 0.7f);
+					array2[i].z += UnityEngine.Random.Range(2f, 2f);
+					array2[i].y += 0.5f;
+				}
+				GrabbableObject component = UnityEngine.Object.Instantiate(allItemsList.itemsList[array[i]].spawnPrefab, array2[i], Quaternion.identity, elevatorTransform).GetComponent<GrabbableObject>();
+				component.fallTime = 1f;
+				component.hasHitGround = true;
+				component.scrapPersistedThroughRounds = true;
+				component.isInElevator = true;
+				component.isInShipRoom = true;
+				if (flag && allItemsList.itemsList[array[i]].isScrap)
+				{
+					Debug.Log($"Setting scrap value for item: {component.gameObject.name}: {array3[num]}");
+					component.SetScrapValue(array3[num]);
+					num++;
+				}
+				if (flag2 && component.itemProperties.saveItemVariable && num2 < array4.Length)
+				{
+					Debug.Log($"Loading item save data for item: {component.gameObject}: {array4[num2]}");
+					component.LoadItemSaveData(array4[num2]);
+					num2++;
+				}
+				component.NetworkObject.Spawn();
+			}
+		}
+	}
+
+	private void SetTimeAndPlanetToSavedSettings()
+	{
+		string currentSaveFileName = GameNetworkManager.Instance.currentSaveFileName;
+		int levelID;
+		if (currentSaveFileName == "LCChallengeFile")
+		{
+			System.Random random = new System.Random(GameNetworkManager.Instance.GetWeekNumber() + 2);
+			randomMapSeed = random.Next(0, 100000000);
+			hasSubmittedChallengeRank = ES3.Load("SubmittedScore", currentSaveFileName, defaultValue: false);
+			isChallengeFile = true;
+			UnlockableSuit.SwitchSuitForAllPlayers(24);
+			SelectableLevel[] array = levels.Where((SelectableLevel x) => x.planetHasTime).ToArray();
+			levelID = array[random.Next(0, array.Length)].levelID;
+		}
+		else
+		{
+			isChallengeFile = false;
+			randomMapSeed = ES3.Load("RandomSeed", currentSaveFileName, 0);
+			levelID = ES3.Load("CurrentPlanetID", currentSaveFileName, defaultPlanet);
+		}
+		ChangeLevel(levelID);
+		ChangePlanet();
+		if (isChallengeFile)
+		{
+			TimeOfDay.Instance.totalTime = TimeOfDay.Instance.lengthOfHours * (float)TimeOfDay.Instance.numberOfHours;
+			TimeOfDay.Instance.timeUntilDeadline = TimeOfDay.Instance.totalTime;
+			TimeOfDay.Instance.profitQuota = 200;
+		}
+		else
+		{
+			TimeOfDay.Instance.timesFulfilledQuota = ES3.Load("QuotasPassed", currentSaveFileName, 0);
+			TimeOfDay.Instance.profitQuota = ES3.Load("ProfitQuota", currentSaveFileName, TimeOfDay.Instance.quotaVariables.startingQuota);
+			TimeOfDay.Instance.totalTime = TimeOfDay.Instance.lengthOfHours * (float)TimeOfDay.Instance.numberOfHours;
+			TimeOfDay.Instance.timeUntilDeadline = ES3.Load("DeadlineTime", currentSaveFileName, (int)(TimeOfDay.Instance.totalTime * (float)TimeOfDay.Instance.quotaVariables.deadlineDaysAmount));
+			TimeOfDay.Instance.quotaFulfilled = ES3.Load("QuotaFulfilled", currentSaveFileName, 0);
+			TimeOfDay.Instance.SetBuyingRateForDay();
+			gameStats.daysSpent = ES3.Load("Stats_DaysSpent", currentSaveFileName, 0);
+			gameStats.deaths = ES3.Load("Stats_Deaths", currentSaveFileName, 0);
+			gameStats.scrapValueCollected = ES3.Load("Stats_ValueCollected", currentSaveFileName, 0);
+			gameStats.allStepsTaken = ES3.Load("Stats_StepsTaken", currentSaveFileName, 0);
+		}
+		TimeOfDay.Instance.UpdateProfitQuotaCurrentTime();
+		SetPlanetsWeather();
+		UnityEngine.Object.FindObjectOfType<Terminal>().SetItemSales();
+		if (gameStats.daysSpent == 0 && !isChallengeFile)
+		{
+			PlayFirstDayShipAnimation(waitForMenuToClose: true);
+		}
+		if (TimeOfDay.Instance.timeUntilDeadline > 0f && TimeOfDay.Instance.daysUntilDeadline <= 0 && TimeOfDay.Instance.timesFulfilledQuota <= 0)
+		{
+			StartCoroutine(playDaysLeftAlertSFXDelayed());
+		}
+	}
+
+	private IEnumerator StartSpatialVoiceChat()
+	{
+		yield return new WaitUntil(() => localClientHasControl && GameNetworkManager.Instance.localPlayerController != null);
+		for (int num = 0; num < allPlayerObjects.Length; num++)
+		{
+			if ((bool)allPlayerObjects[num].GetComponent<NfgoPlayer>() && !allPlayerObjects[num].GetComponent<NfgoPlayer>().IsTracking)
+			{
+				allPlayerObjects[num].GetComponent<NfgoPlayer>().VoiceChatTrackingStart();
+			}
+		}
+		float startTime = Time.realtimeSinceStartup;
+		yield return new WaitUntil(() => HUDManager.Instance.hasSetSavedValues || Time.realtimeSinceStartup - startTime > 5f);
+		if (!HUDManager.Instance.hasSetSavedValues)
+		{
+			Debug.LogError("Failure to set local player level! Skipping sync.");
+		}
+		else
+		{
+			HUDManager.Instance.SyncAllPlayerLevelsServerRpc(HUDManager.Instance.localPlayerLevel, (int)GameNetworkManager.Instance.localPlayerController.playerClientId);
+		}
+		yield return new WaitForSeconds(12f);
+		UpdatePlayerVoiceEffects();
+	}
+
+	private IEnumerator UpdatePlayerVoiceEffectsOnDelay()
+	{
+		yield return new WaitForSeconds(12f);
+		UpdatePlayerVoiceEffects();
+	}
+
+	public void KickPlayer(int playerObjToKick)
+	{
+		if ((!allPlayerScripts[playerObjToKick].isPlayerControlled && !allPlayerScripts[playerObjToKick].isPlayerDead) || !base.IsServer)
+		{
+			return;
+		}
+		if (!GameNetworkManager.Instance.disableSteam)
+		{
+			ulong playerSteamId = Instance.allPlayerScripts[playerObjToKick].playerSteamId;
+			if (!KickedClientIds.Contains(playerSteamId))
+			{
+				KickedClientIds.Add(playerSteamId);
+			}
+		}
+		NetworkManager.Singleton.DisconnectClient(allPlayerScripts[playerObjToKick].actualClientId);
+		HUDManager.Instance.AddTextToChatOnServer($"[playerNum{playerObjToKick}] was kicked.");
+	}
+
+	public void OnLocalDisconnect()
+	{
+		if (NetworkManager.Singleton != null)
+		{
+			if (NetworkManager.Singleton.SceneManager != null)
+			{
+				NetworkManager.Singleton.SceneManager.OnLoadComplete -= SceneManager_OnLoadComplete1;
+				NetworkManager.Singleton.SceneManager.OnLoad -= SceneManager_OnLoad;
+			}
+			else
+			{
+				Debug.Log("Scene manager is null");
+			}
+		}
+	}
+
+	public void OnClientDisconnect(ulong clientId)
+	{
+		if (ClientPlayerList == null || !ClientPlayerList.ContainsKey(clientId))
+		{
+			Debug.Log("Disconnection callback called for a client id which isn't in ClientPlayerList; ignoring. This is likely due to an unapproved connection.");
+			return;
+		}
+		if (NetworkManager.Singleton == null || GameNetworkManager.Instance == null || GameNetworkManager.Instance.localPlayerController == null)
+		{
+			GameNetworkManager.Instance.disconnectReason = 1;
+			GameNetworkManager.Instance.Disconnect();
+			return;
+		}
+		if (clientId == NetworkManager.Singleton.LocalClientId || clientId == GameNetworkManager.Instance.localPlayerController.actualClientId)
+		{
+			Debug.Log("Disconnect callback called for local client; ignoring.");
+			return;
+		}
+		Debug.Log("Client disconnected from server");
+		if (!ClientPlayerList.TryGetValue(clientId, out var value))
+		{
+			Debug.LogError("Could not get player object number from client id on disconnect!");
+		}
+		if (!base.IsServer)
+		{
+			Debug.Log($"player disconnected c; {clientId}");
+			Debug.Log(ClientPlayerList.Count);
+			for (int i = 0; i < ClientPlayerList.Count; i++)
+			{
+				ClientPlayerList.TryGetValue((ulong)i, out var value2);
+				Debug.Log($"client id: {i} ; player object id: {value2}");
+			}
+			Debug.Log($"disconnecting client id: {clientId}");
+			if (ClientPlayerList.TryGetValue(clientId, out var value3) && value3 == 0)
+			{
+				Debug.Log("Host disconnected!");
+				Debug.Log(GameNetworkManager.Instance.isDisconnecting);
+				if (!GameNetworkManager.Instance.isDisconnecting)
+				{
+					Debug.Log("Host quit! Ending game for client.");
+					GameNetworkManager.Instance.disconnectReason = 1;
+					GameNetworkManager.Instance.Disconnect();
+					return;
+				}
+			}
+			OnPlayerDC(value, clientId);
+			return;
+		}
+		if (fullyLoadedPlayers.Contains(clientId))
+		{
+			fullyLoadedPlayers.Remove(clientId);
+		}
+		if (RoundManager.Instance.playersFinishedGeneratingFloor.Contains(clientId))
+		{
+			RoundManager.Instance.playersFinishedGeneratingFloor.Remove(clientId);
+		}
+		GrabbableObject[] array = UnityEngine.Object.FindObjectsOfType<GrabbableObject>();
+		for (int j = 0; j < array.Length; j++)
+		{
+			if (!array[j].isHeld)
+			{
+				array[j].heldByPlayerOnServer = false;
+			}
+		}
+		if (!base.IsServer)
+		{
+			return;
+		}
+		List<ulong> list = new List<ulong>();
+		foreach (KeyValuePair<ulong, int> clientPlayer in ClientPlayerList)
+		{
+			if (clientPlayer.Key != clientId)
+			{
+				list.Add(clientPlayer.Key);
+			}
+		}
+		ClientRpcParams clientRpcParams = new ClientRpcParams
+		{
+			Send = new ClientRpcSendParams
+			{
+				TargetClientIds = list.ToArray()
+			}
+		};
+		OnPlayerDC(value, clientId);
+		OnClientDisconnectClientRpc(value, clientId, clientRpcParams);
+	}
+
+	[ClientRpc]
+	public void OnClientDisconnectClientRpc(int playerObjectNumber, ulong clientId, ClientRpcParams clientRpcParams = default(ClientRpcParams))
+	{
+		OnPlayerDC(playerObjectNumber, clientId);
+	}
+
+	public void OnPlayerDC(int playerObjectNumber, ulong clientId)
+	{
+		Debug.Log("Calling OnPlayerDC!");
+		if (!ClientPlayerList.ContainsKey(clientId))
+		{
+			Debug.Log("disconnect: clientId key already removed!");
+			return;
+		}
+		if (GameNetworkManager.Instance.localPlayerController != null && clientId == GameNetworkManager.Instance.localPlayerController.actualClientId)
+		{
+			Debug.Log("OnPlayerDC: Local client is disconnecting so return.");
+			return;
+		}
+		if (base.NetworkManager.ShutdownInProgress || NetworkManager.Singleton == null)
+		{
+			Debug.Log("Shutdown is in progress, returning");
+			return;
+		}
+		Debug.Log("Player DC'ing 2");
+		if (base.IsServer && ClientPlayerList.TryGetValue(clientId, out var value))
+		{
+			HUDManager.Instance.AddTextToChatOnServer($"[playerNum{allPlayerScripts[value].playerClientId}] disconnected.");
+		}
+		if (!allPlayerScripts[playerObjectNumber].isPlayerDead)
+		{
+			livingPlayers--;
+		}
+		ClientPlayerList.Remove(clientId);
+		connectedPlayersAmount--;
+		Debug.Log("Player DC'ing 3");
+		PlayerControllerB component = allPlayerObjects[playerObjectNumber].GetComponent<PlayerControllerB>();
+		try
+		{
+			component.isPlayerControlled = false;
+			component.isPlayerDead = false;
+			if (!inShipPhase)
+			{
+				component.disconnectedMidGame = true;
+				if (livingPlayers == 0)
+				{
+					allPlayersDead = true;
+					ShipLeaveAutomatically();
+				}
+			}
+			component.DropAllHeldItems(itemsFall: true, disconnecting: true);
+			Debug.Log("Teleporting disconnected player out");
+			component.TeleportPlayer(notSpawnedPosition.position);
+			UnlockableSuit.SwitchSuitForPlayer(component, 0, playAudio: false);
+			if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+			{
+				HUDManager.Instance.UpdateBoxesSpectateUI();
+			}
+			if (!NetworkManager.Singleton.ShutdownInProgress && base.IsServer)
+			{
+				component.gameObject.GetComponent<NetworkObject>().RemoveOwnership();
+			}
+			QuickMenuManager quickMenuManager = UnityEngine.Object.FindObjectOfType<QuickMenuManager>();
+			if (quickMenuManager != null)
+			{
+				quickMenuManager.RemoveUserFromPlayerList(playerObjectNumber);
+			}
+			Debug.Log($"Current players after dc: {connectedPlayersAmount}");
+		}
+		catch (Exception arg)
+		{
+			Debug.LogError($"Error while handling player disconnect!: {arg}");
+		}
+	}
+
+	public void OnClientConnect(ulong clientId)
+	{
+		if (!base.IsServer)
+		{
+			return;
+		}
+		Debug.Log("player connected");
+		Debug.Log($"connected players #: {connectedPlayersAmount}");
+		try
+		{
+			List<int> list = ClientPlayerList.Values.ToList();
+			Debug.Log($"Connecting new player on host; clientId: {clientId}");
+			int num = 0;
+			for (int i = 1; i < 4; i++)
+			{
+				if (!list.Contains(i))
+				{
+					num = i;
+					break;
+				}
+			}
+			allPlayerScripts[num].actualClientId = clientId;
+			allPlayerObjects[num].GetComponent<NetworkObject>().ChangeOwnership(clientId);
+			Debug.Log($"New player assigned object id: {allPlayerObjects[num]}");
+			List<ulong> list2 = new List<ulong>();
+			for (int j = 0; j < allPlayerObjects.Length; j++)
+			{
+				NetworkObject component = allPlayerObjects[j].GetComponent<NetworkObject>();
+				if (!component.IsOwnedByServer)
+				{
+					list2.Add(component.OwnerClientId);
+				}
+				else if (j == 0)
+				{
+					list2.Add(NetworkManager.Singleton.LocalClientId);
+				}
+				else
+				{
+					list2.Add(999uL);
+				}
+			}
+			int groupCredits = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
+			int profitQuota = TimeOfDay.Instance.profitQuota;
+			int quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
+			int timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
+			OnPlayerConnectedClientRpc(clientId, connectedPlayersAmount, list2.ToArray(), num, groupCredits, currentLevelID, profitQuota, timeUntilDeadline, quotaFulfilled, randomMapSeed, isChallengeFile);
+			ClientPlayerList.Add(clientId, num);
+			Debug.Log($"client id connecting: {clientId} ; their corresponding player object id: {num}");
+		}
+		catch (Exception arg)
+		{
+			Debug.LogError($"Error occured in OnClientConnected! Shutting server down. clientId: {clientId}. Error: {arg}");
+			GameNetworkManager.Instance.disconnectionReasonMessage = "Error occured when a player attempted to join the server! Restart the application and please report the glitch!";
+			GameNetworkManager.Instance.Disconnect();
+		}
+	}
+
+	[ClientRpc]
+	private void OnPlayerConnectedClientRpc(ulong clientId, int connectedPlayers, ulong[] connectedPlayerIdsOrdered, int assignedPlayerObjectId, int serverMoneyAmount, int levelID, int profitQuota, int timeUntilDeadline, int quotaFulfilled, int randomSeed, bool isChallenge)
+	{
+		if (fullyLoadedPlayers.Count >= connectedPlayersAmount + 1 && !travellingToNewLevel)
+		{
+			StartGame();
+		}
+		else
+		{
+			UnityEngine.Object.FindObjectOfType<StartMatchLever>().CancelStartGameClientRpc();
+		}
+	}
+
+	public void StartGame()
+	{
+		if (!base.IsServer)
+		{
+			return;
+		}
+		if (inShipPhase)
+		{
+			if (!GameNetworkManager.Instance.gameHasStarted)
+			{
+				GameNetworkManager.Instance.LeaveLobbyAtGameStart();
+				GameNetworkManager.Instance.gameHasStarted = true;
+			}
+			inShipPhase = false;
+			fullyLoadedPlayers.Clear();
+			ResetPlayersLoadedValueClientRpc(landingShip: true);
+			UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.disabledHoverTip = "[Wait for ship to land]";
+			UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.interactable = false;
+			currentPlanetAnimator.SetTrigger("LandOnPlanet");
+			if (overrideRandomSeed)
+			{
+				randomMapSeed = overrideSeedNumber;
+			}
+			else if (isChallengeFile)
+			{
+				randomMapSeed = new System.Random(GameNetworkManager.Instance.GetWeekNumber() + 51016).Next(0, 100000000);
+				Debug.Log($"RANDOM MAP SEED: {randomMapSeed}");
+			}
+			else
+			{
+				ChooseNewRandomMapSeed();
+			}
+			base.NetworkManager.SceneManager.LoadScene(currentLevel.sceneName, LoadSceneMode.Additive);
+			Debug.Log("LOADING GAME!!!!!");
+			StartCoroutine(OpenShipDoors());
+		}
+		else
+		{
+			Debug.Log("Attempted to start game on server but we are not in ship phase");
+		}
+	}
+
+	public void ChooseNewRandomMapSeed()
+	{
+		randomMapSeed = UnityEngine.Random.Range(1, 100000000);
+	}
+
+	private IEnumerator OpenShipDoors()
+	{
+		Debug.Log("Waiting for all players to load!");
+		yield return new WaitUntil(() => fullyLoadedPlayers.Count >= GameNetworkManager.Instance.connectedPlayers);
+		yield return new WaitForSeconds(0.5f);
+		RoundManager.Instance.LoadNewLevel(randomMapSeed, currentLevel);
+	}
+
+	public IEnumerator openingDoorsSequence()
+	{
+		StartNewRoundEvent.Invoke();
+		yield return new WaitForSeconds(1f);
+		HUDManager.Instance.LevellingAudio.Stop();
+		StartMatchLever leverScript = UnityEngine.Object.FindObjectOfType<StartMatchLever>();
+		leverScript.triggerScript.timeToHold = 0.7f;
+		leverScript.triggerScript.interactable = false;
+		displayedLevelResults = false;
+		Instance.StartTrackingAllPlayerVoices();
+		if (!GameNetworkManager.Instance.gameHasStarted)
+		{
+			GameNetworkManager.Instance.LeaveLobbyAtGameStart();
+			GameNetworkManager.Instance.gameHasStarted = true;
+		}
+		UnityEngine.Object.FindObjectOfType<QuickMenuManager>().DisableInviteFriendsButton();
+		if (!GameNetworkManager.Instance.disableSteam)
+		{
+			GameNetworkManager.Instance.SetSteamFriendGrouping(GameNetworkManager.Instance.steamLobbyName, connectedPlayersAmount + 1, "Landed on " + currentLevel.PlanetName);
+		}
+		SetDiscordStatusDetails();
+		timeSinceRoundStarted = 0f;
+		shipLeftAutomatically = false;
+		ResetStats();
+		inShipPhase = false;
+		SwitchMapMonitorPurpose();
+		SetPlayerObjectExtrapolate(enable: false);
+		shipAnimatorObject.gameObject.GetComponent<Animator>().SetTrigger("OpenShip");
+		if (currentLevel.currentWeather != LevelWeatherType.None)
+		{
+			WeatherEffect weatherEffect = TimeOfDay.Instance.effects[(int)currentLevel.currentWeather];
+			weatherEffect.effectEnabled = true;
+			if (weatherEffect.effectPermanentObject != null)
+			{
+				weatherEffect.effectPermanentObject.SetActive(value: true);
+			}
+		}
+		yield return null;
+		yield return new WaitForSeconds(0.2f);
+		if (TimeOfDay.Instance.currentLevelWeather != LevelWeatherType.None && !currentLevel.overrideWeather)
+		{
+			TimeOfDay.Instance.effects[(int)TimeOfDay.Instance.currentLevelWeather].effectEnabled = true;
+		}
+		shipDoorsEnabled = true;
+		if (currentLevel.planetHasTime)
+		{
+			TimeOfDay.Instance.currentDayTimeStarted = true;
+			TimeOfDay.Instance.movingGlobalTimeForward = true;
+		}
+		UnityEngine.Object.FindObjectOfType<HangarShipDoor>().SetDoorButtonsEnabled(doorButtonsEnabled: true);
+		TeleportPlayerInShipIfOutOfRoomBounds();
+		yield return new WaitForSeconds(0.05f);
+		Debug.Log($"startofround: {currentLevel.levelID}; {hoursSinceLastCompanyVisit}");
+		if (currentLevel.levelID == 3 && hoursSinceLastCompanyVisit >= 0)
+		{
+			hoursSinceLastCompanyVisit = 0;
+			TimeOfDay.Instance.TimeOfDayMusic.volume = 0.6f;
+			Debug.Log("Playing time of day music");
+			TimeOfDay.Instance.PlayTimeMusicDelayed(companyVisitMusic, 1f);
+		}
+		HUDManager.Instance.loadingText.enabled = false;
+		HUDManager.Instance.loadingDarkenScreen.enabled = false;
+		shipDoorAudioSource.PlayOneShot(openingHangarDoorAudio, 1f);
+		yield return new WaitForSeconds(0.8f);
+		shipDoorsAnimator.SetBool("Closed", value: false);
+		yield return new WaitForSeconds(5f);
+		HUDManager.Instance.planetIntroAnimator.SetTrigger("introAnimation");
+		if (isChallengeFile)
+		{
+			HUDManager.Instance.planetInfoHeaderText.text = "CELESTIAL BODY: " + GameNetworkManager.Instance.GetNameForWeekNumber();
+		}
+		else
+		{
+			HUDManager.Instance.planetInfoHeaderText.text = "CELESTIAL BODY: " + currentLevel.PlanetName;
+		}
+		HUDManager.Instance.planetInfoSummaryText.text = currentLevel.LevelDescription;
+		HUDManager.Instance.planetRiskLevelText.text = currentLevel.riskLevel;
+		yield return new WaitForSeconds(10f);
+		if (currentLevel.spawnEnemiesAndScrap && currentLevel.planetHasTime)
+		{
+			HUDManager.Instance.quotaAnimator.SetBool("visible", value: true);
+			TimeOfDay.Instance.currentDayTime = TimeOfDay.Instance.CalculatePlanetTime(currentLevel);
+			TimeOfDay.Instance.RefreshClockUI();
+		}
+		yield return new WaitForSeconds(4f);
+		OnShipLandedMiscEvents();
+		SetPlayerObjectExtrapolate(enable: false);
+		shipHasLanded = true;
+		leverScript.triggerScript.animationString = "SA_PushLeverBack";
+		leverScript.triggerScript.interactable = true;
+		leverScript.hasDisplayedTimeWarning = false;
+	}
+
+	private void OnShipLandedMiscEvents()
+	{
+		if (TimeOfDay.Instance.currentLevelWeather == LevelWeatherType.Eclipsed)
+		{
+			HUDManager.Instance.DisplayTip("Weather alert!", "You have landed in an eclipse. Exercise caution!", isWarning: true, useSave: true, "LC_EclipseTip");
+		}
+		int num = ES3.Load("TimesLanded", "LCGeneralSaveData", 0);
+		ES3.Save("TimesLanded", num + 1, "LCGeneralSaveData");
+	}
+
+	public void ForcePlayerIntoShip()
+	{
+		if (!GameNetworkManager.Instance.localPlayerController.isInHangarShipRoom)
+		{
+			GameNetworkManager.Instance.localPlayerController.isInElevator = true;
+			GameNetworkManager.Instance.localPlayerController.isInHangarShipRoom = true;
+			GameNetworkManager.Instance.localPlayerController.TeleportPlayer(GetPlayerSpawnPosition((int)GameNetworkManager.Instance.localPlayerController.playerClientId));
+		}
+	}
+
+	public void SetPlayerObjectExtrapolate(bool enable)
+	{
+		if (enable)
+		{
+			localPlayerController.GetComponent<Rigidbody>().interpolation = RigidbodyInterpolation.Extrapolate;
+		}
+		else
+		{
+			localPlayerController.GetComponent<Rigidbody>().interpolation = RigidbodyInterpolation.None;
+		}
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void EndGameServerRpc(int playerClientId)
+	{
+		if (shipHasLanded && !shipLeftAutomatically && (!shipIsLeaving || playerClientId == 0))
+		{
+			UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.interactable = false;
+			shipHasLanded = false;
+			EndGameClientRpc(playerClientId);
+		}
+	}
+
+	[ClientRpc]
+	public void EndGameClientRpc(int playerClientId)
+	{
+		HUDManager.Instance.AddTextToChatOnServer($"[playerNum{playerClientId}] started the ship.");
+		ShipLeave();
+	}
+
+	private void ShipLeave()
+	{
+		shipHasLanded = false;
+		shipIsLeaving = true;
+		shipAnimator.ResetTrigger("ShipLeave");
+		shipAnimator.SetTrigger("ShipLeave");
+		_ = localPlayerController.isInElevator;
+	}
+
+	public void ShipHasLeft()
+	{
+		RoundManager.Instance.playersManager.shipDoorsAnimator.SetBool("Closed", value: true);
+		UnityEngine.Object.FindObjectOfType<HangarShipDoor>().SetDoorButtonsEnabled(doorButtonsEnabled: false);
+		if (base.IsServer)
+		{
+			StartCoroutine(unloadSceneForAllPlayers());
+		}
+	}
+
+	private IEnumerator unloadSceneForAllPlayers()
+	{
+		yield return new WaitForSeconds(2f);
+		fullyLoadedPlayers.Clear();
+		base.NetworkManager.SceneManager.UnloadScene(SceneManager.GetSceneAt(1));
+		yield return null;
+		yield return new WaitUntil(() => fullyLoadedPlayers.Count >= GameNetworkManager.Instance.connectedPlayers);
+		playersRevived = 0;
+		int bodiesInShip = GetBodiesInShip();
+		if (connectedPlayersAmount + 1 - livingPlayers == 0 && RoundManager.Instance.valueOfFoundScrapItems > 30)
+		{
+			daysPlayersSurvivedInARow++;
+		}
+		else
+		{
+			daysPlayersSurvivedInARow = 0;
+		}
+		EndOfGameClientRpc(scrapCollectedOnServer: scrapCollectedLastRound = ((livingPlayers != 0) ? GetValueOfAllScrap(onlyScrapCollected: true, onlyNewScrap: true) : 0), bodiesInsured: bodiesInShip, daysPlayersSurvived: daysPlayersSurvivedInARow, connectedPlayersOnServer: connectedPlayersAmount);
+	}
+
+	private int GetBodiesInShip()
+	{
+		int num = 0;
+		DeadBodyInfo[] array = UnityEngine.Object.FindObjectsOfType<DeadBodyInfo>();
+		for (int i = 0; i < array.Length; i++)
+		{
+			if (array[i].isInShip)
+			{
+				num++;
+			}
+		}
+		return num;
+	}
+
+	[ClientRpc]
+	public void EndOfGameClientRpc(int bodiesInsured, int daysPlayersSurvived, int connectedPlayersOnServer, int scrapCollectedOnServer)
+	{
+		SoundManager.Instance.playingOutsideMusic = false;
+		scrapCollectedLastRound = scrapCollectedOnServer;
+		UnityEngine.Object.FindObjectOfType<AudioListener>().enabled = true;
+		if (currentLevel.planetHasTime)
+		{
+			WritePlayerNotes();
+			HUDManager.Instance.FillEndGameStats(gameStats, scrapCollectedOnServer);
+		}
+		UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.animationString = "SA_PullLever";
+		daysPlayersSurvivedInARow = daysPlayersSurvived;
+		StartCoroutine(EndOfGame(bodiesInsured, connectedPlayersOnServer, scrapCollectedOnServer));
+	}
+
+	private IEnumerator fadeVolume(float finalVolume)
+	{
+		float initialVolume = AudioListener.volume;
+		for (int i = 0; i < 20; i++)
+		{
+			yield return new WaitForSeconds(0.015f);
+			AudioListener.volume = Mathf.Lerp(initialVolume, finalVolume, (float)i / 20f);
+		}
+	}
+
+	public void ResetStats()
+	{
+		for (int i = 0; i < gameStats.allPlayerStats.Length; i++)
+		{
+			gameStats.allPlayerStats[i].damageTaken = 0;
+			gameStats.allPlayerStats[i].jumps = 0;
+			gameStats.allPlayerStats[i].playerNotes.Clear();
+			gameStats.allPlayerStats[i].stepsTaken = 0;
+		}
+	}
+
+	public void WritePlayerNotes()
+	{
+		for (int i = 0; i < gameStats.allPlayerStats.Length; i++)
+		{
+			gameStats.allPlayerStats[i].isActivePlayer = allPlayerScripts[i].disconnectedMidGame || allPlayerScripts[i].isPlayerDead || allPlayerScripts[i].isPlayerControlled;
+		}
+		int num = 0;
+		int num2 = 0;
+		for (int j = 0; j < gameStats.allPlayerStats.Length; j++)
+		{
+			if (gameStats.allPlayerStats[j].isActivePlayer && (j == 0 || gameStats.allPlayerStats[j].stepsTaken < num))
+			{
+				num = gameStats.allPlayerStats[j].stepsTaken;
+				num2 = j;
+			}
+		}
+		if (connectedPlayersAmount > 0 && num > 10)
+		{
+			gameStats.allPlayerStats[num2].playerNotes.Add("The laziest employee.");
+		}
+		num = 0;
+		for (int k = 0; k < gameStats.allPlayerStats.Length; k++)
+		{
+			if (gameStats.allPlayerStats[k].isActivePlayer && gameStats.allPlayerStats[k].turnAmount > num)
+			{
+				num = gameStats.allPlayerStats[k].turnAmount;
+				num2 = k;
+			}
+		}
+		if (connectedPlayersAmount > 0)
+		{
+			gameStats.allPlayerStats[num2].playerNotes.Add("The most paranoid employee.");
+		}
+		num = 0;
+		for (int l = 0; l < gameStats.allPlayerStats.Length; l++)
+		{
+			if (gameStats.allPlayerStats[l].isActivePlayer && !allPlayerScripts[l].isPlayerDead && gameStats.allPlayerStats[l].damageTaken > num)
+			{
+				num = gameStats.allPlayerStats[l].damageTaken;
+				num2 = l;
+			}
+		}
+		if (connectedPlayersAmount > 0)
+		{
+			gameStats.allPlayerStats[num2].playerNotes.Add("Sustained the most injuries.");
+		}
+		num = 0;
+		for (int m = 0; m < gameStats.allPlayerStats.Length; m++)
+		{
+			if (gameStats.allPlayerStats[m].isActivePlayer && gameStats.allPlayerStats[m].profitable > num)
+			{
+				num = gameStats.allPlayerStats[m].profitable;
+				num2 = m;
+			}
+		}
+		if (connectedPlayersAmount > 0 && num > 50)
+		{
+			if (num2 == (int)GameNetworkManager.Instance.localPlayerController.playerClientId)
+			{
+				localPlayerWasMostProfitableThisRound = true;
+			}
+			gameStats.allPlayerStats[num2].playerNotes.Add("Most profitable");
+		}
+	}
+
+	private IEnumerator EndOfGame(int bodiesInsured = 0, int connectedPlayersOnServer = 0, int scrapCollected = 0)
+	{
+		if (!GameNetworkManager.Instance.disableSteam)
+		{
+			GameNetworkManager.Instance.SetSteamFriendGrouping(GameNetworkManager.Instance.steamLobbyName, connectedPlayersAmount + 1, "Orbiting " + currentLevel.PlanetName);
+		}
+		shipDoorsEnabled = false;
+		Debug.Log($"Scrap collected: {scrapCollected}");
+		if (currentLevel.currentWeather != LevelWeatherType.None)
+		{
+			WeatherEffect weatherEffect = TimeOfDay.Instance.effects[(int)currentLevel.currentWeather];
+			if (weatherEffect != null && weatherEffect.effectPermanentObject != null)
+			{
+				weatherEffect.effectPermanentObject.SetActive(value: false);
+			}
+		}
+		TimeOfDay.Instance.currentWeatherVariable = 0f;
+		TimeOfDay.Instance.currentWeatherVariable2 = 0f;
+		TimeOfDay.Instance.DisableAllWeather(deactivateObjects: true);
+		TimeOfDay.Instance.currentLevelWeather = LevelWeatherType.None;
+		TimeOfDay.Instance.movingGlobalTimeForward = false;
+		TimeOfDay.Instance.currentDayTimeStarted = false;
+		TimeOfDay.Instance.currentDayTime = 0f;
+		TimeOfDay.Instance.dayMode = DayMode.Dawn;
+		gameStats.daysSpent++;
+		HUDManager.Instance.shipLeavingEarlyIcon.enabled = false;
+		HUDManager.Instance.HideHUD(hide: true);
+		HUDManager.Instance.quotaAnimator.SetBool("visible", value: false);
+		yield return new WaitForSeconds(1f);
+		if (currentLevel.planetHasTime)
+		{
+			if (isChallengeFile)
+			{
+				HUDManager.Instance.endgameStatsAnimator.SetTrigger("displayStatsChallenge");
+			}
+			else
+			{
+				HUDManager.Instance.endgameStatsAnimator.SetTrigger("displayStats");
+			}
+		}
+		SwitchMapMonitorPurpose(displayInfo: true);
+		yield return new WaitForSeconds(1f);
+		RoundManager.Instance.DespawnPropsAtEndOfRound(isChallengeFile);
+		if (isChallengeFile)
+		{
+			ResetShipFurniture(onlyClearBoughtFurniture: true, despawnProps: false);
+		}
+		if (isChallengeFile)
+		{
+			Terminal terminal = UnityEngine.Object.FindObjectOfType<Terminal>();
+			terminal.groupCredits = terminal.startingCreditsAmount;
+		}
+		RoundManager.Instance.scrapCollectedThisRound.Clear();
+		ResetPooledObjects();
+		if (currentLevel.planetHasTime)
+		{
+			yield return new WaitForSeconds(8f);
+			HUDManager.Instance.SetPlayerLevel(GameNetworkManager.Instance.localPlayerController.isPlayerDead, localPlayerWasMostProfitableThisRound, allPlayersDead);
+			if (isChallengeFile)
+			{
+				HUDManager.Instance.FillChallengeResultsStats(scrapCollected);
+				yield return new WaitForSeconds(2f);
+			}
+			displayedLevelResults = true;
+		}
+		localPlayerWasMostProfitableThisRound = false;
+		int playersDead = connectedPlayersAmount + 1 - livingPlayers;
+		ReviveDeadPlayers();
+		RoundManager.Instance.ResetEnemyVariables();
+		yield return new WaitForSeconds(3f);
+		if (playersDead > 0 && !isChallengeFile)
+		{
+			HUDManager.Instance.endgameStatsAnimator.SetTrigger("displayPenalty");
+			HUDManager.Instance.ApplyPenalty(playersDead, bodiesInsured);
+			yield return new WaitForSeconds(4f);
+		}
+		PassTimeToNextDay(connectedPlayersOnServer);
+		yield return new WaitForSeconds(1.7f);
+		HUDManager.Instance.HideHUD(hide: false);
+		shipIsLeaving = false;
+		if (base.IsServer)
+		{
+			playersRevived++;
+			yield return new WaitUntil(() => playersRevived >= GameNetworkManager.Instance.connectedPlayers);
+			playersRevived = 0;
+			bool flag = TimeOfDay.Instance.timeUntilDeadline <= 0f;
+			if ((float)(TimeOfDay.Instance.profitQuota - TimeOfDay.Instance.quotaFulfilled) <= 0f || isChallengeFile)
+			{
+				if (!isChallengeFile)
+				{
+					TimeOfDay.Instance.SetNewProfitQuota();
+				}
+				AllPlayersHaveRevivedClientRpc();
+			}
+			else if (flag)
+			{
+				FirePlayersAfterDeadlineClientRpc(GetEndgameStatsInOrder());
+			}
+			else
+			{
+				AllPlayersHaveRevivedClientRpc();
+			}
+		}
+		else
+		{
+			PlayerHasRevivedServerRpc();
+		}
+	}
+
+	private int[] GetEndgameStatsInOrder()
+	{
+		return new int[4] { gameStats.daysSpent, gameStats.scrapValueCollected, gameStats.deaths, gameStats.allStepsTaken };
+	}
+
+	private void PassTimeToNextDay(int connectedPlayersOnServer = 0)
+	{
+		if (isChallengeFile)
+		{
+			TimeOfDay.Instance.globalTime = 100f;
+			SetMapScreenInfoToCurrentLevel();
+			return;
+		}
+		float num = TimeOfDay.Instance.globalTimeAtEndOfDay - TimeOfDay.Instance.globalTime;
+		_ = TimeOfDay.Instance.totalTime / TimeOfDay.Instance.lengthOfHours;
+		if (currentLevel.planetHasTime || TimeOfDay.Instance.daysUntilDeadline <= 0)
+		{
+			TimeOfDay.Instance.timeUntilDeadline -= num;
+			TimeOfDay.Instance.OnDayChanged();
+		}
+		TimeOfDay.Instance.globalTime = 100f;
+		TimeOfDay.Instance.UpdateProfitQuotaCurrentTime();
+		if (currentLevel.planetHasTime)
+		{
+			HUDManager.Instance.DisplayDaysLeft((int)Mathf.Floor(TimeOfDay.Instance.timeUntilDeadline / TimeOfDay.Instance.totalTime));
+		}
+		UnityEngine.Object.FindObjectOfType<Terminal>().SetItemSales();
+		SetMapScreenInfoToCurrentLevel();
+		if (TimeOfDay.Instance.timeUntilDeadline > 0f && TimeOfDay.Instance.daysUntilDeadline <= 0 && TimeOfDay.Instance.timesFulfilledQuota <= 0)
+		{
+			StartCoroutine(playDaysLeftAlertSFXDelayed());
+		}
+	}
+
+	private IEnumerator playDaysLeftAlertSFXDelayed()
+	{
+		yield return new WaitForSeconds(3f);
+		Instance.speakerAudioSource.PlayOneShot(zeroDaysLeftAlertSFX);
+	}
+
+	[ClientRpc]
+	public void AllPlayersHaveRevivedClientRpc()
+	{
+		SetShipReadyToLand();
+	}
+
+	private void AutoSaveShipData()
+	{
+		HUDManager.Instance.saveDataIconAnimatorB.SetTrigger("save");
+		GameNetworkManager.Instance.SaveGame();
+	}
+
+	[ServerRpc]
+	public void ManuallyEjectPlayersServerRpc()
+	{
+		if (inShipPhase && !isChallengeFile && !firingPlayersCutsceneRunning && fullyLoadedPlayers.Count >= GameNetworkManager.Instance.connectedPlayers)
+		{
+			GameNetworkManager.Instance.gameHasStarted = true;
+			firingPlayersCutsceneRunning = true;
+			FirePlayersAfterDeadlineClientRpc(GetEndgameStatsInOrder());
+		}
+	}
+
+	[ClientRpc]
+	public void FirePlayersAfterDeadlineClientRpc(int[] endGameStats, bool abridgedVersion = false)
+	{
+		firingPlayersCutsceneRunning = true;
+		if (UnityEngine.Object.FindObjectOfType<Terminal>().terminalInUse)
+		{
+			UnityEngine.Object.FindObjectOfType<Terminal>().QuitTerminal();
+		}
+		if (GameNetworkManager.Instance.localPlayerController.inSpecialInteractAnimation && GameNetworkManager.Instance.localPlayerController.currentTriggerInAnimationWith != null)
+		{
+			GameNetworkManager.Instance.localPlayerController.currentTriggerInAnimationWith.StopSpecialAnimation();
+		}
+		HUDManager.Instance.EndOfRunStatsText.text = $"Days on the job: {endGameStats[0]}\n" + $"Scrap value collected: {endGameStats[1]}\n" + $"Deaths: {endGameStats[2]}\n" + $"Steps taken: {endGameStats[3]}";
+		gameStats.daysSpent = 0;
+		gameStats.scrapValueCollected = 0;
+		gameStats.deaths = 0;
+		gameStats.allStepsTaken = 0;
+		SetDiscordStatusDetails();
+		StartCoroutine(playersFiredGameOver(abridgedVersion));
+	}
+
+	private IEnumerator playersFiredGameOver(bool abridgedVersion)
+	{
+		yield return new WaitForSeconds(5f);
+		shipAnimatorObject.gameObject.GetComponent<Animator>().SetBool("AlarmRinging", value: true);
+		shipRoomLights.SetShipLightsOnLocalClientOnly(setLightsOn: false);
+		speakerAudioSource.PlayOneShot(firedVoiceSFX);
+		shipDoorAudioSource.PlayOneShot(alarmSFX);
+		yield return new WaitForSeconds(9.37f);
+		shipDoorsAnimator.SetBool("OpenInOrbit", value: true);
+		shipDoorAudioSource.PlayOneShot(airPressureSFX);
+		starSphereObject.SetActive(value: true);
+		starSphereObject.transform.position = GameNetworkManager.Instance.localPlayerController.transform.position;
+		yield return new WaitForSeconds(0.25f);
+		suckingPlayersOutOfShip = true;
+		suckingFurnitureOutOfShip = true;
+		PlaceableShipObject[] array = UnityEngine.Object.FindObjectsOfType<PlaceableShipObject>();
+		for (int i = 0; i < array.Length; i++)
+		{
+			if (array[i].parentObject == null)
+			{
+				Debug.Log("Error! No parentObject for placeable object: " + unlockablesList.unlockables[array[i].unlockableID].unlockableName);
+			}
+			array[i].parentObject.StartSuckingOutOfShip();
+			if (unlockablesList.unlockables[array[i].unlockableID].spawnPrefab)
+			{
+				Collider[] componentsInChildren = array[i].parentObject.GetComponentsInChildren<Collider>();
+				for (int j = 0; j < componentsInChildren.Length; j++)
+				{
+					componentsInChildren[j].enabled = false;
+				}
+			}
+		}
+		GameNetworkManager.Instance.localPlayerController.inSpecialInteractAnimation = true;
+		GameNetworkManager.Instance.localPlayerController.DropAllHeldItems();
+		HUDManager.Instance.UIAudio.PlayOneShot(suckedIntoSpaceSFX);
+		yield return new WaitForSeconds(6f);
+		SoundManager.Instance.SetDiageticMixerSnapshot(3, 2f);
+		HUDManager.Instance.ShowPlayersFiredScreen(show: true);
+		yield return new WaitForSeconds(2f);
+		starSphereObject.SetActive(value: false);
+		shipDoorAudioSource.Stop();
+		speakerAudioSource.Stop();
+		suckingFurnitureOutOfShip = false;
+		if (base.IsServer)
+		{
+			GameNetworkManager.Instance.ResetSavedGameValues();
+		}
+		Debug.Log("Calling reset ship!");
+		ResetShip();
+		UnityEngine.Object.FindObjectOfType<Terminal>().SetItemSales();
+		yield return new WaitForSeconds(6f);
+		shipAnimatorObject.gameObject.GetComponent<Animator>().SetBool("AlarmRinging", value: false);
+		GameNetworkManager.Instance.localPlayerController.TeleportPlayer(playerSpawnPositions[GameNetworkManager.Instance.localPlayerController.playerClientId].position);
+		shipDoorsAnimator.SetBool("OpenInOrbit", value: false);
+		currentPlanetPrefab.transform.position = planetContainer.transform.position;
+		suckingPlayersOutOfShip = false;
+		choseRandomFlyDirForPlayer = false;
+		suckingPower = 0f;
+		shipRoomLights.SetShipLightsOnLocalClientOnly(setLightsOn: true);
+		yield return new WaitForSeconds(2f);
+		if (base.IsServer)
+		{
+			playersRevived++;
+			yield return new WaitUntil(() => playersRevived >= GameNetworkManager.Instance.connectedPlayers);
+			playersRevived = 0;
+			EndPlayersFiredSequenceClientRpc();
+		}
+		else
+		{
+			PlayerHasRevivedServerRpc();
+		}
+	}
+
+	public void ResetShip()
+	{
+		TimeOfDay.Instance.globalTime = 100f;
+		TimeOfDay.Instance.profitQuota = TimeOfDay.Instance.quotaVariables.startingQuota;
+		TimeOfDay.Instance.quotaFulfilled = 0;
+		TimeOfDay.Instance.timesFulfilledQuota = 0;
+		TimeOfDay.Instance.timeUntilDeadline = (int)(TimeOfDay.Instance.totalTime * (float)TimeOfDay.Instance.quotaVariables.deadlineDaysAmount);
+		TimeOfDay.Instance.UpdateProfitQuotaCurrentTime();
+		randomMapSeed++;
+		Debug.Log("Reset ship 0");
+		companyBuyingRate = 0.3f;
+		ChangeLevel(defaultPlanet);
+		ChangePlanet();
+		SetMapScreenInfoToCurrentLevel();
+		Terminal terminal = UnityEngine.Object.FindObjectOfType<Terminal>();
+		if (terminal != null)
+		{
+			terminal.groupCredits = TimeOfDay.Instance.quotaVariables.startingCredits;
+		}
+		ResetShipFurniture();
+		ResetPooledObjects(destroy: true);
+		TimeOfDay.Instance.OnDayChanged();
+	}
+
+	private void ResetShipFurniture(bool onlyClearBoughtFurniture = false, bool despawnProps = true)
+	{
+		Debug.Log("Resetting ship furniture");
+		if (base.IsServer)
+		{
+			for (int i = 0; i < unlockablesList.unlockables.Count; i++)
+			{
+				if (unlockablesList.unlockables[i].alreadyUnlocked || !unlockablesList.unlockables[i].spawnPrefab)
+				{
+					continue;
+				}
+				if (!SpawnedShipUnlockables.TryGetValue(i, out var value))
+				{
+					SpawnedShipUnlockables.Remove(i);
+					continue;
+				}
+				if (value == null)
+				{
+					SpawnedShipUnlockables.Remove(i);
+					continue;
+				}
+				SpawnedShipUnlockables.Remove(i);
+				NetworkObject component = value.GetComponent<NetworkObject>();
+				if (component != null && component.IsSpawned)
+				{
+					component.Despawn();
+				}
+			}
+			if (despawnProps)
+			{
+				RoundManager.Instance.DespawnPropsAtEndOfRound(despawnAllItems: true);
+			}
+			closetLeftDoor.SetBoolOnClientOnly(setTo: false);
+			closetRightDoor.SetBoolOnClientOnly(setTo: false);
+		}
+		ShipTeleporter.hasBeenSpawnedThisSession = false;
+		ShipTeleporter.hasBeenSpawnedThisSessionInverse = false;
+		if (!onlyClearBoughtFurniture)
+		{
+			PlaceableShipObject[] array = UnityEngine.Object.FindObjectsOfType<PlaceableShipObject>();
+			for (int j = 0; j < array.Length; j++)
+			{
+				if (unlockablesList.unlockables[array[j].unlockableID].alreadyUnlocked && !unlockablesList.unlockables[array[j].unlockableID].spawnPrefab)
+				{
+					array[j].parentObject.disableObject = false;
+					ShipBuildModeManager.Instance.ResetShipObjectToDefaultPosition(array[j]);
+				}
+			}
+		}
+		GameNetworkManager.Instance.ResetUnlockablesListValues(onlyClearBoughtFurniture);
+		for (int k = 0; k < allPlayerScripts.Length; k++)
+		{
+			SoundManager.Instance.playerVoicePitchTargets[k] = 1f;
+			allPlayerScripts[k].ResetPlayerBloodObjects();
+			if (isChallengeFile)
+			{
+				UnlockableSuit.SwitchSuitForPlayer(allPlayerScripts[k], 24);
+			}
+			else
+			{
+				UnlockableSuit.SwitchSuitForPlayer(allPlayerScripts[k], 0);
+			}
+		}
+	}
+
+	[ClientRpc]
+	public void EndPlayersFiredSequenceClientRpc()
+	{
+		firingPlayersCutsceneRunning = false;
+		timeAtStartOfRun = Time.realtimeSinceStartup;
+		ReviveDeadPlayers();
+		SoundManager.Instance.SetDiageticMixerSnapshot(0, 0.25f);
+		HUDManager.Instance.ShowPlayersFiredScreen(show: false);
+		GameNetworkManager.Instance.localPlayerController.inSpecialInteractAnimation = false;
+		SetShipReadyToLand();
+		SetDiscordStatusDetails();
+		if (!isChallengeFile)
+		{
+			PlayFirstDayShipAnimation();
+		}
+	}
+
+	private void PlayFirstDayShipAnimation(bool waitForMenuToClose = false)
+	{
+		StartCoroutine(firstDayAnimation(waitForMenuToClose));
+	}
+
+	private IEnumerator firstDayAnimation(bool waitForMenuToClose)
+	{
+		yield return new WaitForSeconds(5.5f);
+		if (waitForMenuToClose)
+		{
+			QuickMenuManager quickMenu = UnityEngine.Object.FindObjectOfType<QuickMenuManager>();
+			yield return new WaitUntil(() => !quickMenu.isMenuOpen);
+			yield return new WaitForSeconds(0.2f);
+		}
+		speakerAudioSource.PlayOneShot(shipIntroSpeechSFX);
+	}
+
+	public void DisableShipSpeaker()
+	{
+		DisableShipSpeakerLocalClient();
+		StopShipSpeakerServerRpc((int)GameNetworkManager.Instance.localPlayerController.playerClientId);
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void StopShipSpeakerServerRpc(int playerWhoTriggered)
+	{
+		StopShipSpeakerClientRpc(playerWhoTriggered);
+	}
+
+	[ClientRpc]
+	public void StopShipSpeakerClientRpc(int playerWhoTriggered)
+	{
+		DisableShipSpeakerLocalClient();
+	}
+
+	private void DisableShipSpeakerLocalClient()
+	{
+		if (speakerAudioSource.isPlaying)
+		{
+			speakerAudioSource.Stop();
+			speakerAudioSource.PlayOneShot(disableSpeakerSFX);
+		}
+	}
+
+	public void SetPlanetsWeather(int connectedPlayersOnServer = 0)
+	{
+		for (int i = 0; i < levels.Length; i++)
+		{
+			levels[i].currentWeather = LevelWeatherType.None;
+			if (levels[i].overrideWeather)
+			{
+				levels[i].currentWeather = levels[i].overrideWeatherType;
+			}
+		}
+		System.Random random = new System.Random(randomMapSeed + 31);
+		List<SelectableLevel> list = levels.ToList();
+		float num = 1f;
+		if (connectedPlayersOnServer + 1 > 1 && daysPlayersSurvivedInARow > 2 && daysPlayersSurvivedInARow % 3 == 0)
+		{
+			num = (float)random.Next(15, 25) / 10f;
+		}
+		int num2 = Mathf.Clamp((int)(Mathf.Clamp(planetsWeatherRandomCurve.Evaluate((float)random.NextDouble()) * num, 0f, 1f) * (float)levels.Length), 0, levels.Length);
+		for (int j = 0; j < num2; j++)
+		{
+			SelectableLevel selectableLevel = list[random.Next(0, list.Count)];
+			if (selectableLevel.randomWeathers != null && selectableLevel.randomWeathers.Length != 0)
+			{
+				selectableLevel.currentWeather = selectableLevel.randomWeathers[random.Next(0, selectableLevel.randomWeathers.Length)].weatherType;
+			}
+			list.Remove(selectableLevel);
+		}
+	}
+
+	private void SetShipReadyToLand()
+	{
+		if (Instance.isChallengeFile)
+		{
+			hasSubmittedChallengeRank = true;
+			TimeOfDay.Instance.timeUntilDeadline = TimeOfDay.Instance.totalTime;
+		}
+		inShipPhase = true;
+		shipLeftAutomatically = false;
+		SetDiscordStatusDetails();
+		if (currentLevel.planetHasTime && TimeOfDay.Instance.GetDayPhase(TimeOfDay.Instance.CalculatePlanetTime(currentLevel) / TimeOfDay.Instance.totalTime) == DayMode.Midnight)
+		{
+			UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.disabledHoverTip = "Too late on moon to land!";
+		}
+		else
+		{
+			UnityEngine.Object.FindObjectOfType<StartMatchLever>().triggerScript.interactable = true;
+		}
+		HUDManager.Instance.loadingText.text = "";
+		AutoSaveShipData();
+		StartCoroutine(playRandomShipAudio());
+		SoundManager.Instance.ResetRandomSeed();
+	}
+
+	private IEnumerator playRandomShipAudio()
+	{
+		System.Random shipRandom = new System.Random(randomMapSeed);
+		if (shipRandom.Next(0, 100) <= 4)
+		{
+			yield return new WaitForSeconds(shipRandom.Next(7, 35));
+			if (inShipPhase)
+			{
+				RoundManager.PlayRandomClip(shipAmbianceAudio, shipCreakSFX, randomize: false, (float)shipRandom.Next(0, 10) / 10f);
+			}
+		}
+	}
+
+	private IEnumerator ResetDissonanceCommsComponent()
+	{
+		voiceChatModule.enabled = false;
+		yield return new WaitForSeconds(3f);
+		voiceChatModule.enabled = true;
+		voiceChatModule.ResetMicrophoneCapture();
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void PlayerHasRevivedServerRpc()
+	{
+		playersRevived++;
+	}
+
+	private IEnumerator waitingForOtherPlayersToRevive()
+	{
+		yield return new WaitForSeconds(2f);
+		if (!inShipPhase)
+		{
+			HUDManager.Instance.loadingText.enabled = true;
+			HUDManager.Instance.loadingText.text = "Waiting for crew...";
+		}
+	}
+
+	public void ReviveDeadPlayers()
+	{
+		allPlayersDead = false;
+		for (int i = 0; i < allPlayerScripts.Length; i++)
+		{
+			Debug.Log("Reviving players A");
+			allPlayerScripts[i].ResetPlayerBloodObjects(allPlayerScripts[i].isPlayerDead);
+			if (!allPlayerScripts[i].isPlayerDead && !allPlayerScripts[i].isPlayerControlled)
+			{
+				continue;
+			}
+			allPlayerScripts[i].isClimbingLadder = false;
+			allPlayerScripts[i].ResetZAndXRotation();
+			allPlayerScripts[i].thisController.enabled = true;
+			allPlayerScripts[i].health = 100;
+			allPlayerScripts[i].disableLookInput = false;
+			Debug.Log("Reviving players B");
+			if (allPlayerScripts[i].isPlayerDead)
+			{
+				allPlayerScripts[i].isPlayerDead = false;
+				allPlayerScripts[i].isPlayerControlled = true;
+				allPlayerScripts[i].isInElevator = true;
+				allPlayerScripts[i].isInHangarShipRoom = true;
+				allPlayerScripts[i].isInsideFactory = false;
+				allPlayerScripts[i].wasInElevatorLastFrame = false;
+				SetPlayerObjectExtrapolate(enable: false);
+				allPlayerScripts[i].TeleportPlayer(GetPlayerSpawnPosition(i));
+				allPlayerScripts[i].setPositionOfDeadPlayer = false;
+				allPlayerScripts[i].DisablePlayerModel(allPlayerObjects[i], enable: true, disableLocalArms: true);
+				allPlayerScripts[i].helmetLight.enabled = false;
+				Debug.Log("Reviving players C");
+				allPlayerScripts[i].Crouch(crouch: false);
+				allPlayerScripts[i].criticallyInjured = false;
+				if (allPlayerScripts[i].playerBodyAnimator != null)
+				{
+					allPlayerScripts[i].playerBodyAnimator.SetBool("Limp", value: false);
+				}
+				allPlayerScripts[i].bleedingHeavily = false;
+				allPlayerScripts[i].activatingItem = false;
+				allPlayerScripts[i].twoHanded = false;
+				allPlayerScripts[i].inSpecialInteractAnimation = false;
+				allPlayerScripts[i].disableSyncInAnimation = false;
+				allPlayerScripts[i].inAnimationWithEnemy = null;
+				allPlayerScripts[i].holdingWalkieTalkie = false;
+				allPlayerScripts[i].speakingToWalkieTalkie = false;
+				Debug.Log("Reviving players D");
+				allPlayerScripts[i].isSinking = false;
+				allPlayerScripts[i].isUnderwater = false;
+				allPlayerScripts[i].sinkingValue = 0f;
+				allPlayerScripts[i].statusEffectAudio.Stop();
+				allPlayerScripts[i].DisableJetpackControlsLocally();
+				allPlayerScripts[i].health = 100;
+				Debug.Log("Reviving players E");
+				allPlayerScripts[i].mapRadarDotAnimator.SetBool("dead", value: false);
+				if (allPlayerScripts[i].IsOwner)
+				{
+					HUDManager.Instance.gasHelmetAnimator.SetBool("gasEmitting", value: false);
+					allPlayerScripts[i].hasBegunSpectating = false;
+					HUDManager.Instance.RemoveSpectateUI();
+					HUDManager.Instance.gameOverAnimator.SetTrigger("revive");
+					allPlayerScripts[i].hinderedMultiplier = 1f;
+					allPlayerScripts[i].isMovementHindered = 0;
+					allPlayerScripts[i].sourcesCausingSinking = 0;
+					Debug.Log("Reviving players E2");
+					allPlayerScripts[i].reverbPreset = shipReverb;
+				}
+			}
+			Debug.Log("Reviving players F");
+			SoundManager.Instance.earsRingingTimer = 0f;
+			allPlayerScripts[i].voiceMuffledByEnemy = false;
+			SoundManager.Instance.playerVoicePitchTargets[i] = 1f;
+			SoundManager.Instance.SetPlayerPitch(1f, i);
+			if (allPlayerScripts[i].currentVoiceChatIngameSettings == null)
+			{
+				RefreshPlayerVoicePlaybackObjects();
+			}
+			if (allPlayerScripts[i].currentVoiceChatIngameSettings != null)
+			{
+				if (allPlayerScripts[i].currentVoiceChatIngameSettings.voiceAudio == null)
+				{
+					allPlayerScripts[i].currentVoiceChatIngameSettings.InitializeComponents();
+				}
+				if (allPlayerScripts[i].currentVoiceChatIngameSettings.voiceAudio == null)
+				{
+					return;
+				}
+				allPlayerScripts[i].currentVoiceChatIngameSettings.voiceAudio.GetComponent<OccludeAudio>().overridingLowPass = false;
+			}
+			Debug.Log("Reviving players G");
+		}
+		PlayerControllerB playerControllerB = GameNetworkManager.Instance.localPlayerController;
+		playerControllerB.bleedingHeavily = false;
+		playerControllerB.criticallyInjured = false;
+		playerControllerB.playerBodyAnimator.SetBool("Limp", value: false);
+		playerControllerB.health = 100;
+		HUDManager.Instance.UpdateHealthUI(100, hurtPlayer: false);
+		playerControllerB.spectatedPlayerScript = null;
+		HUDManager.Instance.audioListenerLowPass.enabled = false;
+		Debug.Log("Reviving players H");
+		SetSpectateCameraToGameOverMode(enableGameOver: false, playerControllerB);
+		RagdollGrabbableObject[] array = UnityEngine.Object.FindObjectsOfType<RagdollGrabbableObject>();
+		for (int j = 0; j < array.Length; j++)
+		{
+			if (!array[j].isHeld)
+			{
+				if (base.IsServer)
+				{
+					if (array[j].NetworkObject.IsSpawned)
+					{
+						array[j].NetworkObject.Despawn();
+					}
+					else
+					{
+						UnityEngine.Object.Destroy(array[j].gameObject);
+					}
+				}
+			}
+			else if (array[j].isHeld && array[j].playerHeldBy != null)
+			{
+				array[j].playerHeldBy.DropAllHeldItems();
+			}
+		}
+		DeadBodyInfo[] array2 = UnityEngine.Object.FindObjectsOfType<DeadBodyInfo>();
+		for (int k = 0; k < array2.Length; k++)
+		{
+			UnityEngine.Object.Destroy(array2[k].gameObject);
+		}
+		livingPlayers = connectedPlayersAmount + 1;
+		allPlayersDead = false;
+		UpdatePlayerVoiceEffects();
+		ResetMiscValues();
+	}
+
+	private void ResetMiscValues()
+	{
+		shipAnimator.ResetTrigger("ShipLeave");
+	}
+
+	public void RefreshPlayerVoicePlaybackObjects()
+	{
+		if (GameNetworkManager.Instance == null || GameNetworkManager.Instance.localPlayerController == null)
+		{
+			return;
+		}
+		PlayerVoiceIngameSettings[] array = UnityEngine.Object.FindObjectsOfType<PlayerVoiceIngameSettings>(includeInactive: true);
+		Debug.Log($"Refreshing voice playback objects. Number of voice objects found: {array.Length}");
+		for (int i = 0; i < allPlayerScripts.Length; i++)
+		{
+			PlayerControllerB playerControllerB = allPlayerScripts[i];
+			if (!playerControllerB.isPlayerControlled && !playerControllerB.isPlayerDead)
+			{
+				Debug.Log($"Skipping player #{i} as they are not controlled or dead");
+				continue;
+			}
+			for (int j = 0; j < array.Length; j++)
+			{
+				if (array[j]._playerState == null)
+				{
+					array[j].FindPlayerIfNull();
+					if (array[j]._playerState == null)
+					{
+						Debug.LogError($"Unable to connect player to voice B #{i}; {array[j].isActiveAndEnabled}; {array[j]._playerState == null}");
+					}
+				}
+				else if (!array[j].isActiveAndEnabled)
+				{
+					Debug.LogError($"Unable to connect player to voice A #{i}; {array[j].isActiveAndEnabled}; {array[j]._playerState == null}");
+				}
+				else if (array[j]._playerState.Name == playerControllerB.gameObject.GetComponentInChildren<NfgoPlayer>().PlayerId)
+				{
+					Debug.Log($"Found a match for voice object #{j} and player object #{i}");
+					playerControllerB.voicePlayerState = array[j]._playerState;
+					playerControllerB.currentVoiceChatAudioSource = array[j].voiceAudio;
+					playerControllerB.currentVoiceChatIngameSettings = array[j];
+					playerControllerB.currentVoiceChatAudioSource.outputAudioMixerGroup = SoundManager.Instance.playerVoiceMixers[playerControllerB.playerClientId];
+					Debug.Log($"player voice chat audiosource: {playerControllerB.currentVoiceChatAudioSource}; set audiomixer to {SoundManager.Instance.playerVoiceMixers[playerControllerB.playerClientId]} ; {playerControllerB.currentVoiceChatAudioSource.outputAudioMixerGroup} ; {playerControllerB.playerClientId}");
+				}
+			}
+		}
+	}
+
+	public void UpdatePlayerVoiceEffects()
+	{
+		if (GameNetworkManager.Instance == null || GameNetworkManager.Instance.localPlayerController == null)
+		{
+			return;
+		}
+		updatePlayerVoiceInterval = 2f;
+		PlayerControllerB playerControllerB = ((!GameNetworkManager.Instance.localPlayerController.isPlayerDead || !(GameNetworkManager.Instance.localPlayerController.spectatedPlayerScript != null)) ? GameNetworkManager.Instance.localPlayerController : GameNetworkManager.Instance.localPlayerController.spectatedPlayerScript);
+		for (int i = 0; i < allPlayerScripts.Length; i++)
+		{
+			PlayerControllerB playerControllerB2 = allPlayerScripts[i];
+			if ((!playerControllerB2.isPlayerControlled && !playerControllerB2.isPlayerDead) || playerControllerB2 == GameNetworkManager.Instance.localPlayerController)
+			{
+				continue;
+			}
+			if (playerControllerB2.voicePlayerState == null || playerControllerB2.currentVoiceChatIngameSettings._playerState == null || playerControllerB2.currentVoiceChatAudioSource == null)
+			{
+				RefreshPlayerVoicePlaybackObjects();
+				if (playerControllerB2.voicePlayerState == null || playerControllerB2.currentVoiceChatAudioSource == null)
+				{
+					Debug.Log($"Was not able to access voice chat object for player #{i}; {playerControllerB2.voicePlayerState == null}; {playerControllerB2.currentVoiceChatAudioSource == null}");
+					continue;
+				}
+			}
+			AudioSource currentVoiceChatAudioSource = allPlayerScripts[i].currentVoiceChatAudioSource;
+			bool flag = playerControllerB2.speakingToWalkieTalkie && playerControllerB.holdingWalkieTalkie && playerControllerB2 != playerControllerB;
+			if (playerControllerB2.isPlayerDead)
+			{
+				currentVoiceChatAudioSource.GetComponent<AudioLowPassFilter>().enabled = false;
+				currentVoiceChatAudioSource.GetComponent<AudioHighPassFilter>().enabled = false;
+				currentVoiceChatAudioSource.panStereo = 0f;
+				SoundManager.Instance.playerVoicePitchTargets[playerControllerB2.playerClientId] = 1f;
+				SoundManager.Instance.SetPlayerPitch(1f, (int)playerControllerB2.playerClientId);
+				if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+				{
+					currentVoiceChatAudioSource.spatialBlend = 0f;
+					playerControllerB2.currentVoiceChatIngameSettings.set2D = true;
+					playerControllerB2.voicePlayerState.Volume = 1f;
+				}
+				else
+				{
+					currentVoiceChatAudioSource.spatialBlend = 1f;
+					playerControllerB2.currentVoiceChatIngameSettings.set2D = false;
+					playerControllerB2.voicePlayerState.Volume = 0f;
+				}
+				continue;
+			}
+			AudioLowPassFilter component = currentVoiceChatAudioSource.GetComponent<AudioLowPassFilter>();
+			OccludeAudio component2 = currentVoiceChatAudioSource.GetComponent<OccludeAudio>();
+			component.enabled = true;
+			component2.overridingLowPass = flag || allPlayerScripts[i].voiceMuffledByEnemy;
+			currentVoiceChatAudioSource.GetComponent<AudioHighPassFilter>().enabled = flag;
+			if (!flag)
+			{
+				currentVoiceChatAudioSource.spatialBlend = 1f;
+				playerControllerB2.currentVoiceChatIngameSettings.set2D = false;
+				currentVoiceChatAudioSource.bypassListenerEffects = false;
+				currentVoiceChatAudioSource.bypassEffects = false;
+				currentVoiceChatAudioSource.outputAudioMixerGroup = SoundManager.Instance.playerVoiceMixers[playerControllerB2.playerClientId];
+				component.lowpassResonanceQ = 1f;
+			}
+			else
+			{
+				currentVoiceChatAudioSource.spatialBlend = 0f;
+				playerControllerB2.currentVoiceChatIngameSettings.set2D = true;
+				if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+				{
+					currentVoiceChatAudioSource.panStereo = 0f;
+					currentVoiceChatAudioSource.outputAudioMixerGroup = SoundManager.Instance.playerVoiceMixers[playerControllerB2.playerClientId];
+					currentVoiceChatAudioSource.bypassListenerEffects = false;
+					currentVoiceChatAudioSource.bypassEffects = false;
+				}
+				else
+				{
+					currentVoiceChatAudioSource.panStereo = 0.4f;
+					currentVoiceChatAudioSource.bypassListenerEffects = false;
+					currentVoiceChatAudioSource.bypassEffects = false;
+					currentVoiceChatAudioSource.outputAudioMixerGroup = SoundManager.Instance.playerVoiceMixers[playerControllerB2.playerClientId];
+				}
+				component2.lowPassOverride = 4000f;
+				component.lowpassResonanceQ = 3f;
+			}
+			if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+			{
+				playerControllerB2.voicePlayerState.Volume = 0.8f;
+			}
+			else
+			{
+				playerControllerB2.voicePlayerState.Volume = 1f;
+			}
+		}
+	}
+
+	[ServerRpc]
+	public void SetShipDoorsOverheatServerRpc()
+	{
+		SetShipDoorsOverheatClientRpc();
+	}
+
+	[ClientRpc]
+	public void SetShipDoorsOverheatClientRpc()
+	{
+		if (!base.IsServer)
+		{
+			HangarShipDoor hangarShipDoor = UnityEngine.Object.FindObjectOfType<HangarShipDoor>();
+			hangarShipDoor.PlayDoorAnimation(closed: false);
+			hangarShipDoor.overheated = true;
+			hangarShipDoor.triggerScript.interactable = false;
+		}
+	}
+
+	public void SetShipDoorsClosed(bool closed)
+	{
+		hangarDoorsClosed = closed;
+		SetPlayerSafeInShip();
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void SetDoorsClosedServerRpc(bool closed)
+	{
+		SetDoorsClosedClientRpc(closed);
+	}
+
+	[ClientRpc]
+	public void SetDoorsClosedClientRpc(bool closed)
+	{
+		SetShipDoorsClosed(closed);
+	}
+
+	public void SetPlayerSafeInShip()
+	{
+		if (GameNetworkManager.Instance == null || GameNetworkManager.Instance.localPlayerController == null)
+		{
+			return;
+		}
+		PlayerControllerB playerControllerB = GameNetworkManager.Instance.localPlayerController;
+		if (playerControllerB.isPlayerDead && playerControllerB.spectatedPlayerScript != null)
+		{
+			playerControllerB = playerControllerB.spectatedPlayerScript;
+		}
+		EnemyAI[] array = UnityEngine.Object.FindObjectsOfType<EnemyAI>();
+		if (hangarDoorsClosed && GameNetworkManager.Instance.localPlayerController.isInHangarShipRoom)
+		{
+			for (int i = 0; i < array.Length; i++)
+			{
+				array[i].EnableEnemyMesh(array[i].isInsidePlayerShip);
+			}
+		}
+		else
+		{
+			for (int j = 0; j < array.Length; j++)
+			{
+				array[j].EnableEnemyMesh(enable: true);
+			}
+		}
+	}
+
+	public bool CanChangeLevels()
+	{
+		if (!travellingToNewLevel)
+		{
+			return inShipPhase;
+		}
+		return false;
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void ChangeLevelServerRpc(int levelID, int newGroupCreditsAmount)
+	{
+		Debug.Log($"Changing level server rpc {levelID}");
+		if (!travellingToNewLevel && inShipPhase && newGroupCreditsAmount <= UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits && !isChallengeFile)
+		{
+			UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
+			travellingToNewLevel = true;
+			ChangeLevelClientRpc(levelID, newGroupCreditsAmount);
+		}
+		else
+		{
+			CancelChangeLevelClientRpc(UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits);
+		}
+	}
+
+	[ClientRpc]
+	public void CancelChangeLevelClientRpc(int groupCreditsAmount)
+	{
+		UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = groupCreditsAmount;
+		UnityEngine.Object.FindObjectOfType<Terminal>().useCreditsCooldown = false;
+	}
+
+	[ClientRpc]
+	public void ChangeLevelClientRpc(int levelID, int newGroupCreditsAmount)
+	{
+		UnityEngine.Object.FindObjectOfType<Terminal>().useCreditsCooldown = false;
+		ChangeLevel(levelID);
+		travellingToNewLevel = true;
+		if (shipTravelCoroutine != null)
+		{
+			StopCoroutine(shipTravelCoroutine);
+		}
+		shipTravelCoroutine = StartCoroutine(TravelToLevelEffects());
+		if (!base.IsServer)
+		{
+			UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits = newGroupCreditsAmount;
+		}
+	}
+
+	public void ChangeLevel(int levelID)
+	{
+		Debug.Log($"level id: {levelID}");
+		Debug.Log("Changing level");
+		currentLevel = levels[levelID];
+		currentLevelID = levelID;
+		TimeOfDay.Instance.currentLevel = currentLevel;
+		RoundManager.Instance.currentLevel = levels[levelID];
+		SoundManager.Instance.ResetSoundType();
+	}
+
+	private IEnumerator TravelToLevelEffects()
+	{
+		StartMatchLever lever = UnityEngine.Object.FindObjectOfType<StartMatchLever>();
+		lever.triggerScript.interactable = false;
+		shipAmbianceAudio.PlayOneShot(shipDepartSFX);
+		currentPlanetAnimator.SetTrigger("FlyAway");
+		shipAnimatorObject.gameObject.GetComponent<Animator>().SetBool("FlyingToNewPlanet", value: true);
+		HUDManager.Instance.ShakeCamera(ScreenShakeType.Long);
+		yield return new WaitForSeconds(2f);
+		if (currentPlanetPrefab != null)
+		{
+			UnityEngine.Object.Destroy(currentPlanetPrefab);
+		}
+		yield return new WaitForSeconds(currentLevel.timeToArrive);
+		ArriveAtLevel();
+		if (base.IsServer || GameNetworkManager.Instance.gameHasStarted)
+		{
+			lever.triggerScript.interactable = true;
+		}
+		for (int i = 0; i < 20; i++)
+		{
+			shipAmbianceAudio.volume -= 0.05f;
+			yield return null;
+		}
+		yield return new WaitForSeconds(0.02f);
+		shipAmbianceAudio.Stop();
+		shipAmbianceAudio.volume = 1f;
+		shipAmbianceAudio.PlayOneShot(shipArriveSFX);
+	}
+
+	public void ArriveAtLevel()
+	{
+		Debug.Log($"Level id: {currentLevel.levelID}");
+		TimeOfDay timeOfDay = UnityEngine.Object.FindObjectOfType<TimeOfDay>();
+		outerSpaceSunAnimator.SetFloat("currentTime", timeOfDay.CalculatePlanetTime(currentLevel) / timeOfDay.totalTime + 1f);
+		timeOfDay.currentLevel = currentLevel;
+		travellingToNewLevel = false;
+		ChangePlanet();
+		currentPlanetAnimator.SetTrigger("FlyTo");
+		shipAnimatorObject.gameObject.GetComponent<Animator>().SetBool("FlyingToNewPlanet", value: false);
+		SetMapScreenInfoToCurrentLevel();
+		UnityEngine.Object.FindObjectOfType<StartMatchLever>().hasDisplayedTimeWarning = false;
+		if (!GameNetworkManager.Instance.disableSteam)
+		{
+			GameNetworkManager.Instance.SetSteamFriendGrouping(GameNetworkManager.Instance.steamLobbyName, connectedPlayersAmount + 1, "Orbiting " + currentLevel.PlanetName);
+		}
+		SetDiscordStatusDetails();
+	}
+
+	public void ChangePlanet()
+	{
+		if (currentPlanetPrefab != null)
+		{
+			UnityEngine.Object.Destroy(currentPlanetPrefab);
+		}
+		currentPlanetPrefab = UnityEngine.Object.Instantiate(currentLevel.planetPrefab, planetContainer, worldPositionStays: false);
+		currentPlanetAnimator = currentPlanetPrefab.GetComponentInChildren<Animator>();
+		UnityEngine.Object.FindObjectOfType<TimeOfDay>().currentLevel = currentLevel;
+		SetMapScreenInfoToCurrentLevel();
+	}
+
+	public void SetMapScreenInfoToCurrentLevel()
+	{
+		screenLevelVideoReel.enabled = false;
+		screenLevelVideoReel.gameObject.SetActive(value: false);
+		screenLevelVideoReel.clip = currentLevel.videoReel;
+		TimeOfDay timeOfDay = UnityEngine.Object.FindObjectOfType<TimeOfDay>();
+		if (timeOfDay.totalTime == 0f)
+		{
+			timeOfDay.totalTime = (float)timeOfDay.numberOfHours * timeOfDay.lengthOfHours;
+		}
+		string text = ((currentLevel.currentWeather == LevelWeatherType.None) ? "" : ("Weather: " + currentLevel.currentWeather));
+		string levelDescription = currentLevel.LevelDescription;
+		if (isChallengeFile)
+		{
+			screenLevelDescription.text = "Orbiting: " + GameNetworkManager.Instance.GetNameForWeekNumber() + "\n" + levelDescription + "\n" + text;
+		}
+		else
+		{
+			screenLevelDescription.text = "Orbiting: " + currentLevel.PlanetName + "\n" + levelDescription + "\n" + text;
+		}
+		mapScreen.overrideCameraForOtherUse = true;
+		mapScreen.cam.transform.position = new Vector3(0f, 100f, 0f);
+		screenLevelDescription.enabled = true;
+		if (currentLevel.videoReel != null && !isChallengeFile)
+		{
+			screenLevelVideoReel.enabled = true;
+			screenLevelVideoReel.gameObject.SetActive(value: true);
+			screenLevelVideoReel.Play();
+		}
+	}
+
+	public void SwitchMapMonitorPurpose(bool displayInfo = false)
+	{
+		if (displayInfo)
+		{
+			screenLevelVideoReel.enabled = true;
+			screenLevelVideoReel.gameObject.SetActive(value: true);
+			screenLevelDescription.enabled = true;
+			mapScreenPlayerName.enabled = false;
+			mapScreen.overrideCameraForOtherUse = true;
+			mapScreen.SwitchScreenOn();
+			mapScreen.cam.enabled = true;
+			Terminal terminal = UnityEngine.Object.FindObjectOfType<Terminal>();
+			terminal.displayingPersistentImage = null;
+			terminal.terminalImage.enabled = false;
+		}
+		else
+		{
+			screenLevelVideoReel.enabled = false;
+			screenLevelVideoReel.gameObject.SetActive(value: false);
+			screenLevelDescription.enabled = false;
+			mapScreenPlayerName.enabled = true;
+			mapScreen.overrideCameraForOtherUse = false;
+		}
+	}
+
+	public void PowerSurgeShip()
+	{
+		mapScreen.SwitchScreenOn(on: false);
+		if (base.IsServer)
+		{
+			if ((bool)UnityEngine.Object.FindObjectOfType<TVScript>())
+			{
+				UnityEngine.Object.FindObjectOfType<TVScript>().TurnOffTVServerRpc();
+			}
+			shipRoomLights.SetShipLightsServerRpc(setLightsOn: false);
+		}
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void SyncCompanyBuyingRateServerRpc()
+	{
+		SyncCompanyBuyingRateClientRpc(companyBuyingRate);
+	}
+
+	[ClientRpc]
+	public void SyncCompanyBuyingRateClientRpc(float buyingRate)
+	{
+		companyBuyingRate = buyingRate;
+	}
+
+	private void TeleportPlayerInShipIfOutOfRoomBounds()
+	{
+		if (!(testRoom != null) && !shipInnerRoomBounds.bounds.Contains(GameNetworkManager.Instance.localPlayerController.transform.position))
+		{
+			GameNetworkManager.Instance.localPlayerController.TeleportPlayer(GetPlayerSpawnPosition((int)GameNetworkManager.Instance.localPlayerController.playerClientId, simpleTeleport: true));
+		}
+	}
+
+	public void LateUpdate()
+	{
+		if (GameNetworkManager.Instance == null || GameNetworkManager.Instance.localPlayerController == null)
+		{
+			return;
+		}
+		if (updatePlayerVoiceInterval > 5f)
+		{
+			updatePlayerVoiceInterval = 0f;
+			UpdatePlayerVoiceEffects();
+		}
+		else
+		{
+			updatePlayerVoiceInterval += Time.deltaTime;
+		}
+		if (!inShipPhase && shipDoorsEnabled && !suckingPlayersOutOfShip)
+		{
+			if (GameNetworkManager.Instance.localPlayerController.transform.position.y < -600f)
+			{
+				GameNetworkManager.Instance.localPlayerController.KillPlayer(Vector3.zero, spawnBody: false, CauseOfDeath.Gravity);
+			}
+			else if (GameNetworkManager.Instance.localPlayerController.isInElevator && !shipBounds.bounds.Contains(GameNetworkManager.Instance.localPlayerController.transform.position) && GameNetworkManager.Instance.localPlayerController.thisController.isGrounded)
+			{
+				GameNetworkManager.Instance.localPlayerController.SetAllItemsInElevator(inShipRoom: false, inElevator: false);
+				GameNetworkManager.Instance.localPlayerController.isInElevator = false;
+				GameNetworkManager.Instance.localPlayerController.isInHangarShipRoom = false;
+			}
+			else if (!GameNetworkManager.Instance.localPlayerController.isInElevator && shipBounds.bounds.Contains(GameNetworkManager.Instance.localPlayerController.transform.position) && GameNetworkManager.Instance.localPlayerController.thisController.isGrounded)
+			{
+				GameNetworkManager.Instance.localPlayerController.isInElevator = true;
+				if (shipInnerRoomBounds.bounds.Contains(GameNetworkManager.Instance.localPlayerController.transform.position) && GameNetworkManager.Instance.localPlayerController.thisController.isGrounded)
+				{
+					GameNetworkManager.Instance.localPlayerController.isInHangarShipRoom = true;
+				}
+				else
+				{
+					GameNetworkManager.Instance.localPlayerController.SetAllItemsInElevator(inShipRoom: false, inElevator: true);
+				}
+			}
+		}
+		else if (!suckingPlayersOutOfShip)
+		{
+			TeleportPlayerInShipIfOutOfRoomBounds();
+		}
+		if (suckingPlayersOutOfShip)
+		{
+			starSphereObject.transform.position = GameNetworkManager.Instance.localPlayerController.transform.position;
+			currentPlanetPrefab.transform.position = GameNetworkManager.Instance.localPlayerController.transform.position + new Vector3(-101f, -65f, 160f);
+		}
+		if (fearLevelIncreasing)
+		{
+			fearLevelIncreasing = false;
+		}
+		else if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+		{
+			fearLevel -= Time.deltaTime * 0.5f;
+		}
+		else
+		{
+			fearLevel -= Time.deltaTime * 0.055f;
+		}
+	}
+
+	public override void OnDestroy()
+	{
+		base.OnDestroy();
+	}
+
+	[ServerRpc]
+	public void Debug_EnableTestRoomServerRpc(bool enable)
+	{
+		if (!(GameNetworkManager.Instance.localPlayerController == null) && IsClientFriendsWithHost())
+		{
+			QuickMenuManager quickMenuManager = UnityEngine.Object.FindObjectOfType<QuickMenuManager>();
+			for (int i = 0; i < quickMenuManager.doorGameObjects.Length; i++)
+			{
+			quickMenuManager.doorGameObjects[i].SetActive(!enable);
+			}
+			quickMenuManager.outOfBoundsCollider.enabled = !enable;
+			if (!enable && testRoom != null)
+			{
+			UnityEngine.Object.Destroy(testRoom);
+			}
+		}
+	}
+
+	private IEnumerator SetTestRoomDebug(NetworkObjectReference objectRef)
+	{
+		NetworkObject testRoomNetObject = null;
+		yield return new WaitUntil(() => objectRef.TryGet(out testRoomNetObject));
+		if (!(testRoomNetObject == null))
+		{
+			Instance.testRoom = testRoomNetObject.gameObject;
+		}
+	}
+
+	[ServerRpc]
+	public void Debug_ToggleAllowDeathServerRpc()
+	{
+		if (Application.isEditor)
+		{
+			allowLocalPlayerDeath = !allowLocalPlayerDeath;
+			Debug_ToggleAllowDeathClientRpc(allowLocalPlayerDeath);
+		}
+	}
+
+	[ClientRpc]
+	public void Debug_ToggleAllowDeathClientRpc(bool allowDeath)
+	{
+		if (IsClientFriendsWithHost() && !base.IsServer)
+		{
+			allowLocalPlayerDeath = allowDeath;
+		}
+	}
+
+	public void SetDiscordStatusDetails()
+	{
+		if (DiscordController.Instance == null || GameNetworkManager.Instance.disableSteam)
+		{
+			return;
+		}
+		DiscordController.Instance.status_largeText = "";
+		if (currentLevel != null)
+		{
+			if (firingPlayersCutsceneRunning)
+			{
+				DiscordController.Instance.status_Details = "Getting fired";
+				DiscordController.Instance.status_largeImage = "mapfired";
+			}
+			else if (!GameNetworkManager.Instance.gameHasStarted)
+			{
+				DiscordController.Instance.status_Details = "In orbit (Waiting for crew)";
+				DiscordController.Instance.status_largeImage = "mapshipicon";
+			}
+			else if (inShipPhase)
+			{
+				DiscordController.Instance.status_Details = "Orbiting " + currentLevel.PlanetName;
+				DiscordController.Instance.status_largeImage = "mapshipicon";
+			}
+			else
+			{
+				DiscordController.Instance.status_Details = HUDManager.Instance.GetClockText(TimeOfDay.Instance.normalizedTimeOfDay, TimeOfDay.Instance.numberOfHours, createNewLine: false);
+				DiscordController.Instance.status_largeText = "On " + currentLevel.PlanetName;
+				if (currentLevel.levelIconString != "")
+				{
+					DiscordController.Instance.status_largeImage = currentLevel.levelIconString;
+				}
+			}
+			if (GameNetworkManager.Instance.localPlayerController != null)
+			{
+				if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+				{
+					DiscordController.Instance.status_smallText = "Deceased";
+					DiscordController.Instance.status_smallImage = "faceiconwhitev1big";
+				}
+				else
+				{
+					DiscordController.Instance.status_smallText = "";
+					DiscordController.Instance.status_smallImage = "faceiconorangev1big";
+				}
+			}
+		}
+		else
+		{
+			DiscordController.Instance.status_Details = "In orbit";
+			DiscordController.Instance.status_smallText = "";
+			DiscordController.Instance.status_smallImage = "faceiconorangev1big";
+		}
+		DiscordController.Instance.currentPartySize = connectedPlayersAmount + 1;
+		DiscordController.Instance.maxPartySize = GameNetworkManager.Instance.maxAllowedPlayers;
+		if (RoundManager.Instance != null && inShipPhase)
+		{
+			float num = (float)GetValueOfAllScrap() / (float)TimeOfDay.Instance.profitQuota * 100f;
+			DiscordController.Instance.status_State = $"{(int)num}% of quota | {TimeOfDay.Instance.daysUntilDeadline} days left";
+		}
+		DiscordController.Instance.timeElapsed = (int)(Time.realtimeSinceStartup - timeAtStartOfRun) / 60;
+		if (GameNetworkManager.Instance.currentLobby.HasValue)
+		{
+			DiscordController.Instance.status_partyId = Convert.ToString(GameNetworkManager.Instance.currentLobby.Value.Owner.Id);
+		}
+		DiscordController.Instance.UpdateStatus(clear: false);
+	}
+
+	public int GetValueOfAllScrap(bool onlyScrapCollected = true, bool onlyNewScrap = false)
+	{
+		GrabbableObject[] array = UnityEngine.Object.FindObjectsOfType<GrabbableObject>();
+		int num = 0;
+		for (int i = 0; i < array.Length; i++)
+		{
+			if (shipInnerRoomBounds.bounds.Contains(array[i].transform.position))
+			{
+				array[i].isInShipRoom = true;
+			}
+		}
+		for (int j = 0; j < array.Length; j++)
+		{
+			if ((!onlyNewScrap || !array[j].scrapPersistedThroughRounds) && array[j].itemProperties.isScrap && !array[j].deactivated && !array[j].itemUsedUp && (array[j].isInShipRoom || !onlyScrapCollected))
+			{
+				num += array[j].scrapValue;
+			}
+		}
+		return num;
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void StartGameServerRpc()
+	{
+		StartGame();
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	public void BuyShipUnlockableServerRpc(int unlockableID, int newGroupCreditsAmount)
+	{
+		BuyShipUnlockableClientRpc(newGroupCreditsAmount, unlockableID);
+		UnlockShipObject(unlockableID);
+	}
+
+	private void UnlockShipObject(int unlockableID)
+	{
+		if (unlockablesList != null && unlockableID >= 0 && unlockableID < unlockablesList.unlockables.Count)
+		{
+			unlockablesList.unlockables[unlockableID].hasBeenUnlockedByPlayer = true;
+		}
+	}
+
+	private void PositionSuitsOnRack()
+	{
+		// Stub for suit rack placement
+	}
+
+	public void ShipLeaveAutomatically(bool leavingOnMidnight = false)
+	{
+		shipLeavingOnMidnight = leavingOnMidnight;
+	}
+
+	public void StartTrackingAllPlayerVoices()
+	{
+		// Stub for voice tracking
+	}
+
+	public Vector3 GetPlayerSpawnPosition(int playerClientId, bool simpleTeleport = false)
+	{
+		if (playerSpawnPositions != null && playerSpawnPositions.Length > 0)
+		{
+			int index = Mathf.Clamp(playerClientId, 0, playerSpawnPositions.Length - 1);
+			return playerSpawnPositions[index].position;
+		}
+		return base.transform.position;
+	}
+
+	public void SetSpectateCameraToGameOverMode(bool enableGameOver, PlayerControllerB playerControllerB = null)
+	{
+		if (spectateCamera != null)
+		{
+			spectateCamera.enabled = true;
+		}
+	}
+
+	public void SwitchCamera(Camera newCamera)
+	{
+		if (newCamera == null)
+		{
+			return;
+		}
+		newCamera.enabled = true;
+		CameraSwitchEvent?.Invoke();
+	}
+
+	private bool IsClientFriendsWithHost()
+	{
+		return true;
+	}
+
+	private void SceneManager_OnLoadComplete1(ulong clientId, string sceneName, LoadSceneMode loadSceneMode)
+	{
+		// Stub for scene load complete
+	}
+
+	private void SceneManager_OnLoad(ulong clientId, string sceneName, LoadSceneMode loadSceneMode, AsyncOperation asyncOperation)
+	{
+		// Stub for scene load
+	}
+
+
+}
