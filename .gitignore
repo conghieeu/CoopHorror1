@@ -104,3 +104,6 @@ InitTestScene*.unity*
 
 # Block Lethal Company assets, which can be very large and are not needed for development
 /[Aa]ssets/[Ll]ethalCompany
+/[Aa]ssets/[Ll]ethalCompany.meta
+/[Aa]ssets/MIMESIS
+/[Aa]ssets/MIMESIS.meta
