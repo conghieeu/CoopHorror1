@@ -197,7 +197,7 @@
         "Unity.PerformanceTesting.Editor.csproj": true,
         "Unity.Profiling.Core.csproj": true
     },
-    "dotnet.defaultSolution": "CoopHorror1.sln",
+    "dotnet.defaultSolution": "CoopHorror1.slnx",
     "hide-files.files": [
         "Assembly-CSharp-Editor.csproj",
         "Assembly-CSharp.csproj",
@@ -342,5 +342,7 @@
         "Unity.PerformanceTesting.csproj",
         "Unity.PerformanceTesting.Editor.csproj",
         "Unity.Profiling.Core.csproj"
-    ]
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
 }

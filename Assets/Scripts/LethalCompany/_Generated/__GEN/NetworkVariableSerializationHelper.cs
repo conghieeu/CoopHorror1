@@ -9,8 +9,8 @@ namespace __GEN
 		[RuntimeInitializeOnLoadMethod]
 		internal static void InitializeSerialization()
 		{
-			NetworkVariableSerializationTypes.InitializeSerializer_FixedString<FixedString128Bytes>();
-			NetworkVariableSerializationTypes.InitializeEqualityChecker_UnmanagedIEquatable<FixedString128Bytes>();
+			NetworkVariableSerializationTypedInitializers.InitializeSerializer_FixedString<FixedString128Bytes>();
+			NetworkVariableSerializationTypedInitializers.InitializeEqualityChecker_UnmanagedIEquatable<FixedString128Bytes>();
 		}
 	}
 }

@@ -38,7 +38,7 @@ namespace DigitalRuby.ThunderAndLightning
 				Rigidbody2D component = whipStart.transform.GetChild(i).gameObject.GetComponent<Rigidbody2D>();
 				if (component != null)
 				{
-					component.drag = 0f;
+					component.linearDamping = 0f;
 				}
 			}
 			audioSource.PlayOneShot(WhipCrack);
@@ -57,8 +57,8 @@ namespace DigitalRuby.ThunderAndLightning
 				Rigidbody2D component2 = whipStart.transform.GetChild(j).gameObject.GetComponent<Rigidbody2D>();
 				if (component2 != null)
 				{
-					component2.velocity = Vector2.zero;
-					component2.drag = 0.5f;
+					component2.linearVelocity = Vector2.zero;
+					component2.linearDamping = 0.5f;
 				}
 			}
 			canWhip = true;

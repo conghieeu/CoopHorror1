@@ -292,7 +292,7 @@ public class PlayerInventory : NetworkBehaviour
         Rigidbody rb = item.GetComponent<Rigidbody>();
         if (rb != null)
         {
-            rb.velocity = Vector3.zero;
+            rb.linearVelocity = Vector3.zero;
             rb.AddForce(forward * throwForce, ForceMode.Impulse);
         }
     }

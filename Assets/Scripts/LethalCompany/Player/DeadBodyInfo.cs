@@ -107,7 +107,7 @@ public class DeadBodyInfo : MonoBehaviour
 		{
 			float num = playerScript.underwaterCollider.transform.position.y + playerScript.underwaterCollider.bounds.extents.y - bodyParts[i].transform.position.y;
 			bodyParts[i].AddForce(-Physics.gravity * num * 5f, ForceMode.Force);
-			bodyParts[i].drag = 2.5f;
+			bodyParts[i].linearDamping = 2.5f;
 			bodyParts[i].useGravity = false;
 		}
 	}
@@ -117,7 +117,7 @@ public class DeadBodyInfo : MonoBehaviour
 		playerScript.underwaterCollider = null;
 		for (int i = 0; i < bodyParts.Length; i++)
 		{
-			bodyParts[i].drag = 0f;
+			bodyParts[i].linearDamping = 0f;
 			bodyParts[i].useGravity = true;
 		}
 	}
@@ -257,7 +257,7 @@ public class DeadBodyInfo : MonoBehaviour
 			return;
 		}
 		timeSinceLastCollisionSFX = 0f;
-		velocityLastFrame = bodyParts[5].velocity.sqrMagnitude;
+		velocityLastFrame = bodyParts[5].linearVelocity.sqrMagnitude;
 	}
 
 	public void DetectIfSeenByLocalPlayer()
@@ -354,10 +354,10 @@ public class DeadBodyInfo : MonoBehaviour
 					attachedLimb.transform.rotation = attachedTo.rotation;
 					for (int i = 0; i < bodyParts.Length; i++)
 					{
-						bodyParts[i].angularDrag = 1f;
+						bodyParts[i].angularDamping = 1f;
 						bodyParts[i].maxAngularVelocity = 2f;
 						bodyParts[i].maxDepenetrationVelocity = 0.3f;
-						bodyParts[i].velocity = Vector3.zero;
+						bodyParts[i].linearVelocity = Vector3.zero;
 						bodyParts[i].angularVelocity = Vector3.zero;
 						bodyParts[i].WakeUp();
 					}
@@ -376,17 +376,17 @@ public class DeadBodyInfo : MonoBehaviour
 		}
 		forceDirection = Vector3.Normalize(attachedTo.position - attachedLimb.position);
 		attachedLimb.AddForce(forceDirection * speedMultiplier * Mathf.Clamp(Vector3.Distance(attachedTo.position, attachedLimb.position), 0.2f, 2.5f), ForceMode.VelocityChange);
-		if (attachedLimb.velocity.sqrMagnitude > maxVelocity)
+		if (attachedLimb.linearVelocity.sqrMagnitude > maxVelocity)
 		{
-			attachedLimb.velocity = attachedLimb.velocity.normalized * maxVelocity;
+			attachedLimb.linearVelocity = attachedLimb.linearVelocity.normalized * maxVelocity;
 		}
 		if (!(secondaryAttachedLimb == null) && !(secondaryAttachedTo == null))
 		{
 			forceDirection = Vector3.Normalize(secondaryAttachedTo.position - secondaryAttachedLimb.position);
 			secondaryAttachedLimb.AddForce(forceDirection * speedMultiplier * Mathf.Clamp(Vector3.Distance(secondaryAttachedTo.position, secondaryAttachedLimb.position), 0.2f, 2.5f), ForceMode.VelocityChange);
-			if (secondaryAttachedLimb.velocity.sqrMagnitude > maxVelocity)
+			if (secondaryAttachedLimb.linearVelocity.sqrMagnitude > maxVelocity)
 			{
-				secondaryAttachedLimb.velocity = secondaryAttachedLimb.velocity.normalized * maxVelocity;
+				secondaryAttachedLimb.linearVelocity = secondaryAttachedLimb.linearVelocity.normalized * maxVelocity;
 			}
 		}
 	}
@@ -444,14 +444,14 @@ public class DeadBodyInfo : MonoBehaviour
 			bodySetToKinematic = true;
 			for (int i = 0; i < bodyParts.Length; i++)
 			{
-				bodyParts[i].velocity = Vector3.zero;
+				bodyParts[i].linearVelocity = Vector3.zero;
 				bodyParts[i].isKinematic = true;
 			}
 			return;
 		}
 		for (int j = 0; j < bodyParts.Length; j++)
 		{
-			bodyParts[j].velocity = Vector3.zero;
+			bodyParts[j].linearVelocity = Vector3.zero;
 			if (!(bodyParts[j] == attachedLimb) || !matchPositionExactly)
 			{
 				bodyParts[j].isKinematic = false;
@@ -479,7 +479,7 @@ public class DeadBodyInfo : MonoBehaviour
 		}
 		for (int i = 0; i < bodyParts.Length; i++)
 		{
-			bodyParts[i].velocity = Vector3.zero;
+			bodyParts[i].linearVelocity = Vector3.zero;
 			bodyParts[i].GetComponent<Collider>().enabled = false;
 		}
 	}
@@ -493,7 +493,7 @@ public class DeadBodyInfo : MonoBehaviour
 		}
 		for (int i = 0; i < bodyParts.Length; i++)
 		{
-			bodyParts[i].velocity = Vector3.zero;
+			bodyParts[i].linearVelocity = Vector3.zero;
 		}
 		timeSinceLastCollisionSFX = -1f;
 	}
